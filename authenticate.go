@@ -11,6 +11,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 */
+
 package pmax
 
 import (
@@ -66,7 +67,7 @@ func (c *Client) Authenticate(configConnect *ConfigConnect) error {
 
 	if c.version != APIVersion90 {
 		// Path for version has been changed from u4p 91 unwards
-		path = "univmax/restapi/" + c.version + "/version"
+		path = "univmax/restapi/" + "version"
 	}
 
 	resp, err := c.api.DoAndGetResponseBody(

@@ -11,6 +11,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 */
+
 package pmax
 
 import types "github.com/dell/gopowermax/types/v90"
@@ -28,12 +29,20 @@ type ConfigConnect struct {
 	Password string
 }
 
+// ISCSITarget is a structure representing a target IQN and associated IP addresses
+type ISCSITarget struct {
+	IQN       string
+	PortalIPs []string
+}
+
 const (
-	// DefaultAPIVersion is the default API version you will get if not specificed to NewClientWithArgs.
+	// DefaultAPIVersion is the default API version you will get if not specified to NewClientWithArgs.
 	// The other supported versions are listed here.
 	DefaultAPIVersion = "90"
-	APIVersion90      = "90"
-	APIVersion91      = "91"
+	// APIVersion90 is the API version corresponding to  90
+	APIVersion90 = "90"
+	// APIVersion91 is the API version corresponding to 91
+	APIVersion91 = "91"
 )
 
 // Pmax interface has all the externally available functions provided by the pmax client library for the Powermax accessed through Unisphere.
@@ -50,7 +59,7 @@ type Pmax interface {
 	GetVolumeIDsIterator(symID string, volumeIdentifierMatch string, like bool) (*types.VolumeIterator, error)
 
 	// GetVolumesInStorageGroupIterator returns a list of volumes for a given StorageGroup
-	GetVolumesInStorageGroupIterator(symID string, storageGroupId string) (*types.VolumeIterator, error)
+	GetVolumesInStorageGroupIterator(symID string, storageGroupID string) (*types.VolumeIterator, error)
 
 	// GetVolumeIDsIteraotrPage gets a page of volume ids from a Volume iterator.
 	GetVolumeIDsIteratorPage(iter *types.VolumeIterator, from, to int) ([]string, error)
@@ -65,7 +74,7 @@ type Pmax interface {
 	GetVolumeIDList(symID string, volumeIdentifierMatch string, like bool) ([]string, error)
 
 	// GetVolumeIDListInStorageGroup returns a list of volume IDs that are associated with the StorageGroup
-	GetVolumeIDListInStorageGroup(symID string, storageGroupId string) ([]string, error)
+	GetVolumeIDListInStorageGroup(symID string, storageGroupID string) ([]string, error)
 
 	// GetVolumeById returns a Volume given the volumeID.
 	GetVolumeByID(symID string, volumeID string) (*types.Volume, error)
@@ -84,7 +93,7 @@ type Pmax interface {
 	CreateStorageGroup(symID string, storageGroupID string, srpID string, serviceLevel string, thickVolumes bool) (*types.StorageGroup, error)
 	// UpdateStorageGroup updates a storage group (i.e. a PUT operation) and should support all the defined
 	// operations (but many have not been tested).
-	UpdateStorageGroup(symID string, storageGroupID string, payload *types.UpdateStorageGroupPayload) (*types.Job, error)
+	UpdateStorageGroup(symID string, storageGroupID string, payload interface{}) (*types.Job, error)
 
 	// CreateVolumeInStorageGroup takes simplified input arguments to create a volume of a give name and size in a particular storage group.
 	// This method creates a job and waits on the job to complete.
@@ -97,7 +106,7 @@ type Pmax interface {
 	DeleteMaskingView(symID string, maskingViewID string) error
 
 	// Get the list of Storage Pools
-	GetStoragePoolList(symid string) (*types.StoragePoolList, error)
+	GetStoragePoolList(symID string) (*types.StoragePoolList, error)
 
 	// Rename a Volume given the volumeID
 	RenameVolume(symID string, volumeID string, newName string) (*types.Volume, error)
@@ -115,14 +124,14 @@ type Pmax interface {
 	DeleteVolume(symID string, volumeID string) error
 
 	// GetMaskingViewList  returns a list of the MaskingView names.
-	GetMaskingViewList(symid string) (*types.MaskingViewList, error)
+	GetMaskingViewList(symID string) (*types.MaskingViewList, error)
 
 	// GetMaskingViewByID returns a masking view given it's identifier (which is the name)
-	GetMaskingViewByID(symid string, maskingViewID string) (*types.MaskingView, error)
+	GetMaskingViewByID(symID string, maskingViewID string) (*types.MaskingView, error)
 
 	// GetMaskingViewConnections returns the connections of a masking view (optionally for a specific volume id.)
 	// Here volume id is the 5 digit volume ID.
-	GetMaskingViewConnections(symid string, maskingViewID string, volumeID string) ([]*types.MaskingViewConnection, error)
+	GetMaskingViewConnections(symID string, maskingViewID string, volumeID string) ([]*types.MaskingViewConnection, error)
 
 	// CreateMaskingView creates a masking view given the Masking view id, Storage group id,
 	// host id and the port id and returns the masking view object
@@ -173,6 +182,8 @@ type Pmax interface {
 	GetPort(symID string, directorID string, portID string) (*types.Port, error)
 	// GetListOfTargetAddresses returns an array of all IP addresses which expose iscsi targets.
 	GetListOfTargetAddresses(symID string) ([]string, error)
+	// GetISCSITargets returns a list of ISCSI Targets for a given sym id
+	GetISCSITargets(symID string) ([]ISCSITarget, error)
 
 	// SetAllowedArrays sets the list of arrays which can be manipulated
 	// an empty list will allow all arrays to be accessed
@@ -208,8 +219,9 @@ type Pmax interface {
 	// Delete PortGroup
 	DeletePortGroup(symID string, portGroupID string) error
 	// Update PortGroup
-	UpdatePortGroup(symID string, portGroupId string, ports []types.PortKey) (*types.PortGroup, error)
+	UpdatePortGroup(symID string, portGroupID string, ports []types.PortKey) (*types.PortGroup, error)
 
 	// Expand the size of an existing volume
 	ExpandVolume(symID string, volumeID string, newSizeGB int) (*types.Volume, error)
+	GetCreateVolInSGPayload(sizeInCylinders int, volumeName string) (payload interface{})
 }

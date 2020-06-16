@@ -51,10 +51,15 @@ type uMV struct {
 	portGroupID    string
 }
 
+// client91 makes a client with version 91
+// flag91 is set when a valid connection of client91 is established
+// client91 is used when flag91 is set to have successful API calls of version 91 even if APIVersion is 90
 type unitContext struct {
 	nGoRoutines int
 	client      Pmax
+	client91    Pmax
 	err         error // First error observed
+	flag91      bool
 
 	symIDList          *types.SymmetrixIDList
 	sym                *types.Symmetrix
@@ -75,6 +80,7 @@ type unitContext struct {
 	maskingView        *types.MaskingView
 	uMaskingView       *uMV
 	addressList        []string
+	targetList         []ISCSITarget
 	storagePool        *types.StoragePool
 	volIDList          []string
 	hostID             string
@@ -99,6 +105,7 @@ type unitContext struct {
 
 func (c *unitContext) reset() {
 	Debug = true
+	c.flag91 = false
 	c.err = nil
 	c.symIDList = nil
 	c.sym = nil
@@ -171,6 +178,9 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.VolumeNotAddedError = false
 	mock.InducedErrors.UpdateHostError = false
 	mock.InducedErrors.GetPortError = false
+	mock.InducedErrors.GetSpecificPortError = false
+	mock.InducedErrors.GetPortISCSITargetError = false
+	mock.InducedErrors.GetPortGigEError = false
 	mock.InducedErrors.GetDirectorError = false
 	mock.InducedErrors.GetStoragePoolError = false
 
@@ -243,6 +253,12 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.UpdateHostError = true
 	case "GetPortError":
 		mock.InducedErrors.GetPortError = true
+	case "GetSpecificPortError":
+		mock.InducedErrors.GetSpecificPortError = true
+	case "GetPortGigEError":
+		mock.InducedErrors.GetPortGigEError = true
+	case "GetPortISCSITargetError":
+		mock.InducedErrors.GetPortISCSITargetError = true
 	case "GetDirectorError":
 		mock.InducedErrors.GetDirectorError = true
 	case "GetStoragePoolError":
@@ -276,7 +292,8 @@ func (c *unitContext) aValidConnection() error {
 	c.reset()
 	mock.Reset()
 	if c.client == nil {
-		err := c.iCallAuthenticateWithEndpointCredentials("", "")
+		apiVersion := strings.TrimSpace(os.Getenv("APIVersion"))
+		err := c.iCallAuthenticateWithEndpointCredentials("", "", apiVersion)
 		if err != nil {
 			return err
 		}
@@ -286,13 +303,31 @@ func (c *unitContext) aValidConnection() error {
 	return nil
 }
 
+// Make a client with apiversion 91
+func (c *unitContext) aValidv91Connection(version int) error {
+	c.reset()
+	mock.Reset()
+	// set the flag to insure client91 is used while making functions calls
+	c.flag91 = true
+	if c.client91 == nil {
+		apiVersion := APIVersion91
+		err := c.iCallAuthenticateWithEndpointCredentials("", "", apiVersion)
+		if err != nil {
+			return err
+		}
+	}
+	c.checkGoRoutines("aValidV91Connection")
+	c.client91.SetAllowedArrays([]string{})
+	return nil
+}
+
 func (c *unitContext) checkGoRoutines(tag string) {
 	goroutines := runtime.NumGoroutine()
 	fmt.Printf("goroutines %s new %d old groutines %d\n", tag, goroutines, c.nGoRoutines)
 	c.nGoRoutines = goroutines
 }
 
-func (c *unitContext) iCallAuthenticateWithEndpointCredentials(endpoint, credentials string) error {
+func (c *unitContext) iCallAuthenticateWithEndpointCredentials(endpoint, credentials, apiVersion string) error {
 	URL := mockServer.URL
 	switch endpoint {
 	case "badurl":
@@ -300,7 +335,6 @@ func (c *unitContext) iCallAuthenticateWithEndpointCredentials(endpoint, credent
 	case "nilurl":
 		URL = ""
 	}
-	apiVersion := strings.TrimSpace(os.Getenv("APIVersion"))
 	fmt.Printf("apiVersion: %s\n", apiVersion)
 	client, err := NewClientWithArgs(URL, apiVersion, "", true, false)
 	if err != nil {
@@ -317,7 +351,11 @@ func (c *unitContext) iCallAuthenticateWithEndpointCredentials(endpoint, credent
 		Password: password,
 	})
 	if err == nil {
-		c.client = client
+		if apiVersion == APIVersion91 {
+			c.client91 = client
+		} else {
+			c.client = client
+		}
 	}
 	c.err = err
 	return nil
@@ -446,10 +484,9 @@ func (c *unitContext) iValidateVolumeSize(volumeID string, sizeStr string) error
 	size, err := strconv.Atoi(sizeStr)
 	if err == nil && float64(size) != c.vol.CapacityGB {
 		return fmt.Errorf("Expected volume %s to be size %s, but was %d", volumeID, sizeStr, size)
-	} else {
+	} else if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -550,7 +587,11 @@ func (c *unitContext) iCallWaitOnJobCompletion() error {
 }
 
 func (c *unitContext) iCallCreateVolumeInStorageGroupWithNameAndSize(volumeName string, sizeInCylinders int) error {
-	c.vol, c.err = c.client.CreateVolumeInStorageGroup(symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+	if !c.flag91 {
+		c.vol, c.err = c.client.CreateVolumeInStorageGroup(symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+	} else {
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+	}
 	return nil
 }
 
@@ -565,7 +606,11 @@ func (c *unitContext) iGetAValidVolumeWithNameIfNoError(volumeName string) error
 }
 
 func (c *unitContext) iCallCreateStorageGroupWithNameAndSrpAndSl(sgName, srp, serviceLevel string) error {
-	c.storageGroup, c.err = c.client.CreateStorageGroup(symID, sgName, srp, serviceLevel, false)
+	if !c.flag91 {
+		c.storageGroup, c.err = c.client.CreateStorageGroup(symID, sgName, srp, serviceLevel, false)
+	} else {
+		c.storageGroup, c.err = c.client91.CreateStorageGroup(symID, sgName, srp, serviceLevel, false)
+	}
 	return nil
 }
 
@@ -600,7 +645,11 @@ func (c *unitContext) iGetAValidStoragePoolListIfNoError() error {
 }
 
 func (c *unitContext) iCallRemoveVolumeFromStorageGroup() error {
-	c.storageGroup, c.err = c.client.RemoveVolumesFromStorageGroup(symID, mock.DefaultStorageGroup, c.vol.VolumeID)
+	if !c.flag91 {
+		c.storageGroup, c.err = c.client.RemoveVolumesFromStorageGroup(symID, mock.DefaultStorageGroup, c.vol.VolumeID)
+	} else {
+		c.storageGroup, c.err = c.client91.RemoveVolumesFromStorageGroup(symID, mock.DefaultStorageGroup, c.vol.VolumeID)
+	}
 	return nil
 }
 
@@ -998,7 +1047,11 @@ func (c *unitContext) iHaveAHostGroup(hostGroupID string) error {
 }
 
 func (c *unitContext) iCallAddVolumesToStorageGroup(sgID string) error {
-	c.err = c.client.AddVolumesToStorageGroup(symID, sgID, c.volIDList...)
+	if !c.flag91 {
+		c.err = c.client.AddVolumesToStorageGroup(symID, sgID, c.volIDList...)
+	} else {
+		c.err = c.client91.AddVolumesToStorageGroup(symID, sgID, c.volIDList...)
+	}
 	return nil
 }
 
@@ -1043,7 +1096,11 @@ func (c *unitContext) iHaveAWhitelistOf(whitelist string) error {
 	results := convertStringToSlice(whitelist)
 
 	// set the whitelist
-	c.client.SetAllowedArrays(results)
+	if !c.flag91 {
+		c.client.SetAllowedArrays(results)
+	} else {
+		c.client91.SetAllowedArrays(results)
+	}
 	return nil
 }
 
@@ -1296,12 +1353,25 @@ func convertStringSliceOfPortsToPortKeys(strListOfPorts string) []types.PortKey 
 	return initialPorts
 }
 
+func (c *unitContext) iCallGetISCSITargets() error {
+	c.targetList, c.err = c.client.GetISCSITargets(symID)
+	return nil
+}
+
+func (c *unitContext) iRecieveTargets(count int) error {
+	if len(c.targetList) != count {
+		return fmt.Errorf("expected to get %d targets but recieved %d", count, len(c.targetList))
+	}
+	return nil
+}
+
 func UnitTestContext(s *godog.Suite) {
 	c := &unitContext{}
 	s.Step(`^I induce error "([^"]*)"$`, c.iInduceError)
-	s.Step(`^I call authenticate with endpoint "([^"]*)" credentials "([^"]*)"$`, c.iCallAuthenticateWithEndpointCredentials)
+	s.Step(`^I call authenticate with endpoint "([^"]*)" credentials "([^"]*)" apiversion "([^"]*)"$`, c.iCallAuthenticateWithEndpointCredentials)
 	s.Step(`^the error message contains "([^"]*)"$`, c.theErrorMessageContains)
 	s.Step(`^a valid connection$`, c.aValidConnection)
+	s.Step(`^a valid v(\d+) connection$`, c.aValidv91Connection)
 	s.Step(`^I call GetSymmetrixIDList$`, c.iCallGetSymmetrixIDList)
 	s.Step(`^I get a valid Symmetrix ID List if no error$`, c.iGetAValidSymmetrixIDListIfNoError)
 	s.Step(`^I call GetSymmetrixByID "([^"]*)"$`, c.iCallGetSymmetrixByID)
@@ -1412,6 +1482,7 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call DeleteSnapshot with "([^"]*)", snapshot "([^"]*)" and (\d+)  on it$`, c.iCallDeleteSnapshotWithSnapshotAndOnIt)
 	s.Step(`^I call GetPrivVolumeByID with "([^"]*)"$`, c.iCallGetPrivVolumeByIDWith)
 	s.Step(`^I should get a private volume information if no error$`, c.iShouldGetAPrivateVolumeInformationIfNoError)
-
+	s.Step(`^I call GetISCSITargets$`, c.iCallGetISCSITargets)
+	s.Step(`^I recieve (\d+) targets$`, c.iRecieveTargets)
 	s.Step(`^there should be no errors$`, c.thereShouldBeNoErrors)
 }

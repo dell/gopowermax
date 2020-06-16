@@ -13,7 +13,7 @@ integrationfiles=	inttest/pmax_integration_test.go inttest/pmax_replication_inte
 unitfiles=		unit_test.go unit_steps_test.go
 
 # These variables should be set for your Unisphere installation
-Endpoint="https://localhost:8443"
+Endpoint="https://1.1.1.1:8443"
 Username=			# Leave blank for the default username
 Password=			# Leave blank for the default password
 APIVersion=""                   # Leave blank for default APIVersion

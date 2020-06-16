@@ -11,6 +11,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 */
+
 package inttest
 
 import (
@@ -32,7 +33,7 @@ const (
 
 var (
 	client   pmax.Pmax
-	endpoint = "https://localhost:8443"
+	endpoint = "https://1.1.1.1:8443"
 	// username should match an existing user in Unisphere
 	username = "username"
 	// password should be the value for the corresponding user in Unisphere
@@ -40,28 +41,28 @@ var (
 	// API version
 	apiVersion = ""
 
-	password                = "username"
+	password                = "password"
 	symmetrixID             = "000000000001"
 	defaultStorageGroup     = "csi-Integration-Test"
 	nonFASTManagedSG        = "csi-Integration-No-FAST"
-	defaultFCPortGroup      = "host1_fc_pg"
-	defaultiSCSIPortGroup   = "host2_iscsi_pg"
-	defaultFCInitiator      = "FA-2D:5:10000000c9748df8"
-	defaultiSCSIInitiator   = "SE-1E:000:iqn.1993-08.org.debian:01:5ae293b352a2"
-	defaultiSCSIInitiatorID = "iqn.1994-05.com.redhat:94d8f6116bc"
-	defaultFCInitiatorID    = "10000000c9748df8"
+	defaultFCPortGroup      = "FC_PORTS"
+	defaultiSCSIPortGroup   = "iscsi_ports"
+	defaultFCInitiator      = "FA-1D:5:10000090fa66060b"
+	defaultFCInitiatorID    = "10000090fa66060b"
 	fcInitiator1            = "1a000000c9748df8"
 	fcInitiator2            = "1b000000c9748df8"
 	fcInitiator3            = "1c000000c9748df8"
 	fcInitiator4            = "1d000000c9748df8"
 	fcInitiator5            = "1e000000c9748df8"
+	defaultiSCSIInitiator   = "SE-1E:000:iqn.1993-08.org.debian:01:214e66f8fc1"
+	defaultiSCSIInitiatorID = "iqn.1993-08.org.debian:01:214e66f8fc1"
 	iscsiInitiator1         = "iqn.1993-08.org.centos:01:5ae577b352a0"
 	iscsiInitiator2         = "iqn.1993-08.org.centos:01:5ae577b352a1"
 	iscsiInitiator3         = "iqn.1993-08.org.centos:01:5ae577b352a2"
 	iscsiInitiator4         = "iqn.1993-08.org.centos:01:5ae577b352a3"
 	iscsiInitiator5         = "iqn.1993-08.org.centos:01:5ae577b352a4"
-	defaultFCHost           = "host1_fc_ig"
-	defaultiSCSIHost        = "host1_iscsi_ig"
+	defaultFCHost           = "IntegrationHost1"
+	defaultiSCSIHost        = "IntegrationiSCSIHost"
 	defaultSRP              = "SRP_1"
 	defaultServiceLevel     = "Diamond"
 	volumePrefix            = "xx"
@@ -491,27 +492,7 @@ func TestCreateVolumeInStorageGroup1(t *testing.T) {
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	addVolumeParam := &types.AddVolumeParam{
-		NumberOfVols: 1,
-		VolumeAttribute: types.VolumeAttributeType{
-			VolumeSize:   "1",
-			CapacityUnit: "CYL",
-		},
-		// CreateNewVolumes: true,
-		Emulation: "FBA",
-		VolumeIdentifier: types.VolumeIdentifierType{
-			VolumeIdentifierChoice: "identifier_name",
-			IdentifierName:         volumeName,
-		},
-	}
-
-	payload := &types.UpdateStorageGroupPayload{
-		EditStorageGroupActionParam: types.EditStorageGroupActionParam{
-			ExpandStorageGroupParam: &types.ExpandStorageGroupParam{
-				AddVolumeParam: addVolumeParam,
-			},
-		},
-	}
+	payload := client.GetCreateVolInSGPayload(1, volumeName)
 
 	payloadBytes, err := json.Marshal(&payload)
 	if err != nil {
@@ -1057,12 +1038,9 @@ func TestCreateFCMaskingView(t *testing.T) {
 		return
 	}
 	fmt.Printf("%#v\n, host", host)
-	//hostID := "IS_lqam9024_IG"
-	portGroupID := "l2se0042_fc_pg"
-	storageGroupID := "csi-Int-Test-MV"
 	maskingViewID := "IntTestFCMV"
-	maskingView, err := client.CreateMaskingView(symmetrixID, maskingViewID, storageGroupID,
-		hostID, true, portGroupID)
+	maskingView, err := client.CreateMaskingView(symmetrixID, maskingViewID, defaultStorageGroup,
+		hostID, true, defaultFCPortGroup)
 	if err != nil {
 		t.Error("Expected to create MV with FC initiator and port but didn't: " + err.Error())
 		cleanupHost(symmetrixID, hostID, t)
@@ -1145,12 +1123,9 @@ func TestCreateiSCSIMaskingView(t *testing.T) {
 		return
 	}
 	fmt.Printf("%#v\n, host", host)
-	//hostID := "IS_lqam9024_IG"
-	portGroupID := "IS_lqam9024_PG"
-	storageGroupID := "csi-Int-Test-MV"
 	maskingViewID := "IntTestiSCSIMV"
-	maskingView, err := client.CreateMaskingView(symmetrixID, maskingViewID, storageGroupID,
-		hostID, true, portGroupID)
+	maskingView, err := client.CreateMaskingView(symmetrixID, maskingViewID, defaultStorageGroup,
+		hostID, true, defaultiSCSIPortGroup)
 	if err != nil {
 		t.Error("Expected to create MV with iscsi initiator host and port but didn't: " + err.Error())
 		cleanupHost(symmetrixID, hostID, t)
@@ -1253,5 +1228,20 @@ func TestGetTargetAddresses(t *testing.T) {
 		return
 	}
 	fmt.Printf("Addresses: %v\n", addresses)
+}
 
+func TestGetISCSITargets(t *testing.T) {
+	if client == nil {
+		err := getClient(t)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+	}
+	targets, err := client.GetISCSITargets(symmetrixID)
+	if err != nil {
+		t.Error("Error calling GetISCSITargets " + err.Error())
+		return
+	}
+	fmt.Printf("Targets: %v\n", targets)
 }
