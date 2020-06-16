@@ -5,17 +5,23 @@ Feature: PMAX Client library
 
     Scenario Outline: Authenticate test cases
       When I induce error <induced> 
-      And I call authenticate with endpoint <endpoint> credentials <credentials>
+      And I call authenticate with endpoint <endpoint> credentials <credentials> apiversion <apiversion>
       Then the error message contains <errormsg>
 
       Examples:
-      | endpoint    | credentials    | induced         | errormsg                    |
-      | "mockurl"   | "good"         | "none"          | "none"                      |
-      | "mockurl"   | "bad"          | "none"          | "Unauthorized"              |
-      | "badurl"    | "good"         | "none"          | "connect"                   | 
-      | "nilurl"    | "good"         | "none"          | "Endpoint must be supplied" |
-      | "mockurl"   | "good"         | "httpStatus500" | "Internal Error"            |
-      | "mockurl"   | "good"         | "InvalidJSON"   | "invalid character"         |
+      | endpoint    | credentials    | apiversion     |induced          | errormsg                    |
+      | "mockurl"   | "good"         |     "90"       | "none"          | "none"                      |
+      | "mockurl"   | "bad"          |     "90"       | "none"          | "Unauthorized"              |
+      | "badurl"    | "good"         |     "90"       | "none"          | "connect"                   | 
+      | "nilurl"    | "good"         |     "90"       | "none"          | "Endpoint must be supplied" |
+      | "mockurl"   | "good"         |     "90"       | "httpStatus500" | "Internal Error"            |
+      | "mockurl"   | "good"         |     "90"       | "InvalidJSON"   | "invalid character"         |
+      | "mockurl"   | "good"         |     "91"       | "none"          | "none"                      |
+      | "mockurl"   | "bad"          |     "91"       | "none"          | "Unauthorized"              |
+      | "badurl"    | "good"         |     "91"       | "none"          | "connect"                   | 
+      | "nilurl"    | "good"         |     "91"       | "none"          | "Endpoint must be supplied" |
+      | "mockurl"   | "good"         |     "91"       | "httpStatus500" | "Internal Error"            |
+      | "mockurl"   | "good"         |     "91"       | "InvalidJSON"   | "invalid character"         |
 
     Scenario Outline: TestCases for GetSymmetrixIDList
       Given a valid connection
@@ -213,8 +219,30 @@ Feature: PMAX Client library
       | "RUNNING"      | "SUCCEEDED"      | "GetJobError"    | "induced error"           | ""        |
       | "RUNNING"      | "SUCCEEDED"      | "none"           | "ignored via a whitelist" | "ignored" |
 
-    Scenario Outline: Test cases for CreateVolumeInStorageGroup
+    Scenario Outline: Test cases for CreateVolumeInStorageGroup for v90
       Given a valid connection
+      And I have a whitelist of <whitelist>
+      And I induce error <induced>
+      When I call CreateVolumeInStorageGroup with name <volname> and size <size>
+      Then the error message contains <errormsg>
+      And I get a valid Volume with name <volname> if no error
+
+      Examples:
+      | volname                                                                        | size     | induced                   | errormsg                                               | whitelist |
+      | "IntgA"                                                                        | 1        | "none"                    | "none"                                                 | ""        |
+      | "IntgB"                                                                        | 5        | "none"                    | "none"                                                 | ""        |
+      | "IntgC"                                                                        | 1        | "UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"       | ""        |
+      | "IntgD"                                                                        | 1        | "httpStatus500"           | "A job was not returned from UpdateStorageGroup"       | ""        |
+      | "IntgE"                                                                        | 1        | "GetJobError"             | "induced error"                                        | ""        |
+      | "IntgF"                                                                        | 1        | "JobFailedError"          | "The UpdateStorageGroup job failed"                    | ""        |
+      | "IntgG"                                                                        | 1        | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
+      | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
+      | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
+      | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
+      | "IntgA"                                                                        | 1        | "none"                    | "ignored via a whitelist"                              | "ignored" |
+
+    Scenario Outline: Test cases for CreateVolumeInStorageGroup for v91
+      Given a valid v91 connection
       And I have a whitelist of <whitelist>
       And I induce error <induced>
       When I call CreateVolumeInStorageGroup with name <volname> and size <size>
@@ -237,6 +265,21 @@ Feature: PMAX Client library
 
     Scenario Outline: Test cases for Remove Volume From Storage Group
       Given a valid connection
+      And I call CreateVolumeInStorageGroup with name "IntM" and size 1
+      And I induce error <induced>
+      And I have a whitelist of <whitelist>
+      When I call RemoveVolumeFromStorageGroup
+      Then the error message contains <errormsg>
+      And the volume is no longer a member of the Storage Group if no error
+
+      Examples:
+      | induced                   | errormsg                                         | whitelist |
+      | "none"                    | "none"                                           | ""        |
+      | "UpdateStorageGroupError" | "induced error"                                  | ""        |
+      | "none"                    | "ignored via a whitelist"                        | "ignored" |
+
+      Scenario Outline: Test cases for Remove Volume From Storage Group for v91
+      Given a valid v91 connection
       And I call CreateVolumeInStorageGroup with name "IntM" and size 1
       And I induce error <induced>
       And I have a whitelist of <whitelist>
@@ -294,8 +337,27 @@ Feature: PMAX Client library
       | "DeleteVolumeError"       | "induced error"                                  | ""        |
       | "none"                    | "ignored via a whitelist"                        | "ignored" |
 
-    Scenario Outline: Test cases for CreateStorageGroup
+    Scenario Outline: Test cases for CreateStorageGroup for v90
       Given a valid connection
+      And I have a whitelist of <whitelist>
+      And I induce error <induced>
+      When I call CreateStorageGroup with name <sgname> and srp <srp> and sl <sl>
+      Then the error message contains <errormsg>
+      And I get a valid StorageGroup with name <sgname> if no error
+
+      Examples:
+      | sgname               | srp      | sl           | induced                    | errormsg                                              | whitelist |
+      | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "none"                     | "none"                                                | ""        |
+      | "CSI-Test-New-SG1"   | "None"   | "Diamond"    | "none"                     | "none"                                                | ""        |
+      | "CSI-Test-New-SG2"   | "SRP_1"  | "Optimized"  | "none"                     | "none"                                                | ""        |
+      | "CSI-Test-New-SG2"   | "SRP_1"  | "Optimized"  | "StorageGroupAlreadyExists"| "The requested storage group resource already exists" | ""        |
+      | "CSI-Test-New-SG3"   | "SRP_1"  | "Diamond"    | "CreateStorageGroupError"  | "induced error"                                       | ""        |
+      | "CSI-Test-New-SG4"   | "SRP_1"  | "Diamond"    | "httpStatus500"            | "Internal Error"                                      | ""        |
+      | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "none"                     | "ignored via a whitelist"                             | "ignored" |
+      | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "InvalidResponse"          | "EOF"                                                 | ""        |
+
+    Scenario Outline: Test cases for CreateStorageGroup for v91
+      Given a valid v91 connection
       And I have a whitelist of <whitelist>
       And I induce error <induced>
       When I call CreateStorageGroup with name <sgname> and srp <srp> and sl <sl>
@@ -633,6 +695,26 @@ Feature: PMAX Client library
       | 1     | "TestSG"      |"GetJobError"             | "induced error"                                          | ""        |
       | 1     | "TestSG"      |"none"                    | "ignored via a whitelist"                                | "ignored" |
 
+      Scenario Outline: Test cases for AddVolumesToStorageGroup for v91
+      Given a valid v91 connection
+      And I have a whitelist of <whitelist>
+      And I have a StorageGroup <sgname>
+      And I have <nvols> volumes
+      And I induce error <induced>
+      When I call AddVolumesToStorageGroup <sgname>
+      Then the error message contains <errormsg>
+      And then the Volumes are part of StorageGroup if no error
+      Examples:
+      | nvols | sgname        |induced                   | errormsg                                                 | whitelist |
+      | 5     | "TestSG"      |"none"                    | "none"                                                   | ""        |
+      | 1     | "TestSG"      |"none"                    | "none"                                                   | ""        |
+      | 0     | "TestSG"      |"none"                    | "At least one volume id has to be specified"             | ""        |
+      | 5     | "TestSG"      |"VolumeNotAddedError"     | "A job was not returned from UpdateStorageGroup"         | ""        |
+      | 3     | "TestSG"      |"UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"         | ""        |
+      | 1     | "TestSG"      |"JobFailedError"          | "The UpdateStorageGroup job failed"                      | ""        |
+      | 1     | "TestSG"      |"GetJobError"             | "induced error"                                          | ""        |
+      | 1     | "TestSG"      |"none"                    | "ignored via a whitelist"                                | "ignored" |
+
     Scenario Outline: Test case for retriving list of target IP addresses
       Given a valid connection
       And I have a whitelist of <whitelist>
@@ -643,7 +725,7 @@ Feature: PMAX Client library
       Examples:
       | count | induced                   | errormsg                                                 | whitelist |
       | 8     | "none"                    | "none"                                                   | ""        |
-      | 0     | "GetPortError"            | "Error retrieving Port"                                  | ""        |
+      | 0     | "GetPortError"            | "none"                                                   | ""        |
       | 0     | "GetDirectorError"        | "Error retrieving Director"                              | ""        |
       | 0     | "none"                    | "ignored via a whitelist"                                | "ignored" |
 
@@ -682,3 +764,20 @@ Feature: PMAX Client library
       | "000000000000"  | "none"                | "ignored via a whitelist"   |
       | "000197900046"  | "000197900046"        | "none"                      |
       | "000197900046"  | "000197802104"        | "ignored via a whitelist"   |
+
+    @testthis
+    Scenario Outline: Get ISCSI targets
+      Given a valid connection
+      And I have a whitelist of <whitelist>
+      And I induce error <induced>
+      When I call GetISCSITargets
+      Then the error message contains <errormsg>
+      And I recieve <count> targets
+      Examples:
+      | whitelist        | induced                   | errormsg                         | count |
+      | "000000000000"   | "none"                    | "ignored via a whitelist"        | 0     |
+      | "000197900046"   | "GetDirectorError"        | "Error retrieving Director"      | 0     |
+      | "000197900046"   | "GetPortGigEError"        | "none"                           | 0     |
+      | "000197900046"   | "GetPortISCSITargetError" | "Error retrieving ISCSI targets" | 0     |
+      | "000197900046"   | "GetSpecificPortError"    | "none"                           | 0     |
+      | "000197900046"   | "none"                    | "none"                           | 8     |

@@ -11,6 +11,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 */
+
 package pmax
 
 import (
@@ -26,7 +27,7 @@ import (
 
 // The following constants are for internal use of the pmax library.
 const (
-	RESTPrefix = "univmax/restapi/"
+	RESTPrefix          = "univmax/restapi/"
 	StorageResourcePool = "srp"
 )
 
@@ -275,16 +276,19 @@ func (c *Client) GetListOfTargetAddresses(symID string) ([]string, error) {
 
 	// for each director, get list of ports with iscsi_target=true
 	for _, d := range directors.DirectorIDs {
-		ports, err := c.GetPortList(symID, d, "iscsi_target=true")
+
+		ports, err := c.GetPortList(symID, d, "type=Gige")
 		if err != nil {
-			return []string{}, err
+			// Ignore the error and continue
+			continue
 		}
 
 		// for each port, get the details
 		for _, p := range ports.SymmetrixPortKey {
 			port, err := c.GetPort(symID, d, p.PortID)
 			if err != nil {
-				return []string{}, err
+				// Ignore the error and continue
+				continue
 			}
 			if len(port.SymmetrixPort.IPAddresses) > 0 {
 				ipAddr = append(ipAddr, port.SymmetrixPort.IPAddresses...)
@@ -294,6 +298,59 @@ func (c *Client) GetListOfTargetAddresses(symID string) ([]string, error) {
 	}
 
 	return ipAddr, nil
+}
+
+// GetISCSITargets returns list of target addresses
+func (c *Client) GetISCSITargets(symID string) ([]ISCSITarget, error) {
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	targets := make([]ISCSITarget, 0)
+	// Get list of all directors
+	directors, err := c.GetDirectorIDList(symID)
+	if err != nil {
+		return []ISCSITarget{}, err
+	}
+
+	for _, d := range directors.DirectorIDs {
+		// Check if director is ISCSI
+		// To do this, check if any ports have ports with GigE enabled
+		ports, err := c.GetPortList(symID, d, "type=Gige")
+		if err != nil {
+			// Ignore the error and continue
+			log.Errorf("Failed to get ports of type GigE for director: %s. Error: %s",
+				d, err.Error())
+			continue
+		}
+		if len(ports.SymmetrixPortKey) > 0 {
+			// This is a director with ISCSI port(s)
+			// Query for iscsi_targets
+			virtualPorts, err := c.GetPortList(symID, d, "iscsi_target=true")
+			if err != nil {
+				return []ISCSITarget{}, err
+			}
+			// we have a list of virtual director ports which have ISCSI targets
+			// and portal IPs associated with it
+			for _, vp := range virtualPorts.SymmetrixPortKey {
+				port, err := c.GetPort(symID, vp.DirectorID, vp.PortID)
+				if err != nil {
+					// Ignore the error and continue
+					log.Errorf("Failed to fetch port details for %s:%s. Error: %s",
+						vp.DirectorID, vp.PortID, err.Error())
+					continue
+				}
+				// this should always be set
+				if port.SymmetrixPort.Identifier != "" {
+					tgt := ISCSITarget{
+						IQN:       port.SymmetrixPort.Identifier,
+						PortalIPs: port.SymmetrixPort.IPAddresses,
+					}
+					targets = append(targets, tgt)
+				}
+			}
+		}
+	}
+	return targets, nil
 }
 
 // SetAllowedArrays sets the list of arrays which can be manipulated

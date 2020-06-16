@@ -11,6 +11,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 */
+
 package pmax
 
 import (
@@ -25,6 +26,7 @@ import (
 	"time"
 
 	types "github.com/dell/gopowermax/types/v90"
+	types91 "github.com/dell/gopowermax/types/v91"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -91,13 +93,13 @@ func (c *Client) GetVolumeIDsIterator(symID string, volumeIdentifierMatch string
 }
 
 // GetVolumesInStorageGroupIterator returns a iterator of a list of volumes associated with a StorageGroup.
-func (c *Client) GetVolumesInStorageGroupIterator(symID string, storageGroupId string) (*types.VolumeIterator, error) {
+func (c *Client) GetVolumesInStorageGroupIterator(symID string, storageGroupID string) (*types.VolumeIterator, error) {
 	var query string
-	if storageGroupId == "" {
-		return nil, fmt.Errorf("storageGroupId is empty")
+	if storageGroupID == "" {
+		return nil, fmt.Errorf("storageGroupID is empty")
 	}
 
-	query = fmt.Sprintf("?storageGroupId=%s", storageGroupId)
+	query = fmt.Sprintf("?storageGroupId=%s", storageGroupID)
 	return c.getVolumeIDsIteratorBase(symID, query)
 }
 
@@ -193,18 +195,19 @@ func (c *Client) GetVolumeIDList(symID string, volumeIdentifierMatch string, lik
 	if err != nil {
 		return nil, err
 	}
-	return c.volumeIteratorToVolIdList(iter)
+	return c.volumeIteratorToVolIDList(iter)
 }
 
-func (c *Client) GetVolumeIDListInStorageGroup(symID string, storageGroupId string) ([]string, error) {
-	iter, err := c.GetVolumesInStorageGroupIterator(symID, storageGroupId)
+// GetVolumeIDListInStorageGroup - Gets a list of volume in a SG
+func (c *Client) GetVolumeIDListInStorageGroup(symID string, storageGroupID string) ([]string, error) {
+	iter, err := c.GetVolumesInStorageGroupIterator(symID, storageGroupID)
 	if err != nil {
 		return nil, err
 	}
-	return c.volumeIteratorToVolIdList(iter)
+	return c.volumeIteratorToVolIDList(iter)
 }
 
-func (c *Client) volumeIteratorToVolIdList(iter *types.VolumeIterator) ([]string, error) {
+func (c *Client) volumeIteratorToVolIDList(iter *types.VolumeIterator) ([]string, error) {
 	if iter.MaxPageSize < iter.Count {
 		// The iterator only needs to be deleted if there are more entries than MaxPageSize?
 		defer c.DeleteVolumeIDsIterator(iter)
@@ -289,6 +292,65 @@ func (c *Client) GetStorageGroupIDList(symID string) (*types.StorageGroupIDList,
 	return sgIDList, nil
 }
 
+//GetCreateStorageGroupPayload returns U4P payload for creating storage group
+func (c *Client) GetCreateStorageGroupPayload(storageGroupID, srpID, serviceLevel string, thickVolumes bool) (payload interface{}) {
+	workload := "None"
+	if c.version == "90" {
+		sloParams := []types.SLOBasedStorageGroupParam{}
+		if srpID != "None" {
+			sloParams = []types.SLOBasedStorageGroupParam{
+				{
+					SLOID:             serviceLevel,
+					WorkloadSelection: workload,
+					NumberOfVolumes:   0,
+					VolumeAttribute: types.VolumeAttributeType{
+						VolumeSize:   "0",
+						CapacityUnit: "CYL",
+					},
+					AllocateCapacityForEachVol: thickVolumes,
+					// compression not allowed with thick volumes
+					NoCompression: thickVolumes,
+				},
+			}
+		}
+		createStorageGroupParam := &types.CreateStorageGroupParam{
+			StorageGroupID:            storageGroupID,
+			SRPID:                     srpID,
+			Emulation:                 Emulation,
+			ExecutionOption:           types.ExecutionOptionSynchronous,
+			SLOBasedStorageGroupParam: sloParams,
+		}
+		return createStorageGroupParam
+	}
+	sloParams := []types91.SLOBasedStorageGroupParam{}
+	if srpID != "None" {
+		sloParams = []types91.SLOBasedStorageGroupParam{
+			{
+				SLOID:             serviceLevel,
+				WorkloadSelection: workload,
+				VolumeAttributes: []types91.VolumeAttributeType{
+					{
+						VolumeSize:      "0",
+						CapacityUnit:    "CYL",
+						NumberOfVolumes: 0,
+					},
+				},
+				AllocateCapacityForEachVol: thickVolumes,
+				// compression not allowed with thick volumes
+				NoCompression: thickVolumes,
+			},
+		}
+	}
+	createStorageGroupParam := &types91.CreateStorageGroupParam{
+		StorageGroupID:            storageGroupID,
+		SRPID:                     srpID,
+		Emulation:                 Emulation,
+		ExecutionOption:           types91.ExecutionOptionSynchronous,
+		SLOBasedStorageGroupParam: sloParams,
+	}
+	return createStorageGroupParam
+}
+
 // CreateStorageGroup creates a Storage Group given the storageGroupID (name), srpID (storage resource pool), service level, and boolean for thick volumes.
 // If srpID is "None" then serviceLevel and thickVolumes settings are ignored
 func (c *Client) CreateStorageGroup(symID, storageGroupID, srpID, serviceLevel string, thickVolumes bool) (*types.StorageGroup, error) {
@@ -297,34 +359,11 @@ func (c *Client) CreateStorageGroup(symID, storageGroupID, srpID, serviceLevel s
 		return nil, err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XStorageGroup
-	workload := "None"
-	createStorageGroupParam := &types.CreateStorageGroupParam{
-		StorageGroupID:  storageGroupID,
-		SRPID:           srpID,
-		Emulation:       Emulation,
-		ExecutionOption: types.ExecutionOptionSynchronous,
-	}
-	if srpID != "None" {
-		sloParams := []types.SLOBasedStorageGroupParam{
-			{
-				SLOID:             serviceLevel,
-				WorkloadSelection: workload,
-				NumberOfVolumes:   0,
-				VolumeAttribute: types.VolumeAttributeType{
-					VolumeSize:   "0",
-					CapacityUnit: "CYL",
-				},
-				AllocateCapacityForEachVol: thickVolumes,
-				// compression not allowed with thick volumes
-				NoCompression: thickVolumes,
-			},
-		}
-		createStorageGroupParam.SLOBasedStorageGroupParam = sloParams
-	}
+	payload := c.GetCreateStorageGroupPayload(storageGroupID, srpID, serviceLevel, thickVolumes)
 	ctx, cancel := GetTimeoutContext()
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(
-		ctx, http.MethodPost, URL, c.getDefaultHeaders(), createStorageGroupParam)
+		ctx, http.MethodPost, URL, c.getDefaultHeaders(), payload)
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
@@ -421,12 +460,11 @@ func (c *Client) GetStoragePool(symID string, storagePoolID string) (*types.Stor
 }
 
 // UpdateStorageGroup is a general method to update a StorageGroup (PUT operation) using a UpdateStorageGroupPayload.
-func (c *Client) UpdateStorageGroup(symID string, storageGroupID string, payload *types.UpdateStorageGroupPayload) (*types.Job, error) {
+func (c *Client) UpdateStorageGroup(symID string, storageGroupID string, payload interface{}) (*types.Job, error) {
 	defer c.TimeSpent("UpdateStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
-	payload.ExecutionOption = types.ExecutionOptionAsynchronous
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XStorageGroup + "/" + storageGroupID
 	job := &types.Job{}
 	fields := map[string]interface{}{
@@ -464,39 +502,18 @@ func (c *Client) CreateVolumeInStorageGroup(
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
-	size := strconv.Itoa(sizeInCylinders)
 
 	if len(volumeName) > MaxVolIdentifierLength {
 		return nil, fmt.Errorf("Length of volumeName exceeds max limit")
 	}
-	addVolumeParam := &types.AddVolumeParam{
-		NumberOfVols: 1,
-		VolumeAttribute: types.VolumeAttributeType{
-			VolumeSize:   size,
-			CapacityUnit: "CYL",
-		},
-		// CreateNewVolumes: true,
-		Emulation: "FBA",
-		VolumeIdentifier: types.VolumeIdentifierType{
-			VolumeIdentifierChoice: "identifier_name",
-			IdentifierName:         volumeName,
-		},
-	}
 
-	payload := &types.UpdateStorageGroupPayload{
-		EditStorageGroupActionParam: types.EditStorageGroupActionParam{
-			ExpandStorageGroupParam: &types.ExpandStorageGroupParam{
-				AddVolumeParam: addVolumeParam,
-			},
-		},
-	}
-	ifDebugLogPayload(payload)
-
-	job, err := c.UpdateStorageGroup(symID, storageGroupID, payload)
+	job := &types.Job{}
+	var err error
+	payload := c.GetCreateVolInSGPayload(sizeInCylinders, volumeName)
+	job, err = c.UpdateStorageGroup(symID, storageGroupID, payload)
 	if err != nil || job == nil {
 		return nil, fmt.Errorf("A job was not returned from UpdateStorageGroup")
 	}
-
 	job, err = c.WaitOnJobCompletion(symID, job.JobID)
 	if err != nil {
 		return nil, err
@@ -531,7 +548,7 @@ func (c *Client) CreateVolumeInStorageGroup(
 	return nil, fmt.Errorf(errormsg)
 }
 
-// Expand an existing volume to a new (larger) size in GB
+// ExpandVolume expands an existing volume to a new (larger) size in GB
 func (c *Client) ExpandVolume(symID string, volumeID string, newSizeGB int) (*types.Volume, error) {
 	payload := &types.EditVolumeParam{
 		EditVolumeActionParam: types.EditVolumeActionParam{
@@ -568,19 +585,7 @@ func (c *Client) AddVolumesToStorageGroup(symID string, storageGroupID string, v
 	if len(volumeIDs) == 0 {
 		return fmt.Errorf("At least one volume id has to be specified")
 	}
-	addSpecificVolumeParam := &types.AddSpecificVolumeParam{
-		VolumeIDs: volumeIDs,
-	}
-	payload := &types.UpdateStorageGroupPayload{
-		EditStorageGroupActionParam: types.EditStorageGroupActionParam{
-			ExpandStorageGroupParam: &types.ExpandStorageGroupParam{
-				AddSpecificVolumeParam: addSpecificVolumeParam,
-			},
-		},
-	}
-	payload.ExecutionOption = types.ExecutionOptionAsynchronous
-	ifDebugLogPayload(payload)
-
+	payload := c.GetAddVolumeToSGPayload(volumeIDs...)
 	job, err := c.UpdateStorageGroup(symID, storageGroupID, payload)
 	if err != nil || job == nil {
 		return fmt.Errorf("A job was not returned from UpdateStorageGroup")
@@ -604,18 +609,7 @@ func (c *Client) RemoveVolumesFromStorageGroup(symID string, storageGroupID stri
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
-	removeVolumeParam := &types.RemoveVolumeParam{
-		VolumeIDs: volumeIDs,
-	}
-
-	payload := &types.UpdateStorageGroupPayload{
-		EditStorageGroupActionParam: types.EditStorageGroupActionParam{
-			RemoveVolumeParam: removeVolumeParam,
-		},
-	}
-	payload.ExecutionOption = types.ExecutionOptionSynchronous
-	ifDebugLogPayload(payload)
-
+	payload := c.GetRemoveVolumeFromSGPayload(volumeIDs...)
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XStorageGroup + "/" + storageGroupID
 	fields := map[string]interface{}{
 		http.MethodPut: URL,
@@ -632,6 +626,127 @@ func (c *Client) RemoveVolumesFromStorageGroup(symID string, storageGroupID stri
 	}
 	log.Info(fmt.Sprintf("Successfully removed volumes: [%s] from SG: %s", strings.Join(volumeIDs, " "), storageGroupID))
 	return updatedStorageGroup, nil
+}
+
+// GetCreateVolInSGPayload returns payload for adding volume/s to SG.
+func (c *Client) GetCreateVolInSGPayload(sizeInCylinders int, volumeName string) (payload interface{}) {
+	size := strconv.Itoa(sizeInCylinders)
+	if c.version == "90" {
+		addVolumeParam := &types.AddVolumeParam{
+			NumberOfVols: 1,
+			VolumeAttribute: types.VolumeAttributeType{
+				VolumeSize:   size,
+				CapacityUnit: "CYL",
+			},
+			// CreateNewVolumes: true,
+			Emulation: "FBA",
+			VolumeIdentifier: types.VolumeIdentifierType{
+				VolumeIdentifierChoice: "identifier_name",
+				IdentifierName:         volumeName,
+			},
+		}
+
+		payload = &types.UpdateStorageGroupPayload{
+			EditStorageGroupActionParam: types.EditStorageGroupActionParam{
+				ExpandStorageGroupParam: &types.ExpandStorageGroupParam{
+					AddVolumeParam: addVolumeParam,
+				},
+			},
+			ExecutionOption: types.ExecutionOptionAsynchronous,
+		}
+
+	} else {
+		addVolumeParam := &types91.AddVolumeParam{
+			CreateNewVolumes: true,
+			Emulation:        "FBA",
+			VolumeAttributes: []types91.VolumeAttributeType{
+				{
+					NumberOfVolumes: 1,
+					VolumeIdentifier: &types91.VolumeIdentifierType{
+						VolumeIdentifierChoice: "identifier_name",
+						IdentifierName:         volumeName,
+					},
+					CapacityUnit: "CYL",
+					VolumeSize:   size,
+				},
+			},
+		}
+
+		payload = &types91.UpdateStorageGroupPayload{
+			EditStorageGroupActionParam: types91.EditStorageGroupActionParam{
+				ExpandStorageGroupParam: &types91.ExpandStorageGroupParam{
+					AddVolumeParam: addVolumeParam,
+				},
+			},
+			ExecutionOption: types91.ExecutionOptionAsynchronous,
+		}
+	}
+	if payload != nil {
+		ifDebugLogPayload(payload)
+	}
+	return payload
+}
+
+// GetAddVolumeToSGPayload returns payload for adding specific volume/s to SG.
+func (c *Client) GetAddVolumeToSGPayload(volumeIDs ...string) (payload interface{}) {
+	if c.version == "90" {
+		addSpecificVolumeParam := &types.AddSpecificVolumeParam{
+			VolumeIDs: volumeIDs,
+		}
+		payload = &types.UpdateStorageGroupPayload{
+			EditStorageGroupActionParam: types.EditStorageGroupActionParam{
+				ExpandStorageGroupParam: &types.ExpandStorageGroupParam{
+					AddSpecificVolumeParam: addSpecificVolumeParam,
+				},
+			},
+			ExecutionOption: types.ExecutionOptionAsynchronous,
+		}
+	} else {
+		addSpecificVolumeParam := &types91.AddSpecificVolumeParam{
+			VolumeIDs: volumeIDs,
+		}
+		payload = &types91.UpdateStorageGroupPayload{
+			EditStorageGroupActionParam: types91.EditStorageGroupActionParam{
+				ExpandStorageGroupParam: &types91.ExpandStorageGroupParam{
+					AddSpecificVolumeParam: addSpecificVolumeParam,
+				},
+			},
+			ExecutionOption: types91.ExecutionOptionAsynchronous,
+		}
+	}
+	if payload != nil {
+		ifDebugLogPayload(payload)
+	}
+	return payload
+}
+
+// GetRemoveVolumeFromSGPayload returns payload for removing volume/s from SG.
+func (c *Client) GetRemoveVolumeFromSGPayload(volumeIDs ...string) (payload interface{}) {
+	if c.version == "90" {
+		removeVolumeParam := &types.RemoveVolumeParam{
+			VolumeIDs: volumeIDs,
+		}
+		payload = &types.UpdateStorageGroupPayload{
+			EditStorageGroupActionParam: types.EditStorageGroupActionParam{
+				RemoveVolumeParam: removeVolumeParam,
+			},
+			ExecutionOption: types.ExecutionOptionSynchronous,
+		}
+	} else {
+		removeVolumeParam := &types91.RemoveVolumeParam{
+			VolumeIDs: volumeIDs,
+		}
+		payload = &types91.UpdateStorageGroupPayload{
+			EditStorageGroupActionParam: types91.EditStorageGroupActionParam{
+				RemoveVolumeParam: removeVolumeParam,
+			},
+			ExecutionOption: types91.ExecutionOptionSynchronous,
+		}
+	}
+	if payload != nil {
+		ifDebugLogPayload(payload)
+	}
+	return payload
 }
 
 // GetStoragePoolList returns a StoragePoolList object, which contains a list of all the Storage Pool names.
@@ -754,9 +869,9 @@ func (c *Client) InitiateDeallocationOfTracksFromVolume(symID string, volumeID s
 
 // GetPortGroupList returns a PortGroupList object, which contains a list of the Port Groups
 // which can be optionally filtered based on type
-func (c *Client) GetPortGroupList(symid string, portGroupType string) (*types.PortGroupList, error) {
+func (c *Client) GetPortGroupList(symID string, portGroupType string) (*types.PortGroupList, error) {
 	defer c.TimeSpent("GetPortGroupList", time.Now())
-	if _, err := c.IsAllowedArray(symid); err != nil {
+	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	filter := "?"
@@ -765,7 +880,7 @@ func (c *Client) GetPortGroupList(symid string, portGroupType string) (*types.Po
 	} else if strings.EqualFold(portGroupType, "iscsi") {
 		filter += "iscsi=true"
 	}
-	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symid + XPortGroup
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XPortGroup
 	if len(filter) > 1 {
 		URL += filter
 	}
@@ -801,9 +916,9 @@ func (c *Client) GetPortGroupByID(symID string, portGroupID string) (*types.Port
 
 // GetInitiatorList returns an InitiatorList object, which contains a list of all the Initiators.
 // initiatorHBA, isISCSI, inHost are optional arguments which act as filters for the initiator list
-func (c *Client) GetInitiatorList(symid string, initiatorHBA string, isISCSI bool, inHost bool) (*types.InitiatorList, error) {
+func (c *Client) GetInitiatorList(symID string, initiatorHBA string, isISCSI bool, inHost bool) (*types.InitiatorList, error) {
 	defer c.TimeSpent("GetInitiatorList", time.Now())
-	if _, err := c.IsAllowedArray(symid); err != nil {
+	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	filter := "?"
@@ -825,7 +940,7 @@ func (c *Client) GetInitiatorList(symid string, initiatorHBA string, isISCSI boo
 		}
 		filter += "iscsi=true"
 	}
-	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symid + XInitiator
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XInitiator
 	if len(filter) > 1 {
 		URL += filter
 	}
@@ -860,12 +975,12 @@ func (c *Client) GetInitiatorByID(symID string, initID string) (*types.Initiator
 }
 
 // GetHostList returns an HostList object, which contains a list of all the Hosts.
-func (c *Client) GetHostList(symid string) (*types.HostList, error) {
+func (c *Client) GetHostList(symID string) (*types.HostList, error) {
 	defer c.TimeSpent("GetHostList", time.Now())
-	if _, err := c.IsAllowedArray(symid); err != nil {
+	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
-	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symid + XHost
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XHost
 	hostList := &types.HostList{}
 	ctx, cancel := GetTimeoutContext()
 	defer cancel()
@@ -1016,12 +1131,12 @@ func (c *Client) DeleteHost(symID string, hostID string) error {
 }
 
 // GetMaskingViewList  returns a list of the MaskingView names.
-func (c *Client) GetMaskingViewList(symid string) (*types.MaskingViewList, error) {
+func (c *Client) GetMaskingViewList(symID string) (*types.MaskingViewList, error) {
 	defer c.TimeSpent("GetMaskingViewList", time.Now())
-	if _, err := c.IsAllowedArray(symid); err != nil {
+	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
-	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symid + XMaskingView
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XMaskingView
 	mvList := &types.MaskingViewList{}
 	ctx, cancel := GetTimeoutContext()
 	defer cancel()
@@ -1034,12 +1149,12 @@ func (c *Client) GetMaskingViewList(symid string) (*types.MaskingViewList, error
 }
 
 // GetMaskingViewByID returns a masking view given it's identifier (which is the name)
-func (c *Client) GetMaskingViewByID(symid string, maskingViewID string) (*types.MaskingView, error) {
+func (c *Client) GetMaskingViewByID(symID string, maskingViewID string) (*types.MaskingView, error) {
 	defer c.TimeSpent("GetMaskingViewByID", time.Now())
-	if _, err := c.IsAllowedArray(symid); err != nil {
+	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
-	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symid + XMaskingView + "/" + maskingViewID
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XMaskingView + "/" + maskingViewID
 	mv := &types.MaskingView{}
 	ctx, cancel := GetTimeoutContext()
 	defer cancel()
@@ -1053,12 +1168,12 @@ func (c *Client) GetMaskingViewByID(symid string, maskingViewID string) (*types.
 
 // GetMaskingViewConnections returns the connections of a masking view (optionally for a specific volume id.)
 // Here volume id is the 5 digit volume ID.
-func (c *Client) GetMaskingViewConnections(symid string, maskingViewID string, volumeID string) ([]*types.MaskingViewConnection, error) {
+func (c *Client) GetMaskingViewConnections(symID string, maskingViewID string, volumeID string) ([]*types.MaskingViewConnection, error) {
 	defer c.TimeSpent("GetMaskingViewConnections", time.Now())
-	if _, err := c.IsAllowedArray(symid); err != nil {
+	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
-	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symid + XMaskingView + "/" + maskingViewID + "/connections"
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XMaskingView + "/" + maskingViewID + "/connections"
 	if volumeID != "" {
 		URL = URL + "?volume_id=" + volumeID
 	}
@@ -1144,6 +1259,7 @@ func (c *Client) CreateMaskingView(symID string, maskingViewID string, storageGr
 	return maskingView, nil
 }
 
+// DeletePortGroup - Deletes a PG
 func (c *Client) DeletePortGroup(symID string, portGroupID string) error {
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XPortGroup + "/" + portGroupID
 
@@ -1155,7 +1271,7 @@ func (c *Client) DeletePortGroup(symID string, portGroupID string) error {
 	return nil
 }
 
-// Update the PortGroup based on the 'ports' slice. The slice represents the intended
+// UpdatePortGroup - Update the PortGroup based on the 'ports' slice. The slice represents the intended
 // configuration of the PortGroup after _successful_ completion of the request.
 // NB: based on the passed in 'ports' the implementation will determine how to update
 // the PortGroup and make appropriate REST calls sequentially. Take this into
@@ -1184,7 +1300,7 @@ func (c *Client) UpdatePortGroup(symID string, portGroupID string, ports []types
 		return nil, err
 	}
 
-	portIdRegex, _ := regexp.Compile("\\w+:(\\d+)")
+	portIDRegex, _ := regexp.Compile("\\w+:(\\d+)")
 
 	// Create map of string "<DIRECTOR ID>/<PORT ID>" to a SymmetrixPortKeyType object based on what's found
 	// in the PortGroup
@@ -1194,7 +1310,7 @@ func (c *Client) UpdatePortGroup(symID string, portGroupID string, ports []types
 		// PortID string may come as a combination of directory + port_number
 		// Extract just the port_number part
 		port := strings.ToLower(p.PortID)
-		submatch := portIdRegex.FindAllStringSubmatch(port, -1)
+		submatch := portIDRegex.FindAllStringSubmatch(port, -1)
 		if len(submatch) > 0 {
 			port = submatch[0][1]
 		}
