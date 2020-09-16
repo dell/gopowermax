@@ -90,14 +90,26 @@ type Pmax interface {
 
 	// CreateStorageGroup creates a storage group given the Storage group id
 	// and returns the storage group object. The storage group can be configured for thick volumes as an option.
+	// This is a blocking call and will only return after the storage group has been created
 	CreateStorageGroup(symID string, storageGroupID string, srpID string, serviceLevel string, thickVolumes bool) (*types.StorageGroup, error)
+
 	// UpdateStorageGroup updates a storage group (i.e. a PUT operation) and should support all the defined
 	// operations (but many have not been tested).
+	// This is done asynchronously and returns back a job
 	UpdateStorageGroup(symID string, storageGroupID string, payload interface{}) (*types.Job, error)
+
+	// UpdateStorageGroupS updates a storage group (i.e. a PUT operation) and should support all the defined
+	// operations (but many have not been tested).
+	// This is done synchronously and doesn't create any jobs
+	UpdateStorageGroupS(symID string, storageGroupID string, payload interface{}) error
 
 	// CreateVolumeInStorageGroup takes simplified input arguments to create a volume of a give name and size in a particular storage group.
 	// This method creates a job and waits on the job to complete.
 	CreateVolumeInStorageGroup(symID string, storageGroupID string, volumeName string, sizeInCylinders int) (*types.Volume, error)
+
+	// CreateVolumeInStorageGroup takes simplified input arguments to create a volume of a give name and size in a particular storage group.
+	// This is done synchronously and no jobs are created
+	CreateVolumeInStorageGroupS(symID string, storageGroupID string, volumeName string, sizeInCylinders int) (*types.Volume, error)
 
 	// DeleteStorageGroup deletes a storage group given a storage group id
 	DeleteStorageGroup(symID string, storageGroupID string) error
@@ -113,6 +125,10 @@ type Pmax interface {
 
 	// Add volume(s) asynchronously to a StorageGroup
 	AddVolumesToStorageGroup(symID string, storageGroupID string, volumeIDs ...string) error
+
+	// Add volume(s) synchronously to a StorageGroup
+	// This is a blocking call and will only return once the volumes have been added to storage group
+	AddVolumesToStorageGroupS(symID string, storageGroupID string, volumeIDs ...string) error
 
 	// Remove volume(s) synchronously from a StorageGroup
 	RemoveVolumesFromStorageGroup(symID string, storageGroupID string, volumeIDs ...string) (*types.StorageGroup, error)
@@ -174,6 +190,7 @@ type Pmax interface {
 	DeleteHost(symID string, hostID string) error
 	// UpdateHostInitiators will update the inititators
 	UpdateHostInitiators(symID string, host *types.Host, initiatorIDs []string) (*types.Host, error)
+	UpdateHostName(symID, oldHostID, newHostID string) (*types.Host, error)
 	// GetDirectorIDList returns a list of directors
 	GetDirectorIDList(symID string) (*types.DirectorIDList, error)
 	// GetPortList returns a list of all the ports on a specified director/array.
@@ -201,12 +218,25 @@ type Pmax interface {
 	GetSnapshotInfo(symID, volume, SnapID string) (*types.VolumeSnapshot, error)
 	// CreateSnapshot creates a snapVx snapshot of a volume using the input parameters
 	CreateSnapshot(symID string, SnapID string, sourceVolumeList []types.VolumeList, ttl int64) error
-	//ModifySnapshot executes actions on a snapshot
+
+	//ModifySnapshot executes actions on a snapshot asynchronously
+	// This creates a job and waits on its completion
 	ModifySnapshot(symID string, sourceVol []types.VolumeList,
 		targetVol []types.VolumeList, SnapID string, action string,
 		newSnapID string, generation int64) error
+
+	// ModifySnapshotS executes actions on a snapshot synchronously
+	ModifySnapshotS(symID string, sourceVol []types.VolumeList,
+		targetVol []types.VolumeList, SnapID string, action string,
+		newSnapID string, generation int64) error
 	// DeleteSnapshot deletes a snapshot from a volume
+	// This is an asynchronous call and waits for the job to complete
 	DeleteSnapshot(symID, SnapID string, sourceVolumes []types.VolumeList, generation int64) error
+
+	// DeleteSnapshotS deletes a snapshot from a volume
+	// This is a synchronous call and doesn't create a job
+	DeleteSnapshotS(symID, SnapID string, sourceVolumes []types.VolumeList, generation int64) error
+
 	// GetSnapshotGenerations returns a list of all the snapshot generation on a specific snapshot
 	GetSnapshotGenerations(symID, volume, SnapID string) (*types.VolumeSnapshotGenerations, error)
 	// GetSnapshotGenerationInfo returns the specific generation info related to a snapshot
@@ -222,6 +252,7 @@ type Pmax interface {
 	UpdatePortGroup(symID string, portGroupID string, ports []types.PortKey) (*types.PortGroup, error)
 
 	// Expand the size of an existing volume
-	ExpandVolume(symID string, volumeID string, newSizeGB int) (*types.Volume, error)
-	GetCreateVolInSGPayload(sizeInCylinders int, volumeName string) (payload interface{})
+	ExpandVolume(symID string, volumeID string, newSizeCYL int) (*types.Volume, error)
+	// Returns a payload for a create volume call
+	GetCreateVolInSGPayload(sizeInCylinders int, volumeName string, isSync bool) (payload interface{})
 }

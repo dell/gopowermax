@@ -147,7 +147,6 @@ func (c *Client) CreateSnapshot(symID string, snapID string, sourceVolumeList []
 		TimeToLive:       ttl,
 		ExecutionOption:  types.ExecutionOptionSynchronous,
 	}
-	Debug = true
 	ifDebugLogPayload(snapParam)
 	URL := c.privURLPrefix() + ReplicationX + SymmetrixX + symID + XSnapshot + "/" + snapID
 	err := c.api.Post(context.Background(), URL, c.getDefaultHeaders(), snapParam, nil)
@@ -180,7 +179,6 @@ func (c *Client) DeleteSnapshot(symID, snapID string, sourceVolumes []types.Volu
 		ExecutionOption:      types.ExecutionOptionAsynchronous,
 	}
 	job := &types.Job{}
-	Debug = true
 	ifDebugLogPayload(deleteSnapshot)
 	URL := c.privURLPrefix() + ReplicationX + SymmetrixX + symID + XSnapshot + "/" + snapID
 	URL = strings.Replace(URL, "/90/", "/91/", 1)
@@ -194,6 +192,38 @@ func (c *Client) DeleteSnapshot(symID, snapID string, sourceVolumes []types.Volu
 	}
 	if job.Status == types.JobStatusFailed || job.Status == types.JobStatusRunning {
 		return fmt.Errorf("Job status not successful for snapshot delete. Job status = %s and Job result = %s", job.Status, job.Result)
+	}
+	log.Info(fmt.Sprintf("Snapshot (%s) deleted successfully", snapID))
+	return nil
+}
+
+// DeleteSnapshotS - Deletes a snapshot synchronously
+func (c *Client) DeleteSnapshotS(symID, snapID string, sourceVolumes []types.VolumeList, generation int64) error {
+	defer c.TimeSpent("DeleteSnapshotS", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return err
+	}
+	deleteSnapshot := &types.DeleteVolumeSnapshot{
+		DeviceNameListSource: sourceVolumes,
+		Symforce:             false,
+		Star:                 false,
+		Force:                false,
+		Restore:              false,
+		Generation:           generation,
+		ExecutionOption:      types.ExecutionOptionSynchronous,
+	}
+	URL := c.privURLPrefix() + ReplicationX + SymmetrixX + symID + XSnapshot + "/" + snapID
+	URL = strings.Replace(URL, "/90/", "/91/", 1)
+	fields := map[string]interface{}{
+		http.MethodPut: URL,
+	}
+	ifDebugLogPayload(deleteSnapshot)
+	ctx, cancel := GetTimeoutContext()
+	defer cancel()
+	err := c.api.DoWithHeaders(ctx, http.MethodDelete, URL, c.getDefaultHeaders(), deleteSnapshot, nil)
+	if err != nil {
+		log.WithFields(fields).Errorf("Delete Snapshot (%s:%s) failed with error: %s", symID, snapID, err.Error())
+		return err
 	}
 	log.Info(fmt.Sprintf("Snapshot (%s) deleted successfully", snapID))
 	return nil
@@ -268,6 +298,59 @@ func (c *Client) ModifySnapshot(symID string, sourceVol []types.VolumeList,
 	}
 	if job.Status == types.JobStatusFailed || job.Status == types.JobStatusRunning {
 		return fmt.Errorf("Job status not successful for snapshot %s. Job status = %s and Job result = %s", action, job.Status, job.Result)
+	}
+	log.Info(fmt.Sprintf("Action (%s) on Snapshot (%s) is successful", action, snapID))
+	return nil
+}
+
+// ModifySnapshotS executes actions on snapshots synchronously
+func (c *Client) ModifySnapshotS(symID string, sourceVol []types.VolumeList,
+	targetVol []types.VolumeList, snapID string, action string,
+	newSnapID string, generation int64) error {
+	defer c.TimeSpent("ModifySnapshotS", time.Now())
+
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return err
+	}
+
+	snapParam := &types.ModifyVolumeSnapshot{}
+
+	switch action {
+	case "Link", "Unlink":
+		snapParam = &types.ModifyVolumeSnapshot{
+			VolumeNameListSource: sourceVol,
+			VolumeNameListTarget: targetVol,
+			Force:                false,
+			Star:                 false,
+			Exact:                false,
+			Copy:                 false,
+			Remote:               false,
+			Symforce:             false,
+			Action:               action,
+			Generation:           generation,
+			ExecutionOption:      types.ExecutionOptionSynchronous,
+		}
+	case "Rename":
+		snapParam = &types.ModifyVolumeSnapshot{
+			VolumeNameListSource: sourceVol,
+			VolumeNameListTarget: targetVol,
+			NewSnapshotName:      newSnapID,
+			Action:               action,
+			ExecutionOption:      types.ExecutionOptionSynchronous,
+		}
+	default:
+		return fmt.Errorf("not a supported action on Snapshots")
+	}
+	URL := c.privURLPrefix() + ReplicationX + SymmetrixX + symID + XSnapshot + "/" + snapID
+	fields := map[string]interface{}{
+		http.MethodPut: URL,
+	}
+	ctx, cancel := GetTimeoutContext()
+	defer cancel()
+	err := c.api.Put(ctx, URL, c.getDefaultHeaders(), snapParam, nil)
+	if err != nil {
+		log.WithFields(fields).Error("Error in ModifySnapshotS: " + err.Error())
+		return err
 	}
 	log.Info(fmt.Sprintf("Action (%s) on Snapshot (%s) is successful", action, snapID))
 	return nil

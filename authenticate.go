@@ -17,7 +17,6 @@ package pmax
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -25,7 +24,6 @@ import (
 	"strconv"
 
 	"github.com/dell/gopowermax/api"
-	types "github.com/dell/gopowermax/types/v90"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -66,7 +64,7 @@ func (c *Client) Authenticate(configConnect *ConfigConnect) error {
 	path := "univmax/restapi/" + c.version + "/system/version"
 
 	if c.version != APIVersion90 {
-		// Path for version has been changed from u4p 91 unwards
+		// Path for version has been changed from u4p 91 onwards
 		path = "univmax/restapi/" + "version"
 	}
 
@@ -85,15 +83,7 @@ func (c *Client) Authenticate(configConnect *ConfigConnect) error {
 	case !(resp.StatusCode >= 200 && resp.StatusCode <= 299):
 		return c.api.ParseJSONError(resp)
 	}
-
-	version := &types.Version{}
-	decoder := json.NewDecoder(resp.Body)
-	err = decoder.Decode(version)
-	if err != nil {
-		return err
-	}
-	log.Printf("API version: %s\n", version.Version)
-
+	doLog(log.Infoln, "authentication successful")
 	return nil
 }
 

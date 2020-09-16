@@ -49,7 +49,7 @@ const (
 var (
 	// PmaxTimeout is the timeout value for pmax calls in sloprovisioning or system.
 	// If Unisphere fails to answer after this period, an error will be returned.
-	PmaxTimeout = 180 * time.Second
+	PmaxTimeout = 300 * time.Second
 )
 
 // GetTimeoutContext sets up a timeout of time PmaxTimeout for the returned context.
@@ -482,6 +482,28 @@ func (c *Client) UpdateStorageGroup(symID string, storageGroupID string, payload
 	return job, nil
 }
 
+// UpdateStorageGroupS is a general method to update a StorageGroup (PUT operation) using a UpdateStorageGroupPayload.
+func (c *Client) UpdateStorageGroupS(symID string, storageGroupID string, payload interface{}) error {
+	defer c.TimeSpent("UpdateStorageGroupS", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return err
+	}
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XStorageGroup + "/" + storageGroupID
+	fields := map[string]interface{}{
+		http.MethodPut: URL,
+	}
+
+	ctx, cancel := GetTimeoutContext()
+	defer cancel()
+	err := c.api.Put(
+		ctx, URL, c.getDefaultHeaders(), payload, nil)
+	if err != nil {
+		log.WithFields(fields).Error("Error in UpdateStorageGroup: " + err.Error())
+		return err
+	}
+	return nil
+}
+
 func ifDebugLogPayload(payload interface{}) {
 	if Debug == false {
 		return
@@ -509,7 +531,7 @@ func (c *Client) CreateVolumeInStorageGroup(
 
 	job := &types.Job{}
 	var err error
-	payload := c.GetCreateVolInSGPayload(sizeInCylinders, volumeName)
+	payload := c.GetCreateVolInSGPayload(sizeInCylinders, volumeName, false)
 	job, err = c.UpdateStorageGroup(symID, storageGroupID, payload)
 	if err != nil || job == nil {
 		return nil, fmt.Errorf("A job was not returned from UpdateStorageGroup")
@@ -548,14 +570,58 @@ func (c *Client) CreateVolumeInStorageGroup(
 	return nil, fmt.Errorf(errormsg)
 }
 
-// ExpandVolume expands an existing volume to a new (larger) size in GB
-func (c *Client) ExpandVolume(symID string, volumeID string, newSizeGB int) (*types.Volume, error) {
+// CreateVolumeInStorageGroupS creates a volume in the specified Storage Group with a given volumeName
+// and the size of the volume in cylinders.
+// This method is run synchronously
+func (c *Client) CreateVolumeInStorageGroupS(
+	symID string, storageGroupID string, volumeName string, sizeInCylinders int) (*types.Volume, error) {
+	defer c.TimeSpent("CreateVolumeInStorageGroup", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+
+	if len(volumeName) > MaxVolIdentifierLength {
+		return nil, fmt.Errorf("Length of volumeName exceeds max limit")
+	}
+
+	payload := c.GetCreateVolInSGPayload(sizeInCylinders, volumeName, true)
+	err := c.UpdateStorageGroupS(symID, storageGroupID, payload)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't create volume. error - %s", err.Error())
+	}
+
+	// Look up the volume by the identifier.
+	volIDList, err := c.GetVolumeIDList(symID, volumeName, false)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't get Volume ID List: " + err.Error())
+	}
+	if len(volIDList) > 1 {
+		log.Warning("Found multiple volumes matching the identifier " + volumeName)
+	}
+	for _, volumeID := range volIDList {
+		vol, err := c.GetVolumeByID(symID, volumeID)
+		if err == nil {
+			for _, sgID := range vol.StorageGroupIDList {
+				if sgID == storageGroupID && vol.CapacityCYL == sizeInCylinders {
+					// Return the first match
+					return vol, nil
+				}
+			}
+		}
+	}
+	errormsg := fmt.Sprintf("Failed to find newly created volume with name: %s in SG: %s", volumeName, storageGroupID)
+	log.Error(errormsg)
+	return nil, fmt.Errorf(errormsg)
+}
+
+// ExpandVolume expands an existing volume to a new (larger) size in CYL
+func (c *Client) ExpandVolume(symID string, volumeID string, newSizeCYL int) (*types.Volume, error) {
 	payload := &types.EditVolumeParam{
 		EditVolumeActionParam: types.EditVolumeActionParam{
 			ExpandVolumeParam: &types.ExpandVolumeParam{
 				VolumeAttribute: types.VolumeAttributeType{
-					VolumeSize:   fmt.Sprintf("%d", newSizeGB),
-					CapacityUnit: "GB",
+					VolumeSize:   fmt.Sprintf("%d", newSizeCYL),
+					CapacityUnit: "CYL",
 				},
 			},
 		},
@@ -585,12 +651,11 @@ func (c *Client) AddVolumesToStorageGroup(symID string, storageGroupID string, v
 	if len(volumeIDs) == 0 {
 		return fmt.Errorf("At least one volume id has to be specified")
 	}
-	payload := c.GetAddVolumeToSGPayload(volumeIDs...)
+	payload := c.GetAddVolumeToSGPayload(false, volumeIDs...)
 	job, err := c.UpdateStorageGroup(symID, storageGroupID, payload)
 	if err != nil || job == nil {
 		return fmt.Errorf("A job was not returned from UpdateStorageGroup")
 	}
-
 	job, err = c.WaitOnJobCompletion(symID, job.JobID)
 	if err != nil {
 		return err
@@ -599,6 +664,24 @@ func (c *Client) AddVolumesToStorageGroup(symID string, storageGroupID string, v
 	switch job.Status {
 	case types.JobStatusFailed:
 		return fmt.Errorf("The UpdateStorageGroup job failed: " + c.JobToString(job))
+	}
+	return nil
+}
+
+// AddVolumesToStorageGroupS adds one or more volumes (given by their volumeIDs) to a StorageGroup.
+func (c *Client) AddVolumesToStorageGroupS(symID string, storageGroupID string, volumeIDs ...string) error {
+	defer c.TimeSpent("AddVolumesToStorageGroupS", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return err
+	}
+	// Check if the volume id list is not empty
+	if len(volumeIDs) == 0 {
+		return fmt.Errorf("at least one volume id has to be specified")
+	}
+	payload := c.GetAddVolumeToSGPayload(true, volumeIDs...)
+	err := c.UpdateStorageGroupS(symID, storageGroupID, payload)
+	if err != nil {
+		return fmt.Errorf("An error(%s) was returned from UpdateStorageGroup", err.Error())
 	}
 	return nil
 }
@@ -629,9 +712,15 @@ func (c *Client) RemoveVolumesFromStorageGroup(symID string, storageGroupID stri
 }
 
 // GetCreateVolInSGPayload returns payload for adding volume/s to SG.
-func (c *Client) GetCreateVolInSGPayload(sizeInCylinders int, volumeName string) (payload interface{}) {
+func (c *Client) GetCreateVolInSGPayload(sizeInCylinders int, volumeName string, isSync bool) (payload interface{}) {
+	var executionOption string
 	size := strconv.Itoa(sizeInCylinders)
 	if c.version == "90" {
+		if isSync {
+			executionOption = types.ExecutionOptionSynchronous
+		} else {
+			executionOption = types.ExecutionOptionAsynchronous
+		}
 		addVolumeParam := &types.AddVolumeParam{
 			NumberOfVols: 1,
 			VolumeAttribute: types.VolumeAttributeType{
@@ -652,10 +741,15 @@ func (c *Client) GetCreateVolInSGPayload(sizeInCylinders int, volumeName string)
 					AddVolumeParam: addVolumeParam,
 				},
 			},
-			ExecutionOption: types.ExecutionOptionAsynchronous,
+			ExecutionOption: executionOption,
 		}
 
 	} else {
+		if isSync {
+			executionOption = types91.ExecutionOptionSynchronous
+		} else {
+			executionOption = types91.ExecutionOptionAsynchronous
+		}
 		addVolumeParam := &types91.AddVolumeParam{
 			CreateNewVolumes: true,
 			Emulation:        "FBA",
@@ -678,7 +772,7 @@ func (c *Client) GetCreateVolInSGPayload(sizeInCylinders int, volumeName string)
 					AddVolumeParam: addVolumeParam,
 				},
 			},
-			ExecutionOption: types91.ExecutionOptionAsynchronous,
+			ExecutionOption: executionOption,
 		}
 	}
 	if payload != nil {
@@ -688,8 +782,14 @@ func (c *Client) GetCreateVolInSGPayload(sizeInCylinders int, volumeName string)
 }
 
 // GetAddVolumeToSGPayload returns payload for adding specific volume/s to SG.
-func (c *Client) GetAddVolumeToSGPayload(volumeIDs ...string) (payload interface{}) {
+func (c *Client) GetAddVolumeToSGPayload(isSync bool, volumeIDs ...string) (payload interface{}) {
+	executionOption := ""
 	if c.version == "90" {
+		if isSync {
+			executionOption = types.ExecutionOptionSynchronous
+		} else {
+			executionOption = types.ExecutionOptionAsynchronous
+		}
 		addSpecificVolumeParam := &types.AddSpecificVolumeParam{
 			VolumeIDs: volumeIDs,
 		}
@@ -699,9 +799,14 @@ func (c *Client) GetAddVolumeToSGPayload(volumeIDs ...string) (payload interface
 					AddSpecificVolumeParam: addSpecificVolumeParam,
 				},
 			},
-			ExecutionOption: types.ExecutionOptionAsynchronous,
+			ExecutionOption: executionOption,
 		}
 	} else {
+		if isSync {
+			executionOption = types91.ExecutionOptionSynchronous
+		} else {
+			executionOption = types91.ExecutionOptionAsynchronous
+		}
 		addSpecificVolumeParam := &types91.AddSpecificVolumeParam{
 			VolumeIDs: volumeIDs,
 		}
@@ -711,7 +816,7 @@ func (c *Client) GetAddVolumeToSGPayload(volumeIDs ...string) (payload interface
 					AddSpecificVolumeParam: addSpecificVolumeParam,
 				},
 			},
-			ExecutionOption: types91.ExecutionOptionAsynchronous,
+			ExecutionOption: executionOption,
 		}
 	}
 	if payload != nil {
@@ -1096,6 +1201,36 @@ func (c *Client) UpdateHostInitiators(symID string, host *types.Host, initiatorI
 		err := c.api.Put(ctx, URL, c.getDefaultHeaders(), hostParam, updatedHost)
 		if err != nil {
 			log.Error("UpdateHostInitiators failed: " + err.Error())
+			return nil, err
+		}
+	}
+
+	return updatedHost, nil
+}
+
+// UpdateHostName updates a host with new hostID and returns a types.Host.
+func (c *Client) UpdateHostName(symID, oldHostID, newHostID string) (*types.Host, error) {
+	defer c.TimeSpent("UpdateHostName", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XHost + "/" + oldHostID
+	updatedHost := &types.Host{}
+
+	ctx, cancel := GetTimeoutContext()
+	defer cancel()
+	// add initiators if needed
+	if newHostID != "" {
+		hostParam := &types.UpdateHostParam{}
+		hostParam.EditHostAction = &types.EditHostParams{}
+		hostParam.EditHostAction.RenameHostParam = &types.RenameHostParam{}
+		hostParam.EditHostAction.RenameHostParam.NewHostName = newHostID
+		hostParam.ExecutionOption = types.ExecutionOptionSynchronous
+		ifDebugLogPayload(hostParam)
+		err := c.api.Put(ctx, URL, c.getDefaultHeaders(), hostParam, updatedHost)
+		if err != nil {
+			log.Error("UpdateHostName failed: " + err.Error())
 			return nil, err
 		}
 	}

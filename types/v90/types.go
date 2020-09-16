@@ -36,12 +36,12 @@ type Version struct {
 
 // SymmetrixIDList : contains list of symIDs
 type SymmetrixIDList struct {
-	SymmetrixIDs []string `json:"symmetrixID"`
+	SymmetrixIDs []string `json:"symmetrixId"`
 }
 
 // Symmetrix : information about a Symmetrix system
 type Symmetrix struct {
-	SymmetrixID    string `json:"symmetrixID"`
+	SymmetrixID    string `json:"symmetrixId"`
 	DeviceCount    int    `json:"device_count"`
 	Ucode          string `json:"ucode"`
 	Model          string `json:"model"`

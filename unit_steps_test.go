@@ -183,7 +183,7 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.GetPortGigEError = false
 	mock.InducedErrors.GetDirectorError = false
 	mock.InducedErrors.GetStoragePoolError = false
-
+	mock.InducedErrors.ExpandVolumeError = false
 	switch errorType {
 	case "InvalidJSON":
 		mock.InducedErrors.InvalidJSON = true
@@ -265,8 +265,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.GetStoragePoolError = true
 	case "GetSymVolumeError":
 		mock.InducedErrors.GetSymVolumeError = true
-	case "GetSnapshotError":
-		mock.InducedErrors.GetSnapshotError = true
+	case "DeleteSnapshotError":
+		mock.InducedErrors.DeleteSnapshotError = true
 	case "GetGenerationError":
 		mock.InducedErrors.GetGenerationError = true
 	case "GetPrivateVolumeIterator":
@@ -281,6 +281,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.UpdatePortGroupError = true
 	case "DeletePortGroupError":
 		mock.InducedErrors.DeletePortGroupError = true
+	case "ExpandVolumeError":
+		mock.InducedErrors.ExpandVolumeError = true
 	case "none":
 	default:
 		return fmt.Errorf("unknown errorType: %s", errorType)
@@ -591,6 +593,15 @@ func (c *unitContext) iCallCreateVolumeInStorageGroupWithNameAndSize(volumeName 
 		c.vol, c.err = c.client.CreateVolumeInStorageGroup(symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
 	} else {
 		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+	}
+	return nil
+}
+
+func (c *unitContext) iCallCreateVolumeInStorageGroupSWithNameAndSize(volumeName string, sizeInCylinders int) error {
+	if !c.flag91 {
+		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+	} else {
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
 	}
 	return nil
 }
@@ -1055,6 +1066,15 @@ func (c *unitContext) iCallAddVolumesToStorageGroup(sgID string) error {
 	return nil
 }
 
+func (c *unitContext) iCallAddVolumesToStorageGroupS(sgID string) error {
+	if !c.flag91 {
+		c.err = c.client.AddVolumesToStorageGroupS(symID, sgID, c.volIDList...)
+	} else {
+		c.err = c.client91.AddVolumesToStorageGroupS(symID, sgID, c.volIDList...)
+	}
+	return nil
+}
+
 func (c *unitContext) thenTheVolumesArePartOfStorageGroupIfNoError() error {
 	if c.err != nil {
 		return nil
@@ -1296,9 +1316,23 @@ func (c *unitContext) iCallModifySnapshotWithAnd(sourceVols, targetVols, SnapID,
 	return nil
 }
 
+func (c *unitContext) iCallModifySnapshotSWithAnd(sourceVols, targetVols, SnapID, newSnapID string, genID int64, action string) error {
+	sourceVolumeList := c.createVolumeList(sourceVols)
+	targetVolumeList := c.createVolumeList(targetVols)
+	c.err = c.client.ModifySnapshotS(symID, sourceVolumeList, targetVolumeList, SnapID, action, newSnapID, genID)
+
+	return nil
+}
+
 func (c *unitContext) iCallDeleteSnapshotWithSnapshotAndOnIt(sourceVols, SnapID string, genID int64) error {
 	sourceVolumeList := c.createVolumeList(sourceVols)
 	c.err = c.client.DeleteSnapshot(symID, SnapID, sourceVolumeList, genID)
+	return nil
+}
+
+func (c *unitContext) iCallDeleteSnapshotSWithSnapshotAndOnIt(sourceVols, SnapID string, genID int64) error {
+	sourceVolumeList := c.createVolumeList(sourceVols)
+	c.err = c.client.DeleteSnapshotS(symID, SnapID, sourceVolumeList, genID)
 	return nil
 }
 
@@ -1365,6 +1399,11 @@ func (c *unitContext) iRecieveTargets(count int) error {
 	return nil
 }
 
+func (c *unitContext) iCallUpdateHostName(newName string) error {
+	c.host, c.err = c.client.UpdateHostName(symID, c.hostID, newName)
+	return nil
+}
+
 func UnitTestContext(s *godog.Suite) {
 	c := &unitContext{}
 	s.Step(`^I induce error "([^"]*)"$`, c.iInduceError)
@@ -1395,6 +1434,7 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call WaitOnJobCompletion$`, c.iCallWaitOnJobCompletion)
 	// Volumes
 	s.Step(`^I call CreateVolumeInStorageGroup with name "([^"]*)" and size (\d+)$`, c.iCallCreateVolumeInStorageGroupWithNameAndSize)
+	s.Step(`^I call CreateVolumeInStorageGroupS with name "([^"]*)" and size (\d+)$`, c.iCallCreateVolumeInStorageGroupSWithNameAndSize)
 	s.Step(`^I get a valid Volume with name "([^"]*)" if no error$`, c.iGetAValidVolumeWithNameIfNoError)
 	s.Step(`^I call CreateStorageGroup with name "([^"]*)" and srp "([^"]*)" and sl "([^"]*)"$`, c.iCallCreateStorageGroupWithNameAndSrpAndSl)
 	s.Step(`^I call DeleteStorageGroup "([^"]*)"$`, c.iCallDeleteStorageGroup)
@@ -1448,6 +1488,7 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call CreateHost "([^"]*)"$`, c.iCallCreateHost)
 	s.Step(`^I call DeleteHost "([^"]*)"$`, c.iCallDeleteHost)
 	s.Step(`^I call AddVolumesToStorageGroup "([^"]*)"$`, c.iCallAddVolumesToStorageGroup)
+	s.Step(`^I call AddVolumesToStorageGroupS "([^"]*)"$`, c.iCallAddVolumesToStorageGroupS)
 	s.Step(`^then the Volumes are part of StorageGroup if no error$`, c.thenTheVolumesArePartOfStorageGroupIfNoError)
 	s.Step(`^I call UpdateHost$`, c.iCallUpdateHost)
 	// GetListOftargetAddresses
@@ -1478,11 +1519,14 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call GetSnapshotGeneration with "([^"]*)", snapshot "([^"]*)" and (\d+) on it$`, c.iCallGetSnapshotGenerationWithSnapshotAndOnIt)
 	s.Step(`^I should get a generation Info if no error$`, c.iShouldGetAGenerationInfoIfNoError)
 	s.Step(`^I call ModifySnapshot with "([^"]*)", "([^"]*)", "([^"]*)", "([^"]*)", (\d+) and "([^"]*)"$`, c.iCallModifySnapshotWithAnd)
+	s.Step(`^I call ModifySnapshotS with "([^"]*)", "([^"]*)", "([^"]*)", "([^"]*)", (\d+) and "([^"]*)"$`, c.iCallModifySnapshotSWithAnd)
 	s.Step(`^I should get a valid response if no error$`, c.iShouldGetAValidResponseIfNoError)
 	s.Step(`^I call DeleteSnapshot with "([^"]*)", snapshot "([^"]*)" and (\d+)  on it$`, c.iCallDeleteSnapshotWithSnapshotAndOnIt)
+	s.Step(`^I call DeleteSnapshotS with "([^"]*)", snapshot "([^"]*)" and (\d+)  on it$`, c.iCallDeleteSnapshotSWithSnapshotAndOnIt)
 	s.Step(`^I call GetPrivVolumeByID with "([^"]*)"$`, c.iCallGetPrivVolumeByIDWith)
 	s.Step(`^I should get a private volume information if no error$`, c.iShouldGetAPrivateVolumeInformationIfNoError)
 	s.Step(`^I call GetISCSITargets$`, c.iCallGetISCSITargets)
 	s.Step(`^I recieve (\d+) targets$`, c.iRecieveTargets)
 	s.Step(`^there should be no errors$`, c.thereShouldBeNoErrors)
+	s.Step(`^I call UpdateHostName "([^"]*)"$`, c.iCallUpdateHostName)
 }
