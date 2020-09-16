@@ -78,7 +78,7 @@ type ChangeInitiatorParam struct {
 
 // RenameHostParam holds the new name
 type RenameHostParam struct {
-	NewName string `json:"new_host_name,omitempty"`
+	NewHostName string `json:"new_host_name,omitempty"`
 }
 
 // SetHostFlags contains the host flags
@@ -88,7 +88,8 @@ type SetHostFlags struct {
 
 // EditHostParams holds the host flags to modify
 type EditHostParams struct {
-	SetHostFlags *SetHostFlags `json:"setHostFlagsParam,omitempty"`
+	SetHostFlags    *SetHostFlags    `json:"setHostFlagsParam,omitempty"`
+	RenameHostParam *RenameHostParam `json:"renameHostParam,omitempty"`
 }
 
 // AddHostInitiators holds initiator parameter to add

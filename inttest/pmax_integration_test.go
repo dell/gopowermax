@@ -492,7 +492,7 @@ func TestCreateVolumeInStorageGroup1(t *testing.T) {
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	payload := client.GetCreateVolInSGPayload(1, volumeName)
+	payload := client.GetCreateVolInSGPayload(1, volumeName, false)
 
 	payloadBytes, err := json.Marshal(&payload)
 	if err != nil {
@@ -1244,4 +1244,41 @@ func TestGetISCSITargets(t *testing.T) {
 		return
 	}
 	fmt.Printf("Targets: %v\n", targets)
+}
+
+func TestExpandVolume(t *testing.T) {
+	if client == nil {
+		err := getClient(t)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+	}
+	//create a volume
+	now := time.Now()
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
+	fmt.Printf("volumeName: %s\n", volumeName)
+	vol, err := client.CreateVolumeInStorageGroup(symmetrixID, defaultStorageGroup, volumeName, 26)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Printf("volume:\n%#v\n", vol)
+	//expand Volume
+	expandedSize := 30
+	fmt.Println("Doing VolumeExpansion")
+	expandedVol, err := client.ExpandVolume(symmetrixID, vol.VolumeID, expandedSize)
+	if err != nil {
+		t.Error("Error in Volume Expansion: " + err.Error())
+		return
+	}
+	//check expand size
+	if expandedVol.CapacityCYL != expandedSize {
+		t.Error("Size mismatch after Expansion: " + err.Error())
+		return
+	}
+	fmt.Printf("volume:\n%#v\n", expandedVol)
+	fmt.Printf("Expanded Volume Size:\n%d\n", expandedVol.CapacityCYL)
+	//all ok delete Volume
+	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
 }

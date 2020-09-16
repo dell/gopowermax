@@ -137,10 +137,11 @@ var InducedErrors struct {
 	GetMaskingViewConnectionsError bool
 	ResetAfterFirstError           bool
 	CreateSnapshotError            bool
+	DeleteSnapshotError            bool
 	LinkSnapshotError              bool
+	RenameSnapshotError            bool
 	GetSymVolumeError              bool
 	GetVolSnapsError               bool
-	GetSnapshotError               bool
 	GetGenerationError             bool
 	GetPrivateVolumeIterator       bool
 	SnapshotNotLicensed            bool
@@ -152,6 +153,8 @@ var InducedErrors struct {
 	CreatePortGroupError           bool
 	UpdatePortGroupError           bool
 	DeletePortGroupError           bool
+	ExpandVolumeError              bool
+	MaxSnapSessionError            bool
 }
 
 // hasError checks to see if the specified error (via pointer)
@@ -218,7 +221,8 @@ func Reset() {
 	InducedErrors.LinkSnapshotError = false
 	InducedErrors.GetSymVolumeError = false
 	InducedErrors.GetVolSnapsError = false
-	InducedErrors.GetSnapshotError = false
+	InducedErrors.DeleteSnapshotError = false
+	InducedErrors.RenameSnapshotError = false
 	InducedErrors.GetGenerationError = false
 	InducedErrors.GetPrivateVolumeIterator = false
 	InducedErrors.SnapshotNotLicensed = false
@@ -230,6 +234,8 @@ func Reset() {
 	InducedErrors.CreatePortGroupError = false
 	InducedErrors.UpdatePortGroupError = false
 	InducedErrors.DeletePortGroupError = false
+	InducedErrors.ExpandVolumeError = false
+	InducedErrors.MaxSnapSessionError = false
 	Data.JSONDir = "mock"
 	Data.VolumeIDToIdentifier = make(map[string]string)
 	Data.VolumeIDToSize = make(map[string]int)
@@ -616,6 +622,7 @@ func FreeVolume(w http.ResponseWriter, param *types.FreeVolumeParam, volID strin
 	defer mockCacheMutex.Unlock()
 	freeVolume(w, param, volID, executionOption)
 }
+
 // This returns a job for freeing space in a volume
 func freeVolume(w http.ResponseWriter, param *types.FreeVolumeParam, volID string, executionOption string) {
 	if executionOption != types.ExecutionOptionAsynchronous {
@@ -658,6 +665,10 @@ func ExpandVolume(w http.ResponseWriter, param *types.ExpandVolumeParam, volID s
 
 // This returns the volume itself after expanding the volume's size
 func expandVolume(w http.ResponseWriter, param *types.ExpandVolumeParam, volID string, executionOption string) {
+	if InducedErrors.ExpandVolumeError {
+		writeError(w, "Error expanding volume: induced error", http.StatusRequestTimeout)
+		return
+	}
 	if executionOption != types.ExecutionOptionSynchronous {
 		writeError(w, "expected SYNCHRONOUS", http.StatusBadRequest)
 		return
@@ -709,7 +720,6 @@ func newMockJob(jobID string, initialState string, finalState string, resourceLi
 	Data.JobIDToMockJob[jobID] = job
 	return job
 }
-
 
 func handleJob(w http.ResponseWriter, r *http.Request) {
 	if InducedErrors.GetJobError {
@@ -2258,6 +2268,10 @@ func handleSnapshot(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Failed to create snapshot: induced error", http.StatusBadRequest)
 			return
 		}
+		if InducedErrors.MaxSnapSessionError {
+			writeError(w, "The maximum number of sessions has been exceeded for the specified Source device", http.StatusBadRequest)
+			return
+		}
 		decoder := json.NewDecoder(r.Body)
 		createSnapParam := &types.CreateVolumesSnapshot{}
 		err := decoder.Decode(createSnapParam)
@@ -2283,10 +2297,18 @@ func handleSnapshot(w http.ResponseWriter, r *http.Request) {
 		executionOption := updateSnapParam.ExecutionOption
 
 		if updateSnapParam.Action == "Rename" {
+			if InducedErrors.RenameSnapshotError {
+				writeError(w, "error renaming the snapshot: induced error", http.StatusBadRequest)
+				return
+			}
 			RenameSnapshot(w, r, updateSnapParam.VolumeNameListSource, executionOption, SnapID, updateSnapParam.NewSnapshotName)
 			return
 		}
 		if updateSnapParam.Action == "Link" {
+			if InducedErrors.MaxSnapSessionError {
+				writeError(w, "The maximum number of sessions has been exceeded for the specified Source device", http.StatusBadRequest)
+				return
+			}
 			if InducedErrors.LinkSnapshotError {
 				writeError(w, "error linking the snapshot: induced error", http.StatusBadRequest)
 				return
@@ -2392,8 +2414,8 @@ func DeleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, execu
 }
 
 func deleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, executionOption string, deviceNameListSource []types.VolumeList, genID int64) {
-	if executionOption != types.ExecutionOptionAsynchronous {
-		writeError(w, "expected ASYNCHRONOUS", http.StatusBadRequest)
+	if InducedErrors.DeleteSnapshotError {
+		writeError(w, "error deleting the snapshot: induced error", http.StatusBadRequest)
 		return
 	}
 	if deviceNameListSource[0].Name == "" {
@@ -2446,10 +2468,6 @@ func RenameSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []t
 }
 
 func renameSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []types.VolumeList, executionOption, oldSnapID, newSnapID string) {
-	if executionOption != types.ExecutionOptionAsynchronous {
-		writeError(w, "expected ASYNCHRONOUS", http.StatusBadRequest)
-		return
-	}
 	if fewVolumeUnavalaible(sourceVolumeList) {
 		writeError(w, "few devices not available", http.StatusBadRequest)
 		return
@@ -2485,10 +2503,6 @@ func LinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []typ
 }
 
 func linkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []types.VolumeList, targetVolumeList []types.VolumeList, executionOption, SnapID string) {
-	if executionOption != types.ExecutionOptionAsynchronous {
-		writeError(w, "expected ASYNCHRONOUS", http.StatusBadRequest)
-		return
-	}
 	if sourceVolumeList[0].Name == "" {
 		writeError(w, "no source volume names given to link the snapshot", http.StatusBadRequest)
 		return
@@ -2569,10 +2583,6 @@ func UnlinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []t
 }
 
 func unlinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []types.VolumeList, targetVolumeList []types.VolumeList, executionOption, SnapID string) {
-	if executionOption != types.ExecutionOptionAsynchronous {
-		writeError(w, "expected ASYNCHRONOUS", http.StatusBadRequest)
-		return
-	}
 	if sourceVolumeList[0].Name == "" {
 		writeError(w, "no source volume names given to unlink the snapshot", http.StatusBadRequest)
 		return

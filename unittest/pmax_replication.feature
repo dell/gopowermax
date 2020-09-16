@@ -78,7 +78,6 @@ Feature: PMAX replication test
       | "00007"       | "snapshot1" |  "ignored via a whitelist" | "ignored" | "none"             |
       | "00007"       | "snapshot1" |  "induced error"           |    ""     | "GetVolSnapsError" |
 
-
   Scenario Outline: Get a list Generation for given Snapshot
     Given a valid connection
     And I have a whitelist of <whitelist>
@@ -126,6 +125,20 @@ Feature: PMAX replication test
     |   "00001"   |    "00002"  |   ""   | "snapshot1" | "snapshot_csi"  |    0  |  "Rename"  |  "no snapshot information"  | "none"            |
     |   "00001"   |    "00001"  |   ""   | "snapshot1" | "snapshot_csi"  |    0  |  "Rename"  |  "Not Found"                | "JobFailedError"  |
 
+  Scenario Outline: Renaming a snapshot using synchronous modify call
+    Given a valid connection
+    And I induce error <induced>
+    And I have 3 volumes
+    And I call CreateSnapshot with <volIDs> and snapshot <snapID> on it
+    When I call ModifySnapshotS with <source>, <target>, <snapID>, <newSnapID>, <genID> and <action>
+    Then the error message contains <errormsg>
+    And I should get a valid response if no error
+
+    Examples:
+    |   volIDs    |    source   | target |  snapID     |  newSnapID      | genID |   action   |  errormsg                   | induced           |
+    |   "00001"   |    "00001"  |   ""   | "snapshot1" | "snapshot_csi"  |    0  |  "Rename"  |  "none"                     | "none"            |
+    |   "00001"   |    "00002"  |   ""   | "snapshot1" | "snapshot_csi"  |    0  |  "Rename"  |  "no snapshot information"  | "none"            |
+
   Scenario Outline: Linking a snapshot
     Given a valid connection
     And I have a whitelist of <whitelist>
@@ -151,6 +164,31 @@ Feature: PMAX replication test
     |   "00001"        |    "00001"        |     ""          | "snapshot1" |  "Link"  |  "no link volume"          |    ""     |
     |   "00001"        |    "00001"        |   "00002"       | "snapshot1" |    ""    |  "not a supported action"  |    ""     |
 
+  Scenario Outline: Linking a snapshot using synchronous modify call 
+    Given a valid connection
+    And I have a whitelist of <whitelist>
+    And I have 4 volumes
+    And I call CreateSnapshot with <volIDs> and snapshot <snapID> on it
+    When I call ModifySnapshotS with <source>, <target>, <snapID>, "", 0 and <action>
+    Then the error message contains <errormsg>
+    And I should get a valid response if no error
+
+      Examples:
+    |   volIDs         |    source         |   target        |   snapID    |  action  |  errormsg                  | whitelist |
+    |   "00001"        |    "00001"        |   "00002"       | "snapshot1" |  "Link"  |  "none"                    |    ""     |
+    |   "00001,00002"  |    "00001"        |   "00002"       | "snapshot1" |  "Link"  |  "none"                    |    ""     |
+    |   "00001,00002"  |    "00001,00002"  |   "00003,00004" | "snapshot1" |  "Link"  |  "none"                    |    ""     |
+    |   "00001,00002"  |    "00001,00001"  |   "00003,00004" | "snapshot1" |  "Link"  |  "none"                    |    ""     |
+    |   "00001,00002"  |    "00001,00001"  |   "00003,00004" | "snapshot1" |  "Link"  |  "ignored via a whitelist" | "ignored" |
+    |   "00001,00002"  |    "00001,00001"  |   "00002,00002" | "snapshot1" |  "Link"  |  "already in desired state"|    ""     |
+    |   "00001,00002"  |    "00001,00002"  |   "00002"       | "snapshot1" |  "Link"  |  "cannot link snapshot"    |    ""     |
+    |   "00001"        |    "00002"        |   "00004"       | "snapshot1" |  "Link"  |  "no snapshot information" |    ""     |
+    |   "00001"        |    "00005"        |   "00004"       | "snapshot1" |  "Link"  |  "devices not available"   |    ""     |
+    |   "00001"        |    "00004"        |   "00005"       | "snapshot1" |  "Link"  |  "devices not available"   |    ""     |
+    |   "00001"        |      ""           |   "00002"       | "snapshot1" |  "Link"  |  "no source volume"        |    ""     |
+    |   "00001"        |    "00001"        |     ""          | "snapshot1" |  "Link"  |  "no link volume"          |    ""     |
+    |   "00001"        |    "00001"        |   "00002"       | "snapshot1" |    ""    |  "not a supported action"  |    ""     |
+  
   Scenario Outline: Unlinking a snapshot
     Given a valid connection
     And I have 5 volumes
@@ -189,6 +227,30 @@ Feature: PMAX replication test
     And I should get a valid response if no error
 
     Examples:
+      | volID         |    snapID   |  errormsg                    | whitelist | induced          |
+      | "00001"       | "snapshot1" |  "none"                      |    ""     | "none"           |
+      | "00001,00003" | "snapshot1" |  "none"                      |    ""     | "none"           |
+      | "00002"       | "snapshot1" |  "snapshot has a link"       |    ""     | "none"           |
+      | "00007"       | "snapshot1" |  "devices not available"     |    ""     | "none"           |
+      | "00004"       | "snapshot1" |  "no snapshot information"   |    ""     | "none"           |
+      |  ""           | "snapshot1" |  "no source volume"          |    ""     | "none"           |
+      |  "00001"      | "snapshot1" |  "ignored via a whitelist"   | "ignored" | "none"           |
+      |  "00001"      | "snapshot1" |  "Job status not successful" |    ""     | "JobFailedError" |
+      |  "00001"      | "snapshot1" |  "induced error"             |    ""     | "GetJobError"    |
+  
+  Scenario Outline: Delete a snapshot with Synchronous modify call
+    Given a valid connection
+    And I have a whitelist of <whitelist>
+    And I induce error <induced>
+    And I have 4 volumes
+    And I call CreateSnapshot with "00001,00002,00003" and snapshot <snapID> on it
+    And I call CreateSnapshot with "00001,00002,00003" and snapshot "snapshot2" on it
+    And I call ModifySnapshotS with "00002", "00004", <snapID>, "", 0 and "Link"
+    When I call DeleteSnapshotS with <volID>, snapshot <snapID> and 0  on it
+    Then the error message contains <errormsg>
+    And I should get a valid response if no error
+
+    Examples:
       | volID         |    snapID   |  errormsg                  | whitelist | induced          |
       | "00001"       | "snapshot1" |  "none"                    |    ""     | "none"           |
       | "00001,00003" | "snapshot1" |  "none"                    |    ""     | "none"           |
@@ -197,7 +259,6 @@ Feature: PMAX replication test
       | "00004"       | "snapshot1" |  "no snapshot information" |    ""     | "none"           |
       |  ""           | "snapshot1" |  "no source volume"        |    ""     | "none"           |
       |  "00001"      | "snapshot1" |  "ignored via a whitelist" | "ignored" | "none"           |
-      |  "00001"      | "snapshot1" | "Job status not successful"|    ""     | "JobFailedError" |
  
   Scenario Outline: Testing GetPrivVolumeByID
     Given a valid connection
