@@ -17,7 +17,7 @@ package pmax
 import (
 	"bufio"
 	"fmt"
-	"github.com/DATA-DOG/godog"
+	"github.com/cucumber/godog"
 	"github.com/dell/gopowermax/mock"
 	"net/http/httptest"
 	"os"

@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/DATA-DOG/godog"
+	"github.com/cucumber/godog"
 	"github.com/dell/gopowermax/mock"
 	types "github.com/dell/gopowermax/types/v90"
 )
