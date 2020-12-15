@@ -40,19 +40,14 @@ dlv-unit-test:
 
 unit-test-debug: unit-test-debug-build dlv-unit-test
 
-int-test: 
-	Endpoint=$(Endpoint) Username=$(Username) Password=$(Password) DefaultStorageGroup=$(DefaultStorageGroup) \
-		 VolumePrefix=$(VolumePrefix) SymmetrixID=$(SymmetrixID) DefaultStoragePool=$(DefaultStoragePool)\
-		 APIVersion=$(APIVersion) \
-		 go test -v -timeout 90m -coverprofile=c.out -coverpkg github.com/dell/gopowermax \
-		 $(integrationfiles) 
+int-test:
+	bash inttest/run_int.sh 
+
+int-test-no-cleanup:
+	bash inttest/run_int.sh --no-cleanup
 
 short-int-test: 
-	Endpoint=$(Endpoint) Username=$(Username) Password=$(Password) DefaultStorageGroup=$(DefaultStorageGroup) \
-		 VolumePrefix=$(VolumePrefix) SymmetrixID=$(SymmetrixID) \
-		 APIVersion=$(APIVersion) \
-		 go test -v -short -timeout 60m -coverprofile=c.out -coverpkg github.com/dell/gopowermax \
-		 $(integrationfiles) 
+	bash inttest/run_int.sh --short
 
 gocover:
 	go tool cover -html=c.out

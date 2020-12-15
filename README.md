@@ -34,20 +34,24 @@ The process will listen on port 55555 for a debugger to attach. Once the debugge
 Integration Tests exist for the wrapper as well. These tests WILL MODIFY the array.
 
 #### Pre-requisites
-Before running integration tests, do the following:
+Before running integration tests, do the following changes in _user.env_ file in inttest folder:
 
-* Modify the Unisphere endpoint and Symmetrix ID in the Makefile. 
+* Modify the Unisphere endpoint and Symmetrix ID.
 
-* Examine the inttest/pmax_integration_test.go file of
-the repository. Within that file, two variables are defined:
+* In the file, are two variables defined:
     * username
     * password
  
    Either change those variables to match an existing user in Unisphere, or create
    a new user in Unisphere matching those credentials.
-* The integration test expects certain storage objects to be present on the PowerMax array you are using for integration tests. Examine the file inttest/pmax-integration_test.go and modify the declared variables with appropriate names from the PowerMax array in use.
-For e.g. - Set `defaultStorageGroup` to an existing storage group from the array. 
 
+* The integration test expects certain storage objects to be present on the PowerMax array you are using for integration tests. Examine the file and modify the following declared variables with appropriate names from the PowerMax array in use.
+    * Set `DefaultFCPortGroup` to an existing FC port group from the array.
+    * Set `DefaultiSCSIPortGroup` to an existing iSCSI port group from the array.
+    * Set `DefaultFCInitiator` to an existing FC initiatorID from the array which is not part of any host. Suffix initiatorID with its Dir:Port.
+    * Set `FCInitiator1,FCInitiator2` to existing FC initiatorIDs from the array which is not part of any host.
+    * Set `DefaultiSCSIInitiator` to an existing iSCSI initiatorID from the array which is not part of any host. Suffix initiatorID with its Dir:Port.
+    * Set `ISCSIInitiator1,ISCSIInitiator2` to existing iSCSI initiatorIDs from the array which is not part of any host.
 
 #### Running Integration Tests
 To run these tests, from the this directory, run:

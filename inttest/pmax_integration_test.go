@@ -32,66 +32,84 @@ const (
 )
 
 var (
-	client   pmax.Pmax
-	endpoint = "https://1.1.1.1:8443"
+	client pmax.Pmax
+	// Following values will be read from env variables set in user.env
+	endpoint = "https://0.0.0.0:8443"
 	// username should match an existing user in Unisphere
 	username = "username"
 	// password should be the value for the corresponding user in Unisphere
-
-	// API version
-	apiVersion = ""
-
 	password                = "password"
+	apiVersion              = "XX"
 	symmetrixID             = "000000000001"
-	defaultStorageGroup     = "csi-Integration-Test"
-	nonFASTManagedSG        = "csi-Integration-No-FAST"
-	defaultFCPortGroup      = "FC_PORTS"
-	defaultiSCSIPortGroup   = "iscsi_ports"
-	defaultFCInitiator      = "FA-1D:5:10000090fa66060b"
-	defaultFCInitiatorID    = "10000090fa66060b"
-	fcInitiator1            = "1a000000c9748df8"
-	fcInitiator2            = "1b000000c9748df8"
-	fcInitiator3            = "1c000000c9748df8"
-	fcInitiator4            = "1d000000c9748df8"
-	fcInitiator5            = "1e000000c9748df8"
-	defaultiSCSIInitiator   = "SE-1E:000:iqn.1993-08.org.debian:01:214e66f8fc1"
-	defaultiSCSIInitiatorID = "iqn.1993-08.org.debian:01:214e66f8fc1"
-	iscsiInitiator1         = "iqn.1993-08.org.centos:01:5ae577b352a0"
-	iscsiInitiator2         = "iqn.1993-08.org.centos:01:5ae577b352a1"
-	iscsiInitiator3         = "iqn.1993-08.org.centos:01:5ae577b352a2"
-	iscsiInitiator4         = "iqn.1993-08.org.centos:01:5ae577b352a3"
-	iscsiInitiator5         = "iqn.1993-08.org.centos:01:5ae577b352a4"
-	defaultFCHost           = "IntegrationHost1"
-	defaultiSCSIHost        = "IntegrationiSCSIHost"
-	defaultSRP              = "SRP_1"
+	defaultFCPortGroup      = "fc-pg"
+	defaultiSCSIPortGroup   = "iscsi-pg"
+	defaultFCInitiator      = "FA-1D:0:00000000abcd000e"
+	defaultFCInitiatorID    string
+	fcInitiator1            = "00000000abcd000f"
+	fcInitiator2            = "00000000abcd000g"
+	defaultiSCSIInitiator   = "SE-1E:000:iqn.1993-08.org.debian:01:012a34b5cd6"
+	defaultiSCSIInitiatorID string
+	iscsiInitiator1         = "iqn.1993-08.org.centos:01:012a34b5cd7"
+	iscsiInitiator2         = "iqn.1993-08.org.centos:01:012a34b5cd8"
+	defaultSRP              = "storage-pool"
 	defaultServiceLevel     = "Diamond"
 	volumePrefix            = "xx"
 	sgPrefix                = "zz"
 	snapshotPrefix          = "snap"
+	// the test run will create these for the run and clean up in the end
+	defaultStorageGroup = "csi-Integration-Test"
+	nonFASTManagedSG    = "csi-Integration-No-FAST"
+	defaultFCHost       = "IntegrationFCHost"
+	defaultiSCSIHost    = "IntegrationiSCSIHost"
 )
 
-func TestMain(m *testing.M) {
-	status := 0
-
-	// Process environment variables
+func setDefaultVariables() {
 	endpoint = setenvVariable("Endpoint", endpoint)
 	username = setenvVariable("Username", username)
 	password = setenvVariable("Password", password)
-	symmetrixID = setenvVariable("SymmetrixID", symmetrixID)
-	volumePrefix = setenvVariable("VolumePrefix", volumePrefix)
-	defaultStorageGroup = setenvVariable("DefaultStorageGroup", defaultStorageGroup)
-	defaultSRP = setenvVariable("DefaultStoragePool", defaultSRP)
 	apiVersion = strings.TrimSpace(setenvVariable("APIVersion", ""))
+	symmetrixID = setenvVariable("SymmetrixID", symmetrixID)
+	defaultFCPortGroup = setenvVariable("DefaultFCPortGroup", defaultFCPortGroup)
+	defaultiSCSIPortGroup = setenvVariable("DefaultiSCSIPortGroup", defaultiSCSIPortGroup)
+	defaultFCInitiator = setenvVariable("DefaultFCInitiator", defaultFCInitiator)
+	defaultFCInitiatorID = strings.Split(defaultFCInitiator, ":")[2]
+	fcInitiator1 = setenvVariable("FCInitiator1", fcInitiator1)
+	fcInitiator2 = setenvVariable("FCInitiator2", fcInitiator2)
+	defaultiSCSIInitiator = setenvVariable("DefaultiSCSIInitiator", defaultiSCSIInitiator)
+	defaultiSCSIInitiatorID = strings.Join(strings.Split(defaultiSCSIInitiator, ":")[2:], ":")
+	iscsiInitiator1 = setenvVariable("ISCSIInitiator1", iscsiInitiator1)
+	iscsiInitiator2 = setenvVariable("ISCSIInitiator2", iscsiInitiator2)
+	volumePrefix = setenvVariable("VolumePrefix", volumePrefix)
+	defaultSRP = setenvVariable("DefaultStoragePool", defaultSRP)
+	defaultServiceLevel = setenvVariable("DefaultServiceLevel", defaultServiceLevel)
+	sgPrefix = setenvVariable("SGPrefix", sgPrefix)
+	snapshotPrefix = setenvVariable("SnapPrefix", snapshotPrefix)
+}
 
+func TestMain(m *testing.M) {
+	status := 0
+	// Process environment variables
+	setDefaultVariables()
+
+	err := createDefaultSGAndHost() // Creates default storage group and host for the test
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 	if st := m.Run(); st > status {
 		status = st
 	}
-
-	afterRun() // Cleans up the volumes and snapshots created for testing purposes.
-
 	fmt.Printf("status %d\n", status)
-
-	os.Exit(status)
+	doCleanUp := setenvVariable("Cleanup", "true")
+	var cleanupTests = []testing.InternalTest{}
+	if doCleanUp != "false" {
+		fmt.Println("========= CLEANUP ==========")
+		cleanupTests = append(cleanupTests, testing.InternalTest{
+			Name: "cleanupDefaultSGAndHOST",
+			F:    cleanDefaultUpSGAndHOST,
+		})
+	}
+	afterRun(cleanupTests) // Cleans up the volumes and snapshots created for replication testing purposes.
 }
 
 func setenvVariable(key, defaultValue string) string {
@@ -108,12 +126,64 @@ func setenvVariable(key, defaultValue string) string {
 	return value
 }
 
-func getClient(t *testing.T) error {
+func createDefaultSGAndHost() error {
+	fmt.Println("Creating default SG and host...")
+	// Create default SG with SRP
+	_, err := createStorageGroup(symmetrixID, defaultStorageGroup, defaultSRP, defaultServiceLevel, false)
+	if err != nil {
+		return fmt.Errorf("failed to create SG: (%s)", err.Error())
+	}
+
+	// Create default SG without srp
+	_, err = createStorageGroup(symmetrixID, nonFASTManagedSG, "none", "none", false)
+	if err != nil {
+		return fmt.Errorf("failed to create non fast SG: (%s)", err.Error())
+	}
+
+	// Create default FC Host
+	initiators := []string{defaultFCInitiatorID}
+	_, err = createHost(symmetrixID, defaultFCHost, initiators, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create default FC host: (%s)", err.Error())
+	}
+	// Create default iSCSI Host
+	initiators = []string{defaultiSCSIInitiatorID}
+	_, err = createHost(symmetrixID, defaultiSCSIHost, initiators, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create default FC host: (%s)", err.Error())
+	}
+	return err
+}
+
+func cleanDefaultUpSGAndHOST(t *testing.T) {
+	fmt.Println("Cleaning up SG and host...")
+	// delete default SG
+	err := deleteStorageGroup(symmetrixID, defaultStorageGroup)
+	if err != nil {
+		t.Errorf("failed to delete default SG (%s) : (%s)", defaultStorageGroup, err.Error())
+	}
+	// delete default non fast SG
+	err = deleteStorageGroup(symmetrixID, nonFASTManagedSG)
+	if err != nil {
+		t.Errorf("failed to delete default non fast SG (%s) : (%s)", nonFASTManagedSG, err.Error())
+	}
+	// delete default FC host
+	err = deleteHost(symmetrixID, defaultFCHost)
+	if err != nil {
+		t.Errorf("failed to delete default FC host (%s) : (%s)", defaultFCHost, err.Error())
+	}
+	// delete default iSCSI host
+	err = deleteHost(symmetrixID, defaultiSCSIHost)
+	if err != nil {
+		t.Errorf("failed to delete default iSCSI host (%s) : (%s)", defaultFCHost, err.Error())
+	}
+}
+
+func getClient() error {
 	var err error
 	client, err = pmax.NewClientWithArgs(endpoint, apiVersion, "CSI Driver for Dell EMC PowerMax v1.0",
 		true, false)
 	if err != nil {
-		t.Error("cannot create client: ", err.Error())
 		return err
 	}
 	err = client.Authenticate(&pmax.ConfigConnect{
@@ -121,21 +191,20 @@ func getClient(t *testing.T) error {
 		Username: username,
 		Password: password})
 	if err != nil {
-		t.Error("cannot authenticate: ", err.Error())
 		return err
 	}
 	return nil
 }
 
 func TestAuthentication(t *testing.T) {
-	_ = getClient(t)
+	_ = getClient()
 }
 
 func TestGetSymmetrixIDs(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -155,9 +224,9 @@ func TestGetSymmetrixIDs(t *testing.T) {
 
 func TestGetSymmetrix(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -171,9 +240,9 @@ func TestGetSymmetrix(t *testing.T) {
 
 func TestGetVolumeIDs(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -216,9 +285,9 @@ func TestGetVolumeIDs(t *testing.T) {
 
 func TestGetVolume(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -258,9 +327,9 @@ func TestGetNonExistentVolume(t *testing.T) {
 
 func TestGetStorageGroupIDs(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -280,9 +349,9 @@ func TestGetStorageGroupIDs(t *testing.T) {
 
 func TestGetStorageGroup(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -296,9 +365,9 @@ func TestGetStorageGroup(t *testing.T) {
 
 func TestGetStoragePool(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -310,17 +379,39 @@ func TestGetStoragePool(t *testing.T) {
 	fmt.Printf("%#v\n", storagePool)
 }
 
+func createStorageGroup(symmetrixID, storageGroupID, srp, serviceLevel string, isThick bool) (*types.StorageGroup, error) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Check if the SG exists on array
+	storageGroup, err := client.GetStorageGroup(symmetrixID, storageGroupID)
+	// Storage Group already exist, returning old one
+	if storageGroup != nil && err == nil {
+		return storageGroup, err
+	}
+	// Create a new storege group
+	fmt.Println("Creating a new storage group...")
+	return client.CreateStorageGroup(symmetrixID, storageGroupID, srp, serviceLevel, isThick)
+}
+
+func deleteStorageGroup(symmetrixID, storageGroupID string) error {
+	return client.DeleteStorageGroup(symmetrixID, storageGroupID)
+}
+
 func TestCreateStorageGroup(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
 	now := time.Now()
 	storageGroupID := fmt.Sprintf("csi-%s-Int%d-SG", sgPrefix, now.Nanosecond())
-	storageGroup, err := client.CreateStorageGroup(symmetrixID, storageGroupID,
+	storageGroup, err := createStorageGroup(symmetrixID, storageGroupID,
 		defaultSRP, defaultServiceLevel, false)
 	if err != nil || storageGroup == nil {
 		t.Error("Failed to create " + storageGroupID + " " + err.Error())
@@ -335,7 +426,7 @@ func TestCreateStorageGroup(t *testing.T) {
 	}
 	fmt.Printf("%#v\n", storageGroup)
 	fmt.Println("Cleaning up the storage group: " + storageGroupID)
-	err = client.DeleteStorageGroup(symmetrixID, storageGroupID)
+	err = deleteStorageGroup(symmetrixID, storageGroupID)
 	if err != nil {
 		t.Error("Failed to delete " + storageGroupID)
 		return
@@ -351,15 +442,15 @@ func TestCreateStorageGroup(t *testing.T) {
 
 func TestCreateStorageGroupNonFASTManaged(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
 	now := time.Now()
 	storageGroupID := fmt.Sprintf("csi-%s-Int%d-SG-No-FAST", sgPrefix, now.Nanosecond())
-	storageGroup, err := client.CreateStorageGroup(symmetrixID, storageGroupID,
+	storageGroup, err := createStorageGroup(symmetrixID, storageGroupID,
 		"None", "None", false)
 	if err != nil || storageGroup == nil {
 		t.Error("Failed to create " + storageGroupID)
@@ -386,9 +477,9 @@ func TestCreateStorageGroupNonFASTManaged(t *testing.T) {
 
 func TestGetJobs(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -432,9 +523,9 @@ func TestGetJobs(t *testing.T) {
 
 func TestGetStoragePoolList(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -450,9 +541,9 @@ func TestGetStoragePoolList(t *testing.T) {
 
 func TestGetMaskingViews(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -483,9 +574,9 @@ func TestGetMaskingViews(t *testing.T) {
 
 func TestCreateVolumeInStorageGroup1(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -520,9 +611,9 @@ func TestCreateVolumeInStorageGroup1(t *testing.T) {
 
 func TestCreateVolumeInStorageGroup2(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -540,9 +631,9 @@ func TestCreateVolumeInStorageGroup2(t *testing.T) {
 
 func TestAddVolumesInStorageGroup(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -630,7 +721,7 @@ func TestCreateVolumeInStorageGroupInParallel(t *testing.T) {
 		t.Skip("Skipping this test in short mode")
 	}
 	// make sure we have a client
-	getClient(t)
+	getClient()
 	CreateVolumesInParallel(5, t)
 }
 
@@ -645,7 +736,7 @@ func CreateVolumesInParallel(nVols int, t *testing.T) {
 	// create a temporary storage group
 	now := time.Now()
 	storageGroupName := fmt.Sprintf("pmax-%s-Int%d-SG", sgPrefix, now.Nanosecond())
-	_, err := client.CreateStorageGroup(symmetrixID, storageGroupName,
+	_, err := createStorageGroup(symmetrixID, storageGroupName,
 		defaultSRP, defaultServiceLevel, false)
 	if err != nil {
 		t.Errorf("Unable to create temporary Storage Group: %s", storageGroupName)
@@ -698,9 +789,9 @@ func CreateVolumesInParallel(nVols int, t *testing.T) {
 
 func TestGetPorts(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -725,9 +816,9 @@ func TestGetPorts(t *testing.T) {
 
 func TestGetPortGroupIDs(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -762,9 +853,9 @@ func TestGetPortGroupIDs(t *testing.T) {
 }
 func TestGetPortGroupByFCID(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -776,9 +867,9 @@ func TestGetPortGroupByFCID(t *testing.T) {
 }
 func TestGetPortGroupByiSCSIID(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -792,9 +883,9 @@ func TestGetPortGroupByiSCSIID(t *testing.T) {
 
 func TestGetInitiatorIDs(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -843,9 +934,9 @@ func TestGetInitiatorIDs(t *testing.T) {
 }
 func TestGetInitiatorByFCID(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -859,9 +950,9 @@ func TestGetInitiatorByFCID(t *testing.T) {
 
 func TestGetInitiatorByiSCSIID(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -922,9 +1013,9 @@ func TestFCGetInitiators(t *testing.T) {
 
 func TestGetHostIDs(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -943,9 +1034,9 @@ func TestGetHostIDs(t *testing.T) {
 }
 func TestGetHostByFCID(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -959,9 +1050,9 @@ func TestGetHostByFCID(t *testing.T) {
 
 func TestGetHostByiSCSIID(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -972,22 +1063,44 @@ func TestGetHostByiSCSIID(t *testing.T) {
 	}
 	fmt.Printf("defaultHost: %#v\n", host)
 }
+
+func createHost(symmetrixID, hostID string, initiatorKeys []string, hostFlag *types.HostFlags) (*types.Host, error) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Check and return if the host exist on the array
+	host, err := client.GetHostByID(symmetrixID, hostID)
+	if host != nil && err == nil {
+		return host, nil
+	}
+	// host not found, create the host
+	fmt.Println("Creating a new host...")
+	return client.CreateHost(symmetrixID, hostID, initiatorKeys, hostFlag)
+}
+
+func deleteHost(symmetrixID, hostID string) error {
+	return client.DeleteHost(symmetrixID, hostID)
+}
+
 func TestCreateFCHost(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			return
 		}
 	}
 	initiatorKeys := make([]string, 0)
-	initiatorKeys = append(initiatorKeys, fcInitiator1, fcInitiator2, fcInitiator3, fcInitiator4)
-	host, err := client.CreateHost(symmetrixID, "IntTestFCHost", initiatorKeys, nil)
+	initiatorKeys = append(initiatorKeys, fcInitiator1)
+	host, err := createHost(symmetrixID, "IntTestFCHost", initiatorKeys, nil)
 	if err != nil || host == nil {
 		t.Error("Expected to create FC host but didn't: " + err.Error())
 		return
 	}
 	fmt.Printf("%#v\n, FC host", host)
-	err = client.DeleteHost(symmetrixID, "IntTestFCHost")
+	err = deleteHost(symmetrixID, "IntTestFCHost")
 	if err != nil {
 		t.Error("Could not delete FC Host: " + err.Error())
 	}
@@ -995,32 +1108,33 @@ func TestCreateFCHost(t *testing.T) {
 
 func TestCreateiSCSIHost(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			return
 		}
 	}
 	initiatorKeys := make([]string, 0)
-	initiatorKeys = append(initiatorKeys, iscsiInitiator1, iscsiInitiator2, iscsiInitiator3, iscsiInitiator4)
-	host, err := client.CreateHost(symmetrixID, "IntTestiSCSIHost", initiatorKeys, nil)
+	initiatorKeys = append(initiatorKeys, iscsiInitiator1)
+	host, err := createHost(symmetrixID, "IntTestiSCSIHost", initiatorKeys, nil)
 	if err != nil || host == nil {
 		t.Error("Expected to create host but didn't: " + err.Error())
 		return
 	}
 	fmt.Printf("%#v\n, host", host)
-	err = client.DeleteHost(symmetrixID, "IntTestiSCSIHost")
+	err = deleteHost(symmetrixID, "IntTestiSCSIHost")
 	if err != nil {
 		t.Error("Could not delete Host: " + err.Error())
 	}
 }
+
 func TestCreateFCMaskingView(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping this test in short mode")
 	}
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -1030,14 +1144,23 @@ func TestCreateFCMaskingView(t *testing.T) {
 
 	// create a Host with some initiators
 	initiatorKeys := make([]string, 0)
-	initiatorKeys = append(initiatorKeys, fcInitiator5)
+	initiatorKeys = append(initiatorKeys, fcInitiator2)
 	fmt.Println("Setting up a host before creation of masking view")
-	host, err := client.CreateHost(symmetrixID, hostID, initiatorKeys, nil)
+	host, err := createHost(symmetrixID, hostID, initiatorKeys, nil)
 	if err != nil || host == nil {
 		t.Error("Expected to create host but didn't: " + err.Error())
 		return
 	}
 	fmt.Printf("%#v\n, host", host)
+	// add a volume in defaultStorageGroup
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, time.Now().Nanosecond())
+	fmt.Printf("volumeName: %s\n", volumeName)
+	vol, err := client.CreateVolumeInStorageGroup(symmetrixID, defaultStorageGroup, volumeName, 1)
+	if err != nil {
+		t.Error("Expected to create a volume but didn't" + err.Error())
+		return
+	}
+	fmt.Printf("volume:\n%#v\n", vol)
 	maskingViewID := "IntTestFCMV"
 	maskingView, err := client.CreateMaskingView(symmetrixID, maskingViewID, defaultStorageGroup,
 		hostID, true, defaultFCPortGroup)
@@ -1071,15 +1194,16 @@ func TestCreateFCMaskingView(t *testing.T) {
 		return
 	}
 	fmt.Println(fmt.Sprintf("Error in fetching %s: %s", maskingViewID, err.Error()))
+	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
 	cleanupHost(symmetrixID, hostID, t)
 }
 
 func TestCreatePortGroup(t *testing.T) {
 	t.Skip("Skipping this test until Delete Port Group is implemented")
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -1103,9 +1227,9 @@ func TestCreateiSCSIMaskingView(t *testing.T) {
 		t.Skip("Skipping this test in short mode")
 	}
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
-			t.Error("Unable to get/create pmax client")
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
 			return
 		}
 	}
@@ -1115,14 +1239,24 @@ func TestCreateiSCSIMaskingView(t *testing.T) {
 
 	// create a Host with some initiators
 	initiatorKeys := make([]string, 0)
-	initiatorKeys = append(initiatorKeys, iscsiInitiator5)
+	initiatorKeys = append(initiatorKeys, iscsiInitiator2)
 	fmt.Println("Setting up a host before creation of masking view")
-	host, err := client.CreateHost(symmetrixID, hostID, initiatorKeys, nil)
+	host, err := createHost(symmetrixID, hostID, initiatorKeys, nil)
 	if err != nil || host == nil {
 		t.Error("Expected to create iscsi host but didn't: " + err.Error())
 		return
 	}
 	fmt.Printf("%#v\n, host", host)
+	// add a volume in defaultStorageGroup
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, time.Now().Nanosecond())
+	fmt.Printf("volumeName: %s\n", volumeName)
+	vol, err := client.CreateVolumeInStorageGroup(symmetrixID, defaultStorageGroup, volumeName, 1)
+	if err != nil {
+		t.Error("Expected to create a volume but didn't" + err.Error())
+		return
+	}
+	fmt.Printf("volume:\n%#v\n", vol)
+	// create the masking view
 	maskingViewID := "IntTestiSCSIMV"
 	maskingView, err := client.CreateMaskingView(symmetrixID, maskingViewID, defaultStorageGroup,
 		hostID, true, defaultiSCSIPortGroup)
@@ -1156,6 +1290,7 @@ func TestCreateiSCSIMaskingView(t *testing.T) {
 		return
 	}
 	fmt.Println(fmt.Sprintf("Error in fetching %s: %s", maskingViewID, err.Error()))
+	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
 	cleanupHost(symmetrixID, hostID, t)
 }
 
@@ -1170,7 +1305,7 @@ func cleanupHost(symmetrixID string, hostID string, t *testing.T) {
 
 func TestUpdateHostInitiators(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Error(err.Error())
 			return
@@ -1182,7 +1317,7 @@ func TestUpdateHostInitiators(t *testing.T) {
 
 	// create a Host with some initiators
 	initiatorKeys := make([]string, 0)
-	initiatorKeys = append(initiatorKeys, iscsiInitiator1, iscsiInitiator2)
+	initiatorKeys = append(initiatorKeys, iscsiInitiator1)
 	host, err := client.CreateHost(symmetrixID, "IntTestHost", initiatorKeys, nil)
 	if err != nil || host == nil {
 		t.Error("Expected to create host but didn't: " + err.Error())
@@ -1192,7 +1327,7 @@ func TestUpdateHostInitiators(t *testing.T) {
 
 	// change the list of initiators and update the host
 	updatedInitiators := make([]string, 0)
-	updatedInitiators = append(updatedInitiators, iscsiInitiator1, iscsiInitiator3, iscsiInitiator4)
+	updatedInitiators = append(updatedInitiators, iscsiInitiator1, iscsiInitiator2)
 	host, err = client.UpdateHostInitiators(symmetrixID, host, updatedInitiators)
 	if err != nil || host == nil {
 		t.Error("Expected to update host but didn't: " + err.Error())
@@ -1216,7 +1351,7 @@ func TestUpdateHostInitiators(t *testing.T) {
 
 func TestGetTargetAddresses(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Error(err.Error())
 			return
@@ -1232,7 +1367,7 @@ func TestGetTargetAddresses(t *testing.T) {
 
 func TestGetISCSITargets(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Error(err.Error())
 			return
@@ -1248,7 +1383,7 @@ func TestGetISCSITargets(t *testing.T) {
 
 func TestExpandVolume(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Error(err.Error())
 			return

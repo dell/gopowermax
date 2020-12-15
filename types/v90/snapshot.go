@@ -130,6 +130,7 @@ type VolumeSnapshotLink struct {
 	Copy             bool   `json:"copy"`
 	Destage          bool   `json:"destage"`
 	Modified         bool   `json:"modified"`
+	LinkSource       string `json:"linkSourceName"`
 }
 
 // VolumeSnapshot contains list of volume snapshots

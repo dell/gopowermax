@@ -96,7 +96,7 @@ func getOrCreateSnapshot(volumeID string, client pmax.Pmax) (string, error) {
 
 func TestGetSnapVolumeList(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Error(err)
 			return
@@ -114,7 +114,7 @@ func TestGetSnapVolumeList(t *testing.T) {
 
 func TestCreateSnapshot(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Error(err)
 			return
@@ -142,7 +142,7 @@ func TestCreateSnapshot(t *testing.T) {
 
 func TestGetVolumeSnapInfo(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Error(err)
 			return
@@ -171,7 +171,7 @@ func TestGetVolumeSnapInfo(t *testing.T) {
 
 func TestGetSnapshotInfo(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Errorf(err.Error())
 			return
@@ -197,7 +197,7 @@ func TestGetSnapshotInfo(t *testing.T) {
 
 func TestGetSnapshotGenerations(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Errorf(err.Error())
 			return
@@ -222,7 +222,7 @@ func TestGetSnapshotGenerations(t *testing.T) {
 
 func TestGetSnapshotGenerationInfo(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Errorf(err.Error())
 			return
@@ -252,7 +252,7 @@ func TestGetSnapshotGenerationInfo(t *testing.T) {
 
 func TestSnapshotLinkage(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Error(err)
 			return
@@ -297,7 +297,7 @@ func modifySnapshotLink(sourceVolumeList, targetVolumeList []types.VolumeList, o
 
 func TestSnapshotRenaming(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Error(err)
 			return
@@ -360,7 +360,7 @@ func renameSnapshot(symmetrixID, snapshotName, newSnapID string, generation int,
 
 /*func TestSnapshotRestore(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Error(err)
 			return
@@ -394,7 +394,7 @@ func renameSnapshot(symmetrixID, snapshotName, newSnapID string, generation int,
 
 /*func TestPrivateVolumeListing(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Error(err)
 			return
@@ -415,7 +415,7 @@ func renameSnapshot(symmetrixID, snapshotName, newSnapID string, generation int,
 
 func TestGetPrivVolumeByID(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Error(err)
 			return
@@ -436,7 +436,7 @@ func TestGetPrivVolumeByID(t *testing.T) {
 
 /*func TestSnapSessionFetch(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Error(err.Error())
 			return
@@ -467,7 +467,7 @@ func TestGetPrivVolumeByID(t *testing.T) {
 
 func TestDeleteSnapshot(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Error(err)
 			return
@@ -495,7 +495,7 @@ func TestDeleteSnapshot(t *testing.T) {
 
 func TestGetReplicationCapabilities(t *testing.T) {
 	if client == nil {
-		err := getClient(t)
+		err := getClient()
 		if err != nil {
 			t.Error(err)
 			return
@@ -511,7 +511,7 @@ func TestGetReplicationCapabilities(t *testing.T) {
 
 // afterRun gets invoked after the tests run, to clean the snapshot
 // and volumes created for testing purposes.
-func afterRun() {
+func afterRun(tests []testing.InternalTest) {
 	cleanup := []testing.InternalTest{}
 	if snapID != "" {
 		cleanup = append(cleanup, testing.InternalTest{
@@ -531,6 +531,7 @@ func afterRun() {
 			F:    volumeCleanup(targetVolume.VolumeID, targetVolume.VolumeIdentifier, defaultStorageGroup),
 		})
 	}
+	cleanup = append(cleanup, tests...)
 	testing.Main(func(pat, str string) (bool, error) {
 		return true, nil
 	}, cleanup, nil, nil)
