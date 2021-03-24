@@ -14,7 +14,11 @@
 
 package pmax
 
-import types "github.com/dell/gopowermax/types/v90"
+import (
+	"net/http"
+
+	types "github.com/dell/gopowermax/types/v90"
+)
 
 // Debug is a boolean, when enabled, that enables logging of send payloads, and other debug information. Default to false.
 // It is set true by unit testing.
@@ -108,8 +112,13 @@ type Pmax interface {
 	CreateVolumeInStorageGroup(symID string, storageGroupID string, volumeName string, sizeInCylinders int) (*types.Volume, error)
 
 	// CreateVolumeInStorageGroup takes simplified input arguments to create a volume of a give name and size in a particular storage group.
-	// This is done synchronously and no jobs are created
-	CreateVolumeInStorageGroupS(symID string, storageGroupID string, volumeName string, sizeInCylinders int) (*types.Volume, error)
+	// This is done synchronously and no jobs are created. HTTP header argument is optional
+	CreateVolumeInStorageGroupS(symID, storageGroupID string, volumeName string, sizeInCylinders int, opts ...http.Header) (*types.Volume, error)
+
+	// CreateVolumeInProtectedStorageGroup takes simplified input arguments to create a volume of a give name and size in a protected storage group.
+	// This will add volume in both Local and Remote Storage group
+	// This is done synchronously and no jobs are created. HTTP header argument is optional
+	CreateVolumeInProtectedStorageGroupS(symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, sizeInCylinders int, opts ...http.Header) (*types.Volume, error)
 
 	// DeleteStorageGroup deletes a storage group given a storage group id
 	DeleteStorageGroup(symID string, storageGroupID string) error
@@ -124,14 +133,18 @@ type Pmax interface {
 	RenameVolume(symID string, volumeID string, newName string) (*types.Volume, error)
 
 	// Add volume(s) asynchronously to a StorageGroup
-	AddVolumesToStorageGroup(symID string, storageGroupID string, volumeIDs ...string) error
-
+	AddVolumesToStorageGroup(symID, storageGroupID string, force bool, volumeIDs ...string) error
 	// Add volume(s) synchronously to a StorageGroup
 	// This is a blocking call and will only return once the volumes have been added to storage group
-	AddVolumesToStorageGroupS(symID string, storageGroupID string, volumeIDs ...string) error
+	AddVolumesToStorageGroupS(symID, storageGroupID string, force bool, volumeIDs ...string) error
+	// Adds one or more volumes (given by their volumeIDs) to a Protected StorageGroup
+	AddVolumesToProtectedStorageGroup(symID, storageGroupID, remoteSymID, remoteStorageGroupID string, force bool, volumeIDs ...string) error
 
 	// Remove volume(s) synchronously from a StorageGroup
-	RemoveVolumesFromStorageGroup(symID string, storageGroupID string, volumeIDs ...string) (*types.StorageGroup, error)
+	RemoveVolumesFromStorageGroup(symID string, storageGroupID string, force bool, volumeIDs ...string) (*types.StorageGroup, error)
+
+	// RemoveVolumesFromProtectedStorageGroup removes one or more volumes (given by their volumeIDs) from a Protected StorageGroup.
+	RemoveVolumesFromProtectedStorageGroup(symID string, storageGroupID, remoteSymID, remoteStorageGroupID string, force bool, volumeIDs ...string) (*types.StorageGroup, error)
 
 	// Initiate a job to remove storage space from the volume.
 	InitiateDeallocationOfTracksFromVolume(symID string, volumeID string) (*types.Job, error)
@@ -253,6 +266,21 @@ type Pmax interface {
 
 	// Expand the size of an existing volume
 	ExpandVolume(symID string, volumeID string, newSizeCYL int) (*types.Volume, error)
-	// Returns a payload for a create volume call
-	GetCreateVolInSGPayload(sizeInCylinders int, volumeName string, isSync bool) (payload interface{})
+	GetCreateVolInSGPayload(sizeInCylinders int, volumeName string, isSync bool, remoteSymID, storageGroupID string, opts ...http.Header) (payload interface{})
+	//GetCreateVolInSGPayloadWithMetaDataHeaders(sizeInCylinders int, volumeName string, isSync bool, remoteSymID, remoteStorageGroupID string, metadata http.Header) (payload interface{})
+
+	// Fetches RDF group information
+	GetRDFGroup(symID, rdfGroup string) (*types.RDFGroup, error)
+	// GetProtectedStorageGroup returns protected storage group given the storage group ID
+	GetProtectedStorageGroup(symID, storageGroup string) (*types.RDFStorageGroup, error)
+	// CreateSGReplica creates a storage group on remote array and protect them with given RDF Mode and a given source storage group
+	CreateSGReplica(symID, remoteSymID, rdfMode, rdfGroupNo, sourceSG, remoteSGName, remoteServiceLevel string) (*types.SGRDFInfo, error)
+	// ExecuteReplicationActionOnSG executes supported replication based actions on the protected SG
+	ExecuteReplicationActionOnSG(symID, action, storageGroup, rdfGroup string, force, exemptConsistency bool) error
+	// Creates a volume replication pair
+	CreateRDFPair(symID, rdfGroupNo, deviceID, rdfMode, rdfType string, establish, exemptConsistency bool) (*types.RDFDevicePairList, error)
+	/// GetRDFDevicePairInfo returns RDF volume information
+	GetRDFDevicePairInfo(symID, rdfGroup, volumeID string) (*types.RDFDevicePair, error)
+	// GetStorageGroupRDFInfo returns the of RDF info of protected storage group
+	GetStorageGroupRDFInfo(symID, sgName, rdfGroupNo string) (*types.StorageGroupRDFG, error)
 }

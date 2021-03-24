@@ -257,6 +257,24 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup for v90
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgA"                                                                        | 1        | "none"                    | "ignored via a whitelist"                              | "ignored" |
 
+Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with metadata headers for v90
+    Given a valid connection
+    And I have a whitelist of <whitelist>
+    And I induce error <induced>
+    When I call CreateVolumeInStorageGroupSWithMetaDataHeaders with name <volname> and size <size>
+    Then the error message contains <errormsg>
+    And I get a valid Volume with name <volname> if no error
+
+    Examples:
+    | volname                                                                        | size     | induced                   | errormsg                                               | whitelist |
+    | "IntgA"                                                                        | 1        | "none"                    | "none"                                                 | ""        |
+    | "IntgB"                                                                        | 5        | "none"                    | "none"                                                 | ""        |
+    | "IntgG"                                                                        | 1        | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
+    | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
+    | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
+    | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
+    | "IntgA"                                                                        | 1        | "none"                    | "ignored via a whitelist"                              | "ignored" |
+  
   Scenario Outline: Test cases for CreateVolumeInStorageGroup for v91
     Given a valid v91 connection
     And I have a whitelist of <whitelist>
@@ -296,6 +314,25 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup for v90
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgA"                                                                        | 1        | "none"                    | "ignored via a whitelist"                              | "ignored" |
+
+  Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with metadata headers for v91
+    Given a valid v91 connection
+    And I have a whitelist of <whitelist>
+    And I induce error <induced>
+    When I call CreateVolumeInStorageGroupSWithMetaDataHeaders with name <volname> and size <size>
+    Then the error message contains <errormsg>
+    And I get a valid Volume with name <volname> if no error
+
+    Examples:
+    | volname                                                                        | size     | induced                   | errormsg                                               | whitelist |
+    | "IntgA"                                                                        | 1        | "none"                    | "none"                                                 | ""        |
+    | "IntgB"                                                                        | 5        | "none"                    | "none"                                                 | ""        |
+    | "IntgG"                                                                        | 1        | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
+    | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
+    | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
+    | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
+    | "IntgA"                                                                        | 1        | "none"                    | "ignored via a whitelist"                              | "ignored" |
+
   Scenario Outline: Test cases for Remove Volume From Storage Group
     Given a valid connection
     And I call CreateVolumeInStorageGroup with name "IntM" and size 1

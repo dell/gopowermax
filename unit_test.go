@@ -17,13 +17,14 @@ package pmax
 import (
 	"bufio"
 	"fmt"
-	"github.com/cucumber/godog"
-	"github.com/dell/gopowermax/mock"
 	"net/http/httptest"
 	"os"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/cucumber/godog"
+	"github.com/dell/gopowermax/mock"
 )
 
 var mockServer *httptest.Server

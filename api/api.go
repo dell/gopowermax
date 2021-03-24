@@ -349,6 +349,7 @@ func (c *client) DoAndGetResponseBody(
 	}
 
 	// add headers to the request
+	addMetaData(headers, body)
 	for header, value := range headers {
 		if header == HeaderKeyContentType && isContentTypeSet {
 			continue
@@ -410,5 +411,20 @@ func (c *client) doLog(
 
 	if c.debug {
 		l(msg)
+	}
+}
+
+func addMetaData(headers map[string]string, body interface{}) {
+	if headers == nil || body == nil {
+		return
+	}
+	// If the body contains a MetaData method, extract the data
+	// and add as HTTP headers.
+	if usgp, ok := interface{}(body).(interface {
+		MetaData() http.Header
+	}); ok {
+		for k := range usgp.MetaData() {
+			headers[k] = usgp.MetaData().Get(k)
+		}
 	}
 }

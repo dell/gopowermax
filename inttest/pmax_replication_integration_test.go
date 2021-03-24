@@ -102,9 +102,7 @@ func TestGetSnapVolumeList(t *testing.T) {
 			return
 		}
 	}
-	snapVolumes, err := client.GetSnapVolumeList(symmetrixID, types.QueryParams{
-		types.IncludeDetails: true,
-	})
+	snapVolumes, err := client.GetSnapVolumeList(symmetrixID, nil)
 	if err != nil {
 		t.Error("Error getting the list of volumes with snapshots: " + err.Error())
 		return
@@ -434,6 +432,153 @@ func TestGetPrivVolumeByID(t *testing.T) {
 	fmt.Printf("Private volume fetched successfully: %v\n", privateVolume)
 }
 
+func TestGetRDFGroup(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	rdfGrpInfo, err := client.GetRDFGroup(symmetrixID, localRDFGrpNo)
+	if err != nil {
+		t.Errorf("Error fetching RDF Group Information : %s", err.Error())
+		return
+	}
+	fmt.Printf("RDF Information fetched successfully: %v\n", rdfGrpInfo)
+
+}
+
+func TestGetProtectedStorageGroup(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	rdfSgInfo, err := client.GetProtectedStorageGroup(symmetrixID, defaultProtectedStorageGroup)
+	if err != nil {
+		t.Errorf("Error fetching Protected Storage Group Information : %s", err.Error())
+		return
+	}
+	fmt.Printf("Protected Storage Group Information fetched successfully: %v\n", rdfSgInfo)
+}
+
+func TestGetStorageGroupRDFInfo(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	rdfSgInfo, err := client.GetStorageGroupRDFInfo(symmetrixID, defaultProtectedStorageGroup, localRDFGrpNo)
+	if err != nil {
+		t.Errorf("Error fetching RDF Information for storage group: %s", err.Error())
+		return
+	}
+	fmt.Printf("RDF Information for storage group fetched successfully: %v\n", rdfSgInfo)
+}
+func TestGetRDFDevicePairInfo(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+	rdfPair, err := client.GetRDFDevicePairInfo(symmetrixID, localRDFGrpNo, localVol.VolumeID)
+	if err != nil {
+		t.Errorf("Error retrieving RDF device pair information: %s", err.Error())
+		return
+	}
+
+	fmt.Printf("RDF device pair information retrieved successfully: %v\n", rdfPair)
+}
+
+func TestCreateVolumeInProtectedStorageGroupS(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+	now := time.Now()
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
+	vol, err := client.CreateVolumeInProtectedStorageGroupS(symmetrixID, remoteSymmetrixID, defaultProtectedStorageGroup, defaultProtectedStorageGroup, volumeName, 30)
+	if err != nil {
+		t.Errorf("Error Creating Volume in Protected Storage Group: %s", err.Error())
+		return
+	}
+	fmt.Printf("Volume in Protected Storage Group created successfully: %v\n", vol)
+	cleanupRDFPair(vol.VolumeID, volumeName, defaultProtectedStorageGroup, t)
+}
+func TestAddVolumesToProtectedStorageGroup(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+	now := time.Now()
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
+	vol, err := client.CreateVolumeInStorageGroup(symmetrixID, nonFASTManagedSG, volumeName, 50)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	err = client.AddVolumesToProtectedStorageGroup(symmetrixID, defaultProtectedStorageGroup, remoteSymmetrixID, defaultProtectedStorageGroup, true, vol.VolumeID)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	sg, err := client.RemoveVolumesFromStorageGroup(symmetrixID, nonFASTManagedSG, true, vol.VolumeID)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Printf("SG after removing volume: %#v\n", sg)
+	cleanupRDFPair(vol.VolumeID, volumeName, defaultProtectedStorageGroup, t)
+}
+
+func TestExecuteReplicationActionOnSG(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+	now := time.Now()
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
+	vol, err := client.CreateVolumeInProtectedStorageGroupS(symmetrixID, remoteSymmetrixID, defaultProtectedStorageGroup, defaultProtectedStorageGroup, volumeName, 30)
+	if err != nil {
+		t.Errorf("Error Creating Volume in Protected Storage Group: %s", err.Error())
+		return
+	}
+	fmt.Printf("Volume in Protected Storage Group created successfully: %v\n", vol)
+
+	err = client.ExecuteReplicationActionOnSG(symmetrixID, "Suspend", defaultProtectedStorageGroup, localRDFGrpNo, true, true)
+	if err != nil {
+		t.Errorf("Error in suspending the RDF relation in Protected Storage Group: %s", err.Error())
+		return
+	}
+
+	err = client.ExecuteReplicationActionOnSG(symmetrixID, "Resume", defaultProtectedStorageGroup, localRDFGrpNo, true, true)
+	if err != nil {
+		t.Errorf("Error in resuming the RDF relation in Protected Storage Group: %s", err.Error())
+		return
+	}
+
+	cleanupRDFPair(vol.VolumeID, volumeName, defaultProtectedStorageGroup, t)
+}
+
 /*func TestSnapSessionFetch(t *testing.T) {
 	if client == nil {
 		err := getClient()
@@ -547,34 +692,13 @@ func volumeCleanup(volumeID string, volumeName string, storageGroup string) func
 			}
 			fmt.Printf("volume Renamed: %s\n", vol.VolumeIdentifier)
 		}
-		sg, err := client.RemoveVolumesFromStorageGroup(symmetrixID, storageGroup, volumeID)
+		sg, err := client.RemoveVolumesFromStorageGroup(symmetrixID, storageGroup, true, volumeID)
 		if err != nil {
 			t.Error(err)
 			return
 		}
 		fmt.Printf("SG after removing volume: %#v\n", sg)
 		pmax.Debug = true
-		fmt.Printf("Initiating removal of tracks\n")
-		job, err := client.InitiateDeallocationOfTracksFromVolume(symmetrixID, volumeID)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		fmt.Printf("Waiting on job: %s\n", client.JobToString(job))
-		job, err = client.WaitOnJobCompletion(symmetrixID, job.JobID)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		fmt.Printf("Job completion status: %s\n", client.JobToString(job))
-		switch job.Status {
-		case "SUCCEEDED":
-		case "FAILED":
-			if strings.Contains(job.Result, "The device is already in the requested state") {
-				break
-			}
-			t.Error("Track deallocation job failed: " + job.Result)
-		}
 		err = client.DeleteVolume(symmetrixID, volumeID)
 		if err != nil {
 			t.Error("DeleteVolume failed: " + err.Error())
@@ -586,4 +710,50 @@ func volumeCleanup(volumeID string, volumeName string, storageGroup string) func
 		}
 		fmt.Printf("Received expected error: %s\n", err.Error())
 	}
+}
+func cleanupRDFPair(volumeID string, volumeName string, storageGroup string, t *testing.T) {
+	fmt.Println("Cleaning up RDF Pair...")
+
+	//Retrieving remote volume information
+
+	rdfPair, err := client.GetRDFDevicePairInfo(symmetrixID, localRDFGrpNo, volumeID)
+	if err != nil {
+		t.Errorf("Error retrieving RDF device pair information: %s", err.Error())
+		return
+	}
+
+	//Terminating the Pair and removing the volumes from local SG and remote SG
+
+	_, err = client.RemoveVolumesFromProtectedStorageGroup(symmetrixID, defaultProtectedStorageGroup, remoteSymmetrixID, defaultProtectedStorageGroup, true, volumeID)
+	if err != nil {
+		t.Errorf("failed to remove volumes from default Protected SG (%s) : (%s)", defaultProtectedStorageGroup, err.Error())
+	}
+
+	//Deleting local volume
+
+	err = client.DeleteVolume(symmetrixID, volumeID)
+	if err != nil {
+		t.Error("DeleteVolume failed: " + err.Error())
+	}
+
+	// Test deletion of the volume again... should return an error
+	err = client.DeleteVolume(symmetrixID, volumeID)
+	if err == nil {
+		t.Error("Expected an error saying volume was not found, but no error")
+	}
+	fmt.Printf("Received expected error: %s\n", err.Error())
+
+	//Deleting remote volume
+
+	err = client.DeleteVolume(remoteSymmetrixID, rdfPair.RemoteVolumeName)
+	if err != nil {
+		t.Error("DeleteVolume failed: " + err.Error())
+	}
+	// Test deletion of the volume again... should return an error
+	err = client.DeleteVolume(remoteSymmetrixID, rdfPair.RemoteVolumeName)
+	if err == nil {
+		t.Error("Expected an error saying volume was not found, but no error")
+	}
+	fmt.Printf("Received expected error: %s\n", err.Error())
+
 }

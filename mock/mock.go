@@ -27,6 +27,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jinzhu/copier"
+
 	types "github.com/dell/gopowermax/types/v90"
 	types91 "github.com/dell/gopowermax/types/v91"
 	"github.com/gorilla/mux"
@@ -35,20 +37,26 @@ import (
 
 // constants
 const (
-	APIVersion              = "{apiversion}"
-	PREFIX                  = "/univmax/restapi/" + APIVersion
-	PREFIXNOVERSION         = "/univmax/restapi"
-	PRIVATEPREFIX           = "/univmax/restapi/private/" + APIVersion
-	defaultUsername         = "username"
-	defaultPassword         = "password"
-	Debug                   = false
-	DefaultStorageGroup     = "CSI-Test-SG-1"
-	DefaultStorageGroup1    = "CSI-Test-SG-2"
-	DefaultSymmetrixID      = "000197900046"
-	PostELMSRSymmetrixID    = "000197900047"
-	DefaultStoragePool      = "SRP_1"
-	DefaultServiceLevel     = "Optimized"
-	DefaultFcStoragePortWWN = "5000000000000001"
+	APIVersion                   = "{apiversion}"
+	PREFIX                       = "/univmax/restapi/" + APIVersion
+	PREFIXNOVERSION              = "/univmax/restapi"
+	PRIVATEPREFIX                = "/univmax/restapi/private/" + APIVersion
+	defaultUsername              = "username"
+	defaultPassword              = "password"
+	Debug                        = false
+	DefaultStorageGroup          = "CSI-Test-SG-1"
+	DefaultStorageGroup1         = "CSI-Test-SG-2"
+	DefaultProtectedStorageGroup = "CSI-no-srp-async-test-13"
+	DefaultSymmetrixID           = "000197900046"
+	DefaultRemoteSymID           = "000000000013"
+	PostELMSRSymmetrixID         = "000197900047"
+	DefaultStoragePool           = "SRP_1"
+	DefaultServiceLevel          = "Optimized"
+	DefaultFcStoragePortWWN      = "5000000000000001"
+	DefaultRDFGNo                = 13
+	DefaultRemoteRDFGNo          = 13
+	RemoteArrayHeaderKey         = "RemoteArray"
+	RemoteArrayHeaderValue       = "true"
 )
 
 const (
@@ -86,9 +94,14 @@ var Data struct {
 	JSONDir                       string
 	InitiatorHost                 string
 
-	//Snapshots
+	// Snapshots
 	VolIDToSnapshots  map[string]map[string]*types.Snapshot
 	SnapIDToLinkedVol map[string]map[string]*types.LinkedVolumes
+
+	// SRDF
+	StorageGroupIDToRDFStorageGroup map[string]*types.RDFStorageGroup
+	RDFGroup                        *types.RDFGroup
+	SGRDFInfo                       *types.SGRDFInfo
 }
 
 // InducedErrors constants
@@ -155,6 +168,20 @@ var InducedErrors struct {
 	DeletePortGroupError           bool
 	ExpandVolumeError              bool
 	MaxSnapSessionError            bool
+	GetSRDFInfoError               bool
+	VolumeRdfTypesError            bool
+	GetSRDFPairInfoError           bool
+	GetProtectedStorageGroupError  bool
+	CreateSGReplicaError           bool
+	GetRDFGroupError               bool
+	GetSGOnRemote                  bool
+	GetSGWithVolOnRemote           bool
+	RDFGroupHasPairError           bool
+	GetRemoteVolumeError           bool
+	InvalidLocalVolumeError        bool
+	InvalidRemoteVolumeError       bool
+	FetchResponseError             bool
+	RemoveVolumesFromSG            bool
 }
 
 // hasError checks to see if the specified error (via pointer)
@@ -236,6 +263,20 @@ func Reset() {
 	InducedErrors.DeletePortGroupError = false
 	InducedErrors.ExpandVolumeError = false
 	InducedErrors.MaxSnapSessionError = false
+	InducedErrors.GetSRDFInfoError = false
+	InducedErrors.VolumeRdfTypesError = false
+	InducedErrors.GetSRDFPairInfoError = false
+	InducedErrors.GetProtectedStorageGroupError = false
+	InducedErrors.CreateSGReplicaError = false
+	InducedErrors.GetRDFGroupError = false
+	InducedErrors.GetSGOnRemote = false
+	InducedErrors.GetSGWithVolOnRemote = false
+	InducedErrors.RDFGroupHasPairError = false
+	InducedErrors.InvalidLocalVolumeError = false
+	InducedErrors.InvalidRemoteVolumeError = false
+	InducedErrors.GetRemoteVolumeError = false
+	InducedErrors.FetchResponseError = false
+	InducedErrors.RemoveVolumesFromSG = false
 	Data.JSONDir = "mock"
 	Data.VolumeIDToIdentifier = make(map[string]string)
 	Data.VolumeIDToSize = make(map[string]int)
@@ -259,6 +300,25 @@ func Reset() {
 	Data.StorageGroupIDToVolumes = make(map[string][]string)
 	Data.VolIDToSnapshots = make(map[string]map[string]*types.Snapshot)
 	Data.SnapIDToLinkedVol = make(map[string]map[string]*types.LinkedVolumes)
+	Data.StorageGroupIDToRDFStorageGroup = make(map[string]*types.RDFStorageGroup)
+	Data.RDFGroup = &types.RDFGroup{
+		RdfgNumber:          DefaultRDFGNo,
+		Label:               "RG_13",
+		RemoteRdfgNumber:    DefaultRDFGNo,
+		RemoteSymmetrix:     DefaultRemoteSymID,
+		NumDevices:          0,
+		TotalDeviceCapacity: 0.0,
+		Modes:               []string{"Asynchronous"},
+		Type:                "VASA_ASYNC",
+		Async:               true,
+	}
+	Data.SGRDFInfo = &types.SGRDFInfo{
+		RdfGroupNumber: DefaultRDFGNo,
+		VolumeRdfTypes: []string{"R1"},
+		States:         []string{"Consistent"},
+		Modes:          []string{"Asynchronous"},
+		LargerRdfSides: []string{"Equal"},
+	}
 	initMockCache()
 }
 
@@ -270,6 +330,10 @@ func initMockCache() {
 	AddStorageGroup("CSI-Test-SG-4", "SRP_2", "Optimized")
 	AddStorageGroup("CSI-Test-SG-5", "SRP_2", "None")
 	AddStorageGroup("CSI-Test-SG-6", "None", "None")
+	AddStorageGroup("CSI-Test-Fake-Remote-SG", "None", "None")
+	// Initialize protected SG
+	AddStorageGroup(DefaultProtectedStorageGroup, "None", "None")
+	AddRDFStorageGroup(DefaultProtectedStorageGroup, DefaultRemoteSymID)
 	// ISCSI directors
 	iscsiDir1 := "SE-1E"
 	iscsidir1PortKey1 := iscsiDir1 + ":" + "4"
@@ -386,6 +450,13 @@ func getRouter() http.Handler {
 	router.HandleFunc(PRIVATEPREFIX+"/replication/symmetrix/{symid}/volume/{volID}/snapshot/{SnapID}/generation/{genID}", handleGenerations)
 	router.HandleFunc(PREFIX+"/replication/capabilities/symmetrix", handleCapabilities)
 
+	// SRDF
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/rdf_group/{rdf_no}", handleRDFGroup)
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{id}", handleRDFStorageGroup)
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{id}/rdf_group", handleRDFStorageGroup)
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{id}/rdf_group/{rdf_no}", handleSGRDFInfo)
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/rdf_group/{rdf_no}/volume/{volume_id}", handleRDFDevicePair)
+
 	mockRouter = router
 	return router
 }
@@ -398,6 +469,219 @@ func NewVolume(volumeID, volumeIdentifier string, size int, sgList []string) {
 	fmt.Printf("NewVolume: id %s name %s\n", volumeID, volumeIdentifier)
 	Data.VolumeIDToSize[volumeID] = size
 	Data.VolumeIDToSGList[volumeID] = sgList
+}
+
+// TO be used for the endpoints that don't have handlers yet
+func handleTODO(w http.ResponseWriter, r *http.Request) {
+	writeError(w, "Endpoint not implemented yet", http.StatusNotImplemented)
+}
+
+// GET, POST /univmax/restapi/APIVersion/replication/symmetrix/{symID}/rdf_group/{rdf_no}/volume/{volume_id}
+func handleRDFDevicePair(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		handleRDFDevicePairInfo(w, r)
+	case http.MethodPost:
+		handleRDFDevicePairCreation(w, r)
+	default:
+		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func handleRDFDevicePairCreation(w http.ResponseWriter, r *http.Request) {
+	// TODO: Update mock cache based on the request payload.
+	routeParams := mux.Vars(r)
+	rdfPairs := new(types.RDFDevicePairList)
+	rdfPairs.RDFDevicePair = []types.RDFDevicePair{
+		{
+			RemoteVolumeName:     routeParams["volume_id"],
+			LocalVolumeName:      routeParams["volume_id"],
+			RemoteSymmID:         routeParams["symid"],
+			LocalSymmID:          routeParams["symid"],
+			LocalRdfGroupNumber:  DefaultRDFGNo,
+			RemoteRdfGroupNumber: DefaultRemoteRDFGNo,
+		},
+	}
+	writeJSON(w, rdfPairs)
+}
+
+// GET /univmax/restapi/APIVersion/replication/symmetrix/{symID}/rdf_group/{rdf_no}/volume/{volume_id}
+func handleRDFDevicePairInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if InducedErrors.GetSRDFPairInfoError {
+		writeError(w, "Could not retrieve pair info", http.StatusBadRequest)
+		return
+	}
+	routeParams := mux.Vars(r)
+	var volumeConfig string
+	if routeParams["symid"] == Data.RDFGroup.RemoteSymmetrix {
+		volumeConfig = "RDF2+TDEV"
+	} else {
+		volumeConfig = "RDF1+TDEV"
+	}
+	rdfDevicePairInfo := &types.RDFDevicePair{
+		LocalRdfGroupNumber:  Data.RDFGroup.RdfgNumber,
+		RemoteRdfGroupNumber: Data.RDFGroup.RdfgNumber,
+		LocalSymmID:          routeParams["symid"],
+		RemoteSymmID:         Data.RDFGroup.RemoteSymmetrix,
+		LocalVolumeName:      routeParams["volume_id"],
+		RemoteVolumeName:     routeParams["volume_id"],
+		VolumeConfig:         volumeConfig,
+		RdfMode:              Data.RDFGroup.Modes[0],
+		RdfpairState:         "Consistent",
+		LargerRdfSide:        "Equal",
+	}
+	writeJSON(w, rdfDevicePairInfo)
+}
+
+// GET /univmax/restapi/APIVersion/replication/symmetrix/{symID}/rdf_group/{rdf_no}
+func handleRDFGroup(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if InducedErrors.GetRDFGroupError {
+		writeError(w, "the specified RA group does not exist: induced error", http.StatusNotFound)
+		return
+	}
+	routeParams := mux.Vars(r)
+	rdfGroupNumber := routeParams["rdf_no"]
+	if rdfGroupNumber != fmt.Sprintf("%d", Data.RDFGroup.RdfgNumber) {
+		writeError(w, "The specified RA group is not valid", http.StatusNotFound)
+	} else {
+		if InducedErrors.RDFGroupHasPairError {
+			Data.RDFGroup.NumDevices = 1
+		}
+		writeJSON(w, Data.RDFGroup)
+	}
+}
+
+// GET /univmax/restapi/APIVersion/replication/symmetrix/{symid}/storagegroup/{id}
+// POST /univmax/restapi/APIVersion/replication/symmetrix/{symid}/storagegroup/{id}/rdf_group
+func handleRDFStorageGroup(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		if InducedErrors.GetProtectedStorageGroupError {
+			writeError(w, "The requested storage group cannot be found: induced error", http.StatusNotFound)
+			return
+		}
+		if InducedErrors.FetchResponseError {
+			writeError(w, "Error fetching response", http.StatusBadRequest)
+		}
+		handleSGRDFFetch(w, r)
+	case http.MethodPost:
+		if InducedErrors.CreateSGReplicaError {
+			writeError(w, "Failed to create SG replica: induced error", http.StatusNotFound)
+			return
+		}
+		handleSGRDFCreation(w, r)
+	default:
+		writeError(w, "Method["+r.Method+"] not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func handleSGRDFFetch(w http.ResponseWriter, r *http.Request) {
+	routeParams := mux.Vars(r)
+	storageGroupID := routeParams["id"]
+	symmetrixID := routeParams["symid"]
+	var (
+		rdfStorageGroup *types.RDFStorageGroup
+		ok              bool
+	)
+	if _, ok = Data.StorageGroupIDToStorageGroup[storageGroupID]; !ok {
+		writeError(w, "The requested storage group does not exist", http.StatusNotFound)
+		return
+	}
+	if rdfStorageGroup, ok = Data.StorageGroupIDToRDFStorageGroup[storageGroupID]; !ok {
+		rdfStorageGroup = &types.RDFStorageGroup{
+			SymmetrixID: symmetrixID,
+			Name:        storageGroupID,
+			Rdf:         false,
+		}
+	}
+	if InducedErrors.RDFGroupHasPairError {
+		rdfStorageGroup.NumDevicesNonGk = 1
+	}
+	writeJSON(w, rdfStorageGroup)
+}
+
+func handleSGRDFCreation(w http.ResponseWriter, r *http.Request) {
+	sgsrdf := new(types.CreateSGSRDF)
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(sgsrdf); err != nil {
+		writeError(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+	routeParams := mux.Vars(r)
+	storageGroupName := routeParams["id"]
+	symmetrixID := routeParams["symid"]
+	if _, err := AddRDFStorageGroup(storageGroupName, symmetrixID); err != nil {
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	for _, volumeID := range Data.StorageGroupIDToVolumes[storageGroupName] {
+		if _, ok := Data.VolumeIDToVolume[volumeID]; !ok {
+			continue
+		}
+		volume := Data.VolumeIDToVolume[volumeID]
+		volume.Type = "RDF1+TDEV"
+		volume.RDFGroupIDList = []types.RDFGroupID{
+			{RDFGroupNumber: Data.RDFGroup.RdfgNumber},
+		}
+	}
+	sgrdfInfo := new(types.SGRDFInfo)
+	err := copier.Copy(sgrdfInfo, Data.SGRDFInfo)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	sgrdfInfo.SymmetrixID = symmetrixID
+	sgrdfInfo.StorageGroupName = storageGroupName
+	writeJSON(w, sgrdfInfo)
+}
+
+// GET, PUT /replication/symmetrix/{symid}/storagegroup/{id}/rdf_group/{rdf_no}
+func handleSGRDF(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		handleSGRDFInfo(w, r)
+	case http.MethodPut:
+		handleSGRDFAction(w, r)
+	default:
+		writeError(w, "Method["+r.Method+"] not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func handleSGRDFInfo(w http.ResponseWriter, r *http.Request) {
+	if InducedErrors.GetSRDFInfoError {
+		writeError(w, "Error retrieving SRDF Info(%s): induced error", http.StatusRequestTimeout)
+		return
+	}
+	routeParams := mux.Vars(r)
+	if routeParams["rdf_no"] != fmt.Sprintf("%d", Data.RDFGroup.RdfgNumber) {
+		writeError(w, "The specified RA group is not valid", http.StatusNotFound)
+	} else {
+		sgrdfInfo := new(types.SGRDFInfo)
+		err := copier.Copy(sgrdfInfo, Data.SGRDFInfo)
+		if err != nil {
+			writeError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if InducedErrors.VolumeRdfTypesError {
+			sgrdfInfo.VolumeRdfTypes = []string{"invalid"}
+		}
+		sgrdfInfo.SymmetrixID = routeParams["symid"]
+		sgrdfInfo.StorageGroupName = routeParams["id"]
+		writeJSON(w, sgrdfInfo)
+	}
+}
+
+func handleSGRDFAction(w http.ResponseWriter, r *http.Request) {
+	// TODO: execute actions by updating the memory cache
+	w.WriteHeader(200)
 }
 
 // GET /univmax/restapi/system/version
@@ -539,7 +823,11 @@ func handleVolume(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if volID != "" {
-			returnVolume(w, volID)
+			if vars["symid"] == Data.RDFGroup.RemoteSymmetrix {
+				returnVolume(w, volID, true)
+			} else {
+				returnVolume(w, volID, false)
+			}
 		}
 
 	case http.MethodPut:
@@ -565,7 +853,11 @@ func handleVolume(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if updateVolumePayload.EditVolumeActionParam.ModifyVolumeIdentifierParam != nil {
-			RenameVolume(w, updateVolumePayload.EditVolumeActionParam.ModifyVolumeIdentifierParam, volID, executionOption)
+			if vars["symid"] == Data.RDFGroup.RemoteSymmetrix {
+				RenameVolume(w, updateVolumePayload.EditVolumeActionParam.ModifyVolumeIdentifierParam, volID, executionOption, true)
+			} else {
+				RenameVolume(w, updateVolumePayload.EditVolumeActionParam.ModifyVolumeIdentifierParam, volID, executionOption, false)
+			}
 			return
 		}
 		if updateVolumePayload.EditVolumeActionParam.ExpandVolumeParam != nil {
@@ -605,11 +897,38 @@ func deleteVolume(volID string) error {
 	return nil
 }
 
-func returnVolume(w http.ResponseWriter, volID string) {
+func returnVolume(w http.ResponseWriter, volID string, remote bool) {
 	if volID != "" {
 		if vol, ok := Data.VolumeIDToVolume[volID]; ok {
+			newVol := new(types.Volume)
+			err := copier.Copy(newVol, vol)
+			if err != nil {
+				writeError(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			fmt.Printf("volume: %#v\n", vol)
-			writeJSON(w, vol)
+			if InducedErrors.InvalidLocalVolumeError {
+				newVol.StorageGroupIDList = nil
+			}
+			if remote {
+				if InducedErrors.FetchResponseError {
+					writeError(w, "Error fetching response", http.StatusBadRequest)
+				}
+				if InducedErrors.GetRemoteVolumeError {
+					writeError(w, "Volume cannot be found", http.StatusNotFound)
+				}
+				if InducedErrors.InvalidRemoteVolumeError {
+					newVol.StorageGroupIDList = nil
+				}
+				if !strings.Contains(vol.Type, "RDF") {
+					writeError(w, "Volume not found", http.StatusNotFound)
+					return
+				} else {
+					newVol.Type = strings.ReplaceAll(newVol.Type, "RDF1", "RDF2")
+					newVol.VolumeIdentifier = ""
+				}
+			}
+			writeJSON(w, newVol)
 			return
 		}
 		writeError(w, "Volume cannot be found: "+volID, http.StatusNotFound)
@@ -640,20 +959,20 @@ func freeVolume(w http.ResponseWriter, param *types.FreeVolumeParam, volID strin
 }
 
 // RenameVolume - renames volume in cache
-func RenameVolume(w http.ResponseWriter, param *types.ModifyVolumeIdentifierParam, volID string, executionOption string) {
+func RenameVolume(w http.ResponseWriter, param *types.ModifyVolumeIdentifierParam, volID string, executionOption string, remote bool) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
-	renameVolume(w, param, volID, executionOption)
+	renameVolume(w, param, volID, executionOption, remote)
 }
 
 // This returns the volume itself after renaming
-func renameVolume(w http.ResponseWriter, param *types.ModifyVolumeIdentifierParam, volID string, executionOption string) {
+func renameVolume(w http.ResponseWriter, param *types.ModifyVolumeIdentifierParam, volID string, executionOption string, remote bool) {
 	if executionOption != types.ExecutionOptionSynchronous {
 		writeError(w, "expected SYNCHRONOUS", http.StatusBadRequest)
 		return
 	}
 	Data.VolumeIDToVolume[volID].VolumeIdentifier = param.VolumeIdentifier.IdentifierName
-	returnVolume(w, volID)
+	returnVolume(w, volID, remote)
 }
 
 // ExpandVolume - Expands volume size in cache
@@ -691,7 +1010,7 @@ func expandVolume(w http.ResponseWriter, param *types.ExpandVolumeParam, volID s
 		writeError(w, fmt.Sprintf("Could not convert expand size parameter in request (%s)", param.VolumeAttribute.VolumeSize), http.StatusBadRequest)
 		return
 	}
-	returnVolume(w, volID)
+	returnVolume(w, volID, false)
 }
 
 // JobInfo is used to simulate a job in Unisphere.
@@ -836,7 +1155,11 @@ func handleStorageGroup(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error retrieving Storage Group(s): induced error", http.StatusRequestTimeout)
 			return
 		}
-		ReturnStorageGroup(w, sgID)
+		if vars["symid"] == Data.RDFGroup.RemoteSymmetrix {
+			ReturnStorageGroup(w, sgID, true)
+		} else {
+			ReturnStorageGroup(w, sgID, false)
+		}
 
 	case http.MethodPut:
 		if InducedErrors.UpdateStorageGroupError {
@@ -922,7 +1245,11 @@ func handleStorageGroup(w http.ResponseWriter, r *http.Request) {
 		// Data.StorageGroupIDToNVolumes[sgID] = 0
 		// fmt.Println("SG Name: ", sgID)
 		AddStorageGroupFromCreateParams(createSGPayload)
-		ReturnStorageGroup(w, sgID)
+		if vars["symid"] == Data.RDFGroup.RemoteSymmetrix {
+			ReturnStorageGroup(w, sgID, true)
+		} else {
+			ReturnStorageGroup(w, sgID, false)
+		}
 
 	case http.MethodDelete:
 		if InducedErrors.DeleteStorageGroupError {
@@ -1094,6 +1421,22 @@ func AddStorageGroup(storageGroupID string, storageResourcePoolID string,
 	return Data.StorageGroupIDToStorageGroup[storageGroupID], nil
 }
 
+func AddRDFStorageGroup(storageGroupID, symmetrixId string) (*types.RDFStorageGroup, error) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	if _, ok := Data.StorageGroupIDToRDFStorageGroup[storageGroupID]; ok {
+		return nil, fmt.Errorf("rdfStorageGroup already exists")
+	}
+	Data.StorageGroupIDToStorageGroup[storageGroupID].Unprotected = false
+	rdfSG := &types.RDFStorageGroup{
+		Name:        storageGroupID,
+		SymmetrixID: symmetrixId,
+		Rdf:         true,
+	}
+	Data.StorageGroupIDToRDFStorageGroup[storageGroupID] = rdfSG
+	return rdfSG, nil
+}
+
 // RemoveStorageGroup - Removes a storage group from the mock data cache
 func RemoveStorageGroup(w http.ResponseWriter, storageGroupID string) {
 	mockCacheMutex.Lock()
@@ -1102,6 +1445,9 @@ func RemoveStorageGroup(w http.ResponseWriter, storageGroupID string) {
 }
 
 func removeStorageGroup(w http.ResponseWriter, storageGroupID string) {
+	if InducedErrors.GetSGOnRemote {
+		storageGroupID = "CSI-Test-Fake-Remote-SG"
+	}
 	sg, ok := Data.StorageGroupIDToStorageGroup[storageGroupID]
 	if !ok {
 		fmt.Println("Storage Group " + storageGroupID + " doesn't exist")
@@ -1114,13 +1460,18 @@ func removeStorageGroup(w http.ResponseWriter, storageGroupID string) {
 		return
 	}
 	volumes := Data.StorageGroupIDToVolumes[storageGroupID]
+	if InducedErrors.RemoveVolumesFromSG {
+		volumes = nil
+	}
 	if len(volumes) > 0 {
 		fmt.Println("Can't delete a storage group which has volumes")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	delete(Data.StorageGroupIDToStorageGroup, storageGroupID)
-	delete(Data.StorageGroupIDToStorageGroup, storageGroupID)
+	delete(Data.StorageGroupIDToStorageGroup, storageGroupID+"-remote")
+	delete(Data.StorageGroupIDToRDFStorageGroup, storageGroupID)
+	delete(Data.StorageGroupIDToRDFStorageGroup, storageGroupID+"-remote")
 }
 
 func addMaskingViewFromCreateParams(createParams *types.MaskingViewCreateParam) {
@@ -1295,6 +1646,12 @@ func newVolume(volumeID, volumeIdentifier string, size int, sgList []string) {
 		Success:               true,
 		Message:               "message",
 	}
+	if _, ok := Data.StorageGroupIDToRDFStorageGroup[sgList[0]]; ok {
+		volume.Type = "RDF1+TDEV"
+		volume.RDFGroupIDList = []types.RDFGroupID{
+			{RDFGroupNumber: Data.RDFGroup.RdfgNumber},
+		}
+	}
 	Data.VolumeIDToVolume[volumeID] = volume
 }
 
@@ -1368,7 +1725,7 @@ func AddInitiator(initiatorID string, initiatorName string, initiatorType string
 	return Data.InitiatorIDToInitiator[initiatorID], nil
 }
 
-// Returninitiator - Returns initiator from mock cache based on initiator id
+// ReturnInitiator - Returns initiator from mock cache based on initiator id
 func ReturnInitiator(w http.ResponseWriter, initiatorID string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
@@ -1496,7 +1853,7 @@ func addPortGroup(portGroupID string, portGroupType string, portKeys []types.Por
 func updatePortGroup(portGroupID string, editPayload *types.EditPortGroupActionParam) (*types.PortGroup, error) {
 	pg, ok := Data.PortGroupIDToPortGroup[portGroupID]
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("Error! PortGroup %s does not exist.", portGroupID))
+		return nil, fmt.Errorf("Error! PortGroup %s does not exist.", portGroupID)
 	}
 
 	// Collect the ports to add (if any)
@@ -1570,7 +1927,7 @@ func UpdatePortGroupFromParams(portGroupID string, updateParams *types.EditPortG
 func DeletePortGroup(portGroupID string) (*types.PortGroup, error) {
 	pg, ok := Data.PortGroupIDToPortGroup[portGroupID]
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("Error! PortGroup %s does not exist.", portGroupID))
+		return nil, fmt.Errorf("Error! PortGroup %s does not exist.", portGroupID)
 	}
 
 	delete(Data.PortGroupIDToPortGroup, portGroupID)
@@ -1630,20 +1987,37 @@ func keys(m map[string]*types.StorageGroup) (keys []string) {
 }
 
 // ReturnStorageGroup - Returns storage group information from mock cache
-func ReturnStorageGroup(w http.ResponseWriter, sgID string) {
+func ReturnStorageGroup(w http.ResponseWriter, sgID string, remote bool) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
-	returnStorageGroup(w, sgID)
+	returnStorageGroup(w, sgID, remote)
 }
 
-func returnStorageGroup(w http.ResponseWriter, sgID string) {
+func returnStorageGroup(w http.ResponseWriter, sgID string, remote bool) {
 	if sgID != "" {
+		if InducedErrors.GetSGOnRemote && remote {
+			sg := Data.StorageGroupIDToStorageGroup["CSI-Test-Fake-Remote-SG"]
+			fmt.Printf("Fake remote SG: %#v\n", sg)
+			writeJSON(w, sg)
+			return
+		}
+		if InducedErrors.GetSGWithVolOnRemote && remote {
+			sg := Data.StorageGroupIDToStorageGroup["CSI-Test-Fake-Remote-SG"]
+			sg.NumOfVolumes = 1
+			fmt.Printf("Fake remote SG: %#v\n", sg)
+			writeJSON(w, sg)
+			return
+		}
+		if _, ok := Data.StorageGroupIDToRDFStorageGroup[sgID]; remote && !ok {
+			writeError(w, "StorageGroup not found", http.StatusNotFound)
+			return
+		}
 		if sg, ok := Data.StorageGroupIDToStorageGroup[sgID]; ok {
 			fmt.Printf("SG: %#v\n", sg)
 			writeJSON(w, sg)
 			return
 		}
-		w.WriteHeader(http.StatusNotFound)
+		writeError(w, "StorageGroup not found", http.StatusNotFound)
 	} else {
 		storageGroupIDs := keys(Data.StorageGroupIDToStorageGroup)
 		storageGroupIDList := &types.StorageGroupIDList{
@@ -1721,6 +2095,13 @@ func addOneVolumeToStorageGroup(volumeID, volumeIdentifier, sgID string, size in
 			currentStorageGroups := Data.VolumeIDToVolume[volumeID].StorageGroupIDList
 			newStorageGroups := append(currentStorageGroups, sgID)
 			Data.VolumeIDToVolume[volumeID].StorageGroupIDList = newStorageGroups
+			// Update volume's replication details in case the storage-group is replicated
+			if _, ok := Data.StorageGroupIDToRDFStorageGroup[sgID]; ok {
+				Data.VolumeIDToVolume[volumeID].Type = "RDF1+TDEV"
+				Data.VolumeIDToVolume[volumeID].RDFGroupIDList = []types.RDFGroupID{
+					{RDFGroupNumber: Data.RDFGroup.RdfgNumber},
+				}
+			}
 
 			// Update the Storage Group caches
 			Data.StorageGroupIDToStorageGroup[sgID].NumOfVolumes++
@@ -1820,6 +2201,19 @@ func removeOneVolumeFromStorageGroup(volumeID, storageGroupID string) error {
 	}
 	vol.StorageGroupIDList = newStorageGroupList
 	vol.NumberOfStorageGroups--
+	// Change Volume's replication properties if replicated
+	removeReplicationProps := false
+	_, removeReplicationProps = Data.StorageGroupIDToRDFStorageGroup[storageGroupID]
+	for _, sgID := range vol.StorageGroupIDList {
+		if _, ok := Data.StorageGroupIDToRDFStorageGroup[sgID]; ok {
+			removeReplicationProps = false
+			break
+		}
+	}
+	if removeReplicationProps {
+		vol.Type = "TDEV"
+		vol.RDFGroupIDList = nil
+	}
 	// Remove volume from the SG's volume list
 	currentVolumeIDs := Data.StorageGroupIDToVolumes[storageGroupID]
 	newVolumeIDList := make([]string, 0)
@@ -1859,7 +2253,7 @@ func removeVolumeFromStorageGroup(w http.ResponseWriter, volumeIDs []string, sgI
 		fmt.Println("Volume ID: " + volID)
 		removeOneVolumeFromStorageGroup(volID, sgID)
 	}
-	returnStorageGroup(w, sgID)
+	returnStorageGroup(w, sgID, false)
 }
 
 // /univmax/restapi/90/sloprovisioning/symmetrix/{symid}/portgroup/{id}

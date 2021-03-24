@@ -40,30 +40,36 @@ type VolumeIterator struct {
 
 // Volume : information about a volume
 type Volume struct {
-	VolumeID              string   `json:"volumeID"`
-	Type                  string   `json:"type"`
-	Emulation             string   `json:"emulation"`
-	SSID                  string   `json:"ssid"`
-	AllocatedPercent      int      `json:"allocated_percent"`
-	CapacityGB            float64  `json:"cap_gb"`
-	FloatCapacityMB       float64  `json:"cap_mb"`
-	CapacityCYL           int      `json:"cap_cyl"`
-	Status                string   `json:"status"`
-	Reserved              bool     `json:"reserved"`
-	Pinned                bool     `json:"pinned"`
-	PhysicalName          string   `json:"pysical_name"`
-	VolumeIdentifier      string   `json:"volume_identifier"`
-	WWN                   string   `json:"wwn"`
-	Encapsulated          bool     `json:"encapsulated"`
-	NumberOfStorageGroups int      `json:"num_of_storage_groups"`
-	NumberOfFrontEndPaths int      `json:"num_of_front_end_paths"`
-	StorageGroupIDList    []string `json:"storageGroupId"`
+	VolumeID              string       `json:"volumeID"`
+	Type                  string       `json:"type"`
+	Emulation             string       `json:"emulation"`
+	SSID                  string       `json:"ssid"`
+	AllocatedPercent      int          `json:"allocated_percent"`
+	CapacityGB            float64      `json:"cap_gb"`
+	FloatCapacityMB       float64      `json:"cap_mb"`
+	CapacityCYL           int          `json:"cap_cyl"`
+	Status                string       `json:"status"`
+	Reserved              bool         `json:"reserved"`
+	Pinned                bool         `json:"pinned"`
+	PhysicalName          string       `json:"pysical_name"`
+	VolumeIdentifier      string       `json:"volume_identifier"`
+	WWN                   string       `json:"wwn"`
+	Encapsulated          bool         `json:"encapsulated"`
+	NumberOfStorageGroups int          `json:"num_of_storage_groups"`
+	NumberOfFrontEndPaths int          `json:"num_of_front_end_paths"`
+	StorageGroupIDList    []string     `json:"storageGroupId"`
+	RDFGroupIDList        []RDFGroupID `json:"rdfGroupId"`
 	// Don't know how to handle symmetrixPortKey for sure
 	SymmetrixPortKey []SymmetrixPortKeyType `json:"symmetrixPortKey"`
 	Success          bool                   `json:"success"`
 	Message          string                 `json:"message"`
 	SnapSource       bool                   `json:"snapvx_source"`
 	SnapTarget       bool                   `json:"snapvx_target"`
+}
+
+// RDFGroupID contains the group number
+type RDFGroupID struct {
+	RDFGroupNumber int `json:"rdf_group_number"`
 }
 
 // FreeVolumeParam : boolean value representing data to be freed
