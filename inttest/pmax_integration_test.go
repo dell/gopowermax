@@ -41,6 +41,10 @@ var (
 	password                = "password"
 	apiVersion              = "XX"
 	symmetrixID             = "000000000001"
+	remoteSymmetrixID       = "000000000001"
+	localRDFGrpNo           = "0"
+	remoteRDFGrpNo          = "0"
+	defaultRepMode          = "ASYNC"
 	defaultFCPortGroup      = "fc-pg"
 	defaultiSCSIPortGroup   = "iscsi-pg"
 	defaultFCInitiator      = "FA-1D:0:00000000abcd000e"
@@ -56,11 +60,14 @@ var (
 	volumePrefix            = "xx"
 	sgPrefix                = "zz"
 	snapshotPrefix          = "snap"
+	csiPrefix               = "csi"
 	// the test run will create these for the run and clean up in the end
-	defaultStorageGroup = "csi-Integration-Test"
-	nonFASTManagedSG    = "csi-Integration-No-FAST"
-	defaultFCHost       = "IntegrationFCHost"
-	defaultiSCSIHost    = "IntegrationiSCSIHost"
+	defaultStorageGroup          = "csi-Integration-Test"
+	defaultProtectedStorageGroup = "csi-Integration-Test-Protected-SG"
+	nonFASTManagedSG             = "csi-Integration-No-FAST"
+	defaultFCHost                = "IntegrationFCHost"
+	defaultiSCSIHost             = "IntegrationiSCSIHost"
+	localVol, remoteVol          *types.Volume
 )
 
 func setDefaultVariables() {
@@ -69,6 +76,10 @@ func setDefaultVariables() {
 	password = setenvVariable("Password", password)
 	apiVersion = strings.TrimSpace(setenvVariable("APIVersion", ""))
 	symmetrixID = setenvVariable("SymmetrixID", symmetrixID)
+	remoteSymmetrixID = setenvVariable("RemoteSymmetrixID", remoteSymmetrixID)
+	defaultRepMode = setenvVariable("DefaultRepMode", defaultRepMode)
+	localRDFGrpNo = setenvVariable("LocalRDFGrpNo", localRDFGrpNo)
+	remoteRDFGrpNo = setenvVariable("RemoteRDFGrpInfo", remoteRDFGrpNo)
 	defaultFCPortGroup = setenvVariable("DefaultFCPortGroup", defaultFCPortGroup)
 	defaultiSCSIPortGroup = setenvVariable("DefaultiSCSIPortGroup", defaultiSCSIPortGroup)
 	defaultFCInitiator = setenvVariable("DefaultFCInitiator", defaultFCInitiator)
@@ -84,6 +95,7 @@ func setDefaultVariables() {
 	defaultServiceLevel = setenvVariable("DefaultServiceLevel", defaultServiceLevel)
 	sgPrefix = setenvVariable("SGPrefix", sgPrefix)
 	snapshotPrefix = setenvVariable("SnapPrefix", snapshotPrefix)
+	defaultProtectedStorageGroup = defaultProtectedStorageGroup + "-" + localRDFGrpNo + "-" + defaultRepMode
 }
 
 func TestMain(m *testing.M) {
@@ -92,6 +104,12 @@ func TestMain(m *testing.M) {
 	setDefaultVariables()
 
 	err := createDefaultSGAndHost() // Creates default storage group and host for the test
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	err = createRDFSetup() //Creates RDF setup for the test
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
@@ -106,9 +124,14 @@ func TestMain(m *testing.M) {
 		fmt.Println("========= CLEANUP ==========")
 		cleanupTests = append(cleanupTests, testing.InternalTest{
 			Name: "cleanupDefaultSGAndHOST",
-			F:    cleanDefaultUpSGAndHOST,
+			F:    cleanupDefaultSGAndHOST,
 		})
 	}
+	// Always clean up the resources used in replication
+	cleanupTests = append(cleanupTests, testing.InternalTest{
+		Name: "cleanupRDFSetup",
+		F:    cleanupRDFSetup,
+	})
 	afterRun(cleanupTests) // Cleans up the volumes and snapshots created for replication testing purposes.
 }
 
@@ -155,7 +178,51 @@ func createDefaultSGAndHost() error {
 	return err
 }
 
-func cleanDefaultUpSGAndHOST(t *testing.T) {
+func createRDFSetup() error {
+
+	fmt.Printf("Creating RDF Setup.....")
+
+	//Creating default Protected SG
+
+	_, err := createStorageGroup(symmetrixID, defaultProtectedStorageGroup, defaultSRP, defaultServiceLevel, false)
+	if err != nil {
+		return fmt.Errorf("failed to create SG: (%s)", err.Error())
+	}
+	now := time.Now()
+
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
+
+	//Creating source volume
+
+	localVol, err = client.CreateVolumeInStorageGroup(symmetrixID, defaultProtectedStorageGroup, volumeName, 50)
+	if err != nil {
+		return fmt.Errorf("failed to create volume : (%s)", err.Error())
+	}
+	fmt.Printf("volume:\n%#v\n", localVol)
+
+	//Creating SG Replica
+
+	SGRDFInfo, err := client.CreateSGReplica(symmetrixID, remoteSymmetrixID, defaultRepMode, localRDFGrpNo, defaultProtectedStorageGroup, defaultProtectedStorageGroup, defaultServiceLevel)
+	fmt.Printf("SG info :\n%#v\n", SGRDFInfo)
+	if err != nil {
+		return fmt.Errorf("Error Creating SGReplica: %s", err.Error())
+	}
+
+	//Retrieving remote volume information for cleanup
+
+	rdfPair, err := client.GetRDFDevicePairInfo(symmetrixID, localRDFGrpNo, localVol.VolumeID)
+	if err != nil {
+		return fmt.Errorf("Error retrieving RDF device pair information: %s", err.Error())
+	}
+	tgtVolID := rdfPair.RemoteVolumeName
+	remoteVol, err = client.GetVolumeByID(remoteSymmetrixID, tgtVolID)
+	if err != nil {
+		return fmt.Errorf("Error retrieving volume information: %s", err.Error())
+	}
+	return err
+}
+
+func cleanupDefaultSGAndHOST(t *testing.T) {
 	fmt.Println("Cleaning up SG and host...")
 	// delete default SG
 	err := deleteStorageGroup(symmetrixID, defaultStorageGroup)
@@ -176,6 +243,52 @@ func cleanDefaultUpSGAndHOST(t *testing.T) {
 	err = deleteHost(symmetrixID, defaultiSCSIHost)
 	if err != nil {
 		t.Errorf("failed to delete default iSCSI host (%s) : (%s)", defaultFCHost, err.Error())
+	}
+}
+
+func cleanupRDFSetup(t *testing.T) {
+	fmt.Println("Cleaning up RDF Setup...")
+
+	//Terminating the Pair and removing the volumes from local SG and remote SG
+
+	_, err := client.RemoveVolumesFromProtectedStorageGroup(symmetrixID, defaultProtectedStorageGroup, remoteSymmetrixID, defaultProtectedStorageGroup, true, localVol.VolumeID)
+	if err != nil {
+		t.Errorf("failed to remove volumes from default Protected SG (%s) : (%s)", defaultProtectedStorageGroup, err.Error())
+	}
+	//Deleting local volume
+	err = client.DeleteVolume(symmetrixID, localVol.VolumeID)
+	if err != nil {
+		t.Error("DeleteVolume failed: " + err.Error())
+	}
+	// Test deletion of the volume again... should return an error
+	err = client.DeleteVolume(symmetrixID, localVol.VolumeID)
+	if err == nil {
+		t.Error("Expected an error saying volume was not found, but no error")
+	}
+	fmt.Printf("Received expected error: %s\n", err.Error())
+
+	//Deleting remote volume
+	err = client.DeleteVolume(remoteSymmetrixID, remoteVol.VolumeID)
+	if err != nil {
+		t.Error("DeleteVolume failed: " + err.Error())
+	}
+	// Test deletion of the volume again... should return an error
+	err = client.DeleteVolume(remoteSymmetrixID, remoteVol.VolumeID)
+	if err == nil {
+		t.Error("Expected an error saying volume was not found, but no error")
+	}
+	fmt.Printf("Received expected error: %s\n", err.Error())
+
+	// Deleting local SG
+	err = deleteStorageGroup(symmetrixID, defaultProtectedStorageGroup)
+	if err != nil {
+		t.Errorf("failed to delete default SG (%s) : (%s)", defaultProtectedStorageGroup, err.Error())
+	}
+
+	// Deleting remote SG
+	err = deleteStorageGroup(remoteSymmetrixID, defaultProtectedStorageGroup)
+	if err != nil {
+		t.Errorf("failed to delete default SG (%s) : (%s)", defaultProtectedStorageGroup, err.Error())
 	}
 }
 
@@ -583,7 +696,7 @@ func TestCreateVolumeInStorageGroup1(t *testing.T) {
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	payload := client.GetCreateVolInSGPayload(1, volumeName, false)
+	payload := client.GetCreateVolInSGPayload(1, volumeName, false, "", "")
 
 	payloadBytes, err := json.Marshal(&payload)
 	if err != nil {
@@ -646,7 +759,7 @@ func TestAddVolumesInStorageGroup(t *testing.T) {
 		return
 	}
 	fmt.Printf("volume:\n%#v\n", vol)
-	err = client.AddVolumesToStorageGroup(symmetrixID, nonFASTManagedSG, vol.VolumeID)
+	err = client.AddVolumesToStorageGroup(symmetrixID, nonFASTManagedSG, true, vol.VolumeID)
 	if err != nil {
 		t.Error(err)
 		return
@@ -658,7 +771,7 @@ func TestAddVolumesInStorageGroup(t *testing.T) {
 	}
 	fmt.Printf("SG after adding volume: %#v\n", sg)
 	//Remove the volume from SG as part of cleanup
-	sg, err = client.RemoveVolumesFromStorageGroup(symmetrixID, nonFASTManagedSG, vol.VolumeID)
+	sg, err = client.RemoveVolumesFromStorageGroup(symmetrixID, nonFASTManagedSG, true, vol.VolumeID)
 	if err != nil {
 		t.Error(err)
 		return
@@ -676,34 +789,13 @@ func cleanupVolume(volumeID string, volumeName string, storageGroup string, t *t
 		}
 		fmt.Printf("volume Renamed: %s\n", vol.VolumeIdentifier)
 	}
-	sg, err := client.RemoveVolumesFromStorageGroup(symmetrixID, storageGroup, volumeID)
+	sg, err := client.RemoveVolumesFromStorageGroup(symmetrixID, storageGroup, true, volumeID)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	fmt.Printf("SG after removing volume: %#v\n", sg)
 	pmax.Debug = true
-	fmt.Printf("Initiating removal of tracks\n")
-	job, err := client.InitiateDeallocationOfTracksFromVolume(symmetrixID, volumeID)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	fmt.Printf("Waiting on job: %s\n", client.JobToString(job))
-	job, err = client.WaitOnJobCompletion(symmetrixID, job.JobID)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	fmt.Printf("Job completion status: %s\n", client.JobToString(job))
-	switch job.Status {
-	case "SUCCEEDED":
-	case "FAILED":
-		if strings.Contains(job.Result, "The device is already in the requested state") {
-			break
-		}
-		t.Error("Track deallocation job failed: " + job.Result)
-	}
 	err = client.DeleteVolume(symmetrixID, volumeID)
 	if err != nil {
 		t.Error("DeleteVolume failed: " + err.Error())

@@ -16,6 +16,7 @@ package pmax
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"runtime"
 	"strconv"
@@ -30,6 +31,8 @@ const (
 	defaultUsername        = "username"
 	defaultPassword        = "password"
 	symID                  = "000197900046"
+	remoteSymID            = ""
+	srdfMode               = "ASYNC"
 	testPortGroup          = "12se0042-iscsi-PG"
 	testInitiator          = "SE-1E:000:iqn.1993-08.org.debian:01:5ae293b352a2"
 	testInitiatorIQN       = "iqn.1993-08.org.debian:01:5ae293b352a2"
@@ -606,6 +609,19 @@ func (c *unitContext) iCallCreateVolumeInStorageGroupSWithNameAndSize(volumeName
 	return nil
 }
 
+func (c *unitContext) iCallCreateVolumeInStorageGroupSWithNameAndSizeWithMetaDataHeaders(volumeName string, sizeInCylinders int) error {
+	metadata := make(http.Header)
+	metadata.Set("x-csi-pv-name", "testPVName")
+	metadata.Set("x-csi-pv-claimname", "testPVClaimName")
+	metadata.Set("x-csi-pv-namespace", "testPVNamespace")
+	if !c.flag91 {
+		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, metadata)
+	} else {
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, metadata)
+	}
+	return nil
+}
+
 func (c *unitContext) iGetAValidVolumeWithNameIfNoError(volumeName string) error {
 	if c.err != nil {
 		return nil
@@ -657,9 +673,9 @@ func (c *unitContext) iGetAValidStoragePoolListIfNoError() error {
 
 func (c *unitContext) iCallRemoveVolumeFromStorageGroup() error {
 	if !c.flag91 {
-		c.storageGroup, c.err = c.client.RemoveVolumesFromStorageGroup(symID, mock.DefaultStorageGroup, c.vol.VolumeID)
+		c.storageGroup, c.err = c.client.RemoveVolumesFromStorageGroup(symID, mock.DefaultStorageGroup, true, c.vol.VolumeID)
 	} else {
-		c.storageGroup, c.err = c.client91.RemoveVolumesFromStorageGroup(symID, mock.DefaultStorageGroup, c.vol.VolumeID)
+		c.storageGroup, c.err = c.client91.RemoveVolumesFromStorageGroup(symID, mock.DefaultStorageGroup, true, c.vol.VolumeID)
 	}
 	return nil
 }
@@ -1059,18 +1075,18 @@ func (c *unitContext) iHaveAHostGroup(hostGroupID string) error {
 
 func (c *unitContext) iCallAddVolumesToStorageGroup(sgID string) error {
 	if !c.flag91 {
-		c.err = c.client.AddVolumesToStorageGroup(symID, sgID, c.volIDList...)
+		c.err = c.client.AddVolumesToStorageGroup(symID, sgID, true, c.volIDList...)
 	} else {
-		c.err = c.client91.AddVolumesToStorageGroup(symID, sgID, c.volIDList...)
+		c.err = c.client91.AddVolumesToStorageGroup(symID, sgID, true, c.volIDList...)
 	}
 	return nil
 }
 
 func (c *unitContext) iCallAddVolumesToStorageGroupS(sgID string) error {
 	if !c.flag91 {
-		c.err = c.client.AddVolumesToStorageGroupS(symID, sgID, c.volIDList...)
+		c.err = c.client.AddVolumesToStorageGroupS(symID, sgID, true, c.volIDList...)
 	} else {
-		c.err = c.client91.AddVolumesToStorageGroupS(symID, sgID, c.volIDList...)
+		c.err = c.client91.AddVolumesToStorageGroupS(symID, sgID, true, c.volIDList...)
 	}
 	return nil
 }
@@ -1404,6 +1420,121 @@ func (c *unitContext) iCallUpdateHostName(newName string) error {
 	return nil
 }
 
+func (c *unitContext) iCallCreateSGReplica() error {
+	localSG, remoteSG := mock.DefaultStorageGroup, mock.DefaultStorageGroup // Using same names for local and remote storage groups
+	remoteServiceLevel := mock.DefaultServiceLevel                          // Using the same service level as local
+	rdfgNumber := fmt.Sprintf("%d", mock.DefaultRDFGNo)
+	_, c.err = c.client.CreateSGReplica(symID, mock.DefaultRemoteSymID, srdfMode, rdfgNumber, localSG, remoteSG, remoteServiceLevel)
+	return nil
+}
+
+func (c *unitContext) thenSGShouldBeReplicated() error {
+	if c.err != nil {
+		return nil
+	}
+	if mock.Data.StorageGroupIDToRDFStorageGroup[mock.DefaultStorageGroup] == nil ||
+		mock.Data.StorageGroupIDToStorageGroup[mock.DefaultStorageGroup].Unprotected {
+		return fmt.Errorf("storage group not protected")
+	}
+	return nil
+}
+
+func (c *unitContext) checkReplication(volume *types.Volume, compliment string) bool {
+	isReplicated := strings.Contains(volume.Type, "RDF") || len(volume.RDFGroupIDList) > 0
+	if compliment == "not" {
+		isReplicated = !isReplicated
+	}
+	return isReplicated
+}
+
+func (c *unitContext) theVolumesShouldBeReplicated(compliment string) error {
+	if c.err != nil {
+		return nil
+	}
+	for _, volumeID := range mock.Data.StorageGroupIDToVolumes[mock.DefaultStorageGroup] {
+		volume := mock.Data.VolumeIDToVolume[volumeID]
+		if !c.checkReplication(volume, compliment) {
+			return fmt.Errorf("volumes[%s] should %s be replicated", volumeID, compliment)
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iCallGetStorageGroupRDFInfo() error {
+	var sgrdf *types.StorageGroupRDFG
+	sgrdf, c.err = c.client.GetStorageGroupRDFInfo(symID, mock.DefaultStorageGroup, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo))
+	if c.err == nil {
+		if sgrdf.SymmetrixID != symID ||
+			sgrdf.StorageGroupName != mock.DefaultStorageGroup ||
+			sgrdf.RdfGroupNumber != mock.DefaultRDFGNo {
+			c.err = fmt.Errorf("the returned storage group doesn't contain proper details")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iCallGetRDFDevicePairInfo() error {
+	var (
+		devicePairInfo *types.RDFDevicePair
+		localVolID     string = c.volIDList[0]
+		remoteVolID    string = c.volIDList[0]
+	)
+
+	devicePairInfo, c.err = c.client.GetRDFDevicePairInfo(symID, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo), localVolID)
+	if c.err == nil {
+		if devicePairInfo.LocalSymmID != symID || devicePairInfo.RemoteSymmID != mock.DefaultRemoteSymID ||
+			devicePairInfo.LocalVolumeName != localVolID || devicePairInfo.RemoteVolumeName != remoteVolID {
+			c.err = fmt.Errorf("incorrect rdf-pair info returned")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iCallGetProtectedStorageGroup() error {
+	var protectedSG *types.RDFStorageGroup
+	protectedSG, c.err = c.client.GetProtectedStorageGroup(symID, mock.DefaultStorageGroup)
+	if c.err == nil {
+		if protectedSG.SymmetrixID != symID || protectedSG.Name != mock.DefaultStorageGroup {
+			c.err = fmt.Errorf("protected sg with incorrect details returned")
+		}
+		if _, ok := mock.Data.StorageGroupIDToRDFStorageGroup[mock.DefaultStorageGroup]; !ok && protectedSG.Rdf {
+			c.err = fmt.Errorf("storage group is not protected, but the rdf is set to true")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iCallGetRDFGroup() error {
+	var rdfGroup *types.RDFGroup
+	rdfGroup, c.err = c.client.GetRDFGroup(symID, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo))
+	if c.err == nil {
+		if !rdfGroup.Async || rdfGroup.RemoteSymmetrix != mock.DefaultRemoteSymID || rdfGroup.RdfgNumber != mock.DefaultRemoteRDFGNo {
+			c.err = fmt.Errorf("rdf group with incorrect details returned")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iCallAddVolumesToProtectedStorageGroup() error {
+	c.err = c.client.AddVolumesToProtectedStorageGroup(symID, mock.DefaultProtectedStorageGroup, mock.DefaultRemoteSymID, mock.DefaultProtectedStorageGroup, false, c.volIDList...)
+	return nil
+}
+
+func (c *unitContext) iCallRemoveVolumesFromProtectedStorageGroup() error {
+	_, c.err = c.client.RemoveVolumesFromProtectedStorageGroup(symID, mock.DefaultStorageGroup, mock.DefaultRemoteSymID, mock.DefaultStorageGroup, false, c.volIDList...)
+	return nil
+}
+
+func (c *unitContext) iCallCreateRDFPair() error {
+	_, c.err = c.client.CreateRDFPair(symID, fmt.Sprintf("%d", mock.DefaultRDFGNo), c.volIDList[0], ASYNC, "", false, false)
+	return nil
+}
+
+func (c *unitContext) iCallExecuteAction(action string) error {
+	c.err = c.client.ExecuteReplicationActionOnSG(symID, action, mock.DefaultStorageGroup, fmt.Sprintf("%d", mock.DefaultRDFGNo), false, false)
+	return nil
+}
+
 func UnitTestContext(s *godog.Suite) {
 	c := &unitContext{}
 	s.Step(`^I induce error "([^"]*)"$`, c.iInduceError)
@@ -1435,6 +1566,7 @@ func UnitTestContext(s *godog.Suite) {
 	// Volumes
 	s.Step(`^I call CreateVolumeInStorageGroup with name "([^"]*)" and size (\d+)$`, c.iCallCreateVolumeInStorageGroupWithNameAndSize)
 	s.Step(`^I call CreateVolumeInStorageGroupS with name "([^"]*)" and size (\d+)$`, c.iCallCreateVolumeInStorageGroupSWithNameAndSize)
+	s.Step(`^I call CreateVolumeInStorageGroupSWithMetaDataHeaders with name "([^"]*)" and size (\d+)$`, c.iCallCreateVolumeInStorageGroupSWithNameAndSizeWithMetaDataHeaders)
 	s.Step(`^I get a valid Volume with name "([^"]*)" if no error$`, c.iGetAValidVolumeWithNameIfNoError)
 	s.Step(`^I call CreateStorageGroup with name "([^"]*)" and srp "([^"]*)" and sl "([^"]*)"$`, c.iCallCreateStorageGroupWithNameAndSrpAndSl)
 	s.Step(`^I call DeleteStorageGroup "([^"]*)"$`, c.iCallDeleteStorageGroup)
@@ -1529,4 +1661,17 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I recieve (\d+) targets$`, c.iRecieveTargets)
 	s.Step(`^there should be no errors$`, c.thereShouldBeNoErrors)
 	s.Step(`^I call UpdateHostName "([^"]*)"$`, c.iCallUpdateHostName)
+	// SRDF
+	s.Step(`^I call CreateSGReplica$`, c.iCallCreateSGReplica)
+	s.Step(`^then SG should be replicated$`, c.thenSGShouldBeReplicated)
+	s.Step(`^I call GetStorageGroupRDFInfo$`, c.iCallGetStorageGroupRDFInfo)
+	s.Step(`^I call GetStorageGroupRDFInfo$`, c.iCallGetStorageGroupRDFInfo)
+	s.Step(`^I call GetRDFDevicePairInfo$`, c.iCallGetRDFDevicePairInfo)
+	s.Step(`^I call GetProtectedStorageGroup$`, c.iCallGetProtectedStorageGroup)
+	s.Step(`^I call GetRDFGroup$`, c.iCallGetRDFGroup)
+	s.Step(`^I call AddVolumesToProtectedStorageGroup$`, c.iCallAddVolumesToProtectedStorageGroup)
+	s.Step(`^the volumes should "([^"]*)" be replicated$`, c.theVolumesShouldBeReplicated)
+	s.Step(`^I call RemoveVolumesFromProtectedStorageGroup$`, c.iCallRemoveVolumesFromProtectedStorageGroup)
+	s.Step(`^I call CreateRDFPair$`, c.iCallCreateRDFPair)
+	s.Step(`^I call ExecuteAction "([^"]*)"$`, c.iCallExecuteAction)
 }

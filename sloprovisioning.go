@@ -531,7 +531,7 @@ func (c *Client) CreateVolumeInStorageGroup(
 
 	job := &types.Job{}
 	var err error
-	payload := c.GetCreateVolInSGPayload(sizeInCylinders, volumeName, false)
+	payload := c.GetCreateVolInSGPayload(sizeInCylinders, volumeName, false, "", "")
 	job, err = c.UpdateStorageGroup(symID, storageGroupID, payload)
 	if err != nil || job == nil {
 		return nil, fmt.Errorf("A job was not returned from UpdateStorageGroup")
@@ -545,8 +545,12 @@ func (c *Client) CreateVolumeInStorageGroup(
 	case types.JobStatusFailed:
 		return nil, fmt.Errorf("The UpdateStorageGroup job failed: " + c.JobToString(job))
 	}
+	volume, err := c.GetVolumeByIdentifier(symID, storageGroupID, volumeName, sizeInCylinders)
+	return volume, err
+}
 
-	// Look up the volume by the identifier.
+// GetVolumeByIdentifier on the given symmetrix in specific storage group with a volume name and having size in cylinders
+func (c *Client) GetVolumeByIdentifier(symID, storageGroupID string, volumeName string, sizeInCylinders int) (*types.Volume, error) {
 	volIDList, err := c.GetVolumeIDList(symID, volumeName, false)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't get Volume ID List: " + err.Error())
@@ -573,8 +577,7 @@ func (c *Client) CreateVolumeInStorageGroup(
 // CreateVolumeInStorageGroupS creates a volume in the specified Storage Group with a given volumeName
 // and the size of the volume in cylinders.
 // This method is run synchronously
-func (c *Client) CreateVolumeInStorageGroupS(
-	symID string, storageGroupID string, volumeName string, sizeInCylinders int) (*types.Volume, error) {
+func (c *Client) CreateVolumeInStorageGroupS(symID, storageGroupID string, volumeName string, sizeInCylinders int, opts ...http.Header) (*types.Volume, error) {
 	defer c.TimeSpent("CreateVolumeInStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -584,34 +587,37 @@ func (c *Client) CreateVolumeInStorageGroupS(
 		return nil, fmt.Errorf("Length of volumeName exceeds max limit")
 	}
 
-	payload := c.GetCreateVolInSGPayload(sizeInCylinders, volumeName, true)
+	payload := c.GetCreateVolInSGPayload(sizeInCylinders, volumeName, true, "", "", opts...)
 	err := c.UpdateStorageGroupS(symID, storageGroupID, payload)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't create volume. error - %s", err.Error())
 	}
 
-	// Look up the volume by the identifier.
-	volIDList, err := c.GetVolumeIDList(symID, volumeName, false)
+	volume, err := c.GetVolumeByIdentifier(symID, storageGroupID, volumeName, sizeInCylinders)
+	return volume, err
+}
+
+// CreateVolumeInProtectedStorageGroupS takes simplified input arguments to create a volume of a give name and size in a protected storage group.
+// This will add volume in both Local and Remote Storage group
+// This method is run synchronously
+func (c *Client) CreateVolumeInProtectedStorageGroupS(symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, sizeInCylinders int, opts ...http.Header) (*types.Volume, error) {
+	defer c.TimeSpent("CreateVolumeInStorageGroup", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+
+	if len(volumeName) > MaxVolIdentifierLength {
+		return nil, fmt.Errorf("Length of volumeName exceeds max limit")
+	}
+
+	payload := c.GetCreateVolInSGPayload(sizeInCylinders, volumeName, true, remoteSymID, remoteStorageGroupID, opts...)
+	err := c.UpdateStorageGroupS(symID, storageGroupID, payload)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't get Volume ID List: " + err.Error())
+		return nil, fmt.Errorf("couldn't create volume. error - %s", err.Error())
 	}
-	if len(volIDList) > 1 {
-		log.Warning("Found multiple volumes matching the identifier " + volumeName)
-	}
-	for _, volumeID := range volIDList {
-		vol, err := c.GetVolumeByID(symID, volumeID)
-		if err == nil {
-			for _, sgID := range vol.StorageGroupIDList {
-				if sgID == storageGroupID && vol.CapacityCYL == sizeInCylinders {
-					// Return the first match
-					return vol, nil
-				}
-			}
-		}
-	}
-	errormsg := fmt.Sprintf("Failed to find newly created volume with name: %s in SG: %s", volumeName, storageGroupID)
-	log.Error(errormsg)
-	return nil, fmt.Errorf(errormsg)
+
+	volume, err := c.GetVolumeByIdentifier(symID, storageGroupID, volumeName, sizeInCylinders)
+	return volume, err
 }
 
 // ExpandVolume expands an existing volume to a new (larger) size in CYL
@@ -642,7 +648,7 @@ func (c *Client) ExpandVolume(symID string, volumeID string, newSizeCYL int) (*t
 }
 
 // AddVolumesToStorageGroup adds one or more volumes (given by their volumeIDs) to a StorageGroup.
-func (c *Client) AddVolumesToStorageGroup(symID string, storageGroupID string, volumeIDs ...string) error {
+func (c *Client) AddVolumesToStorageGroup(symID, storageGroupID string, force bool, volumeIDs ...string) error {
 	defer c.TimeSpent("AddVolumesToStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return err
@@ -651,7 +657,7 @@ func (c *Client) AddVolumesToStorageGroup(symID string, storageGroupID string, v
 	if len(volumeIDs) == 0 {
 		return fmt.Errorf("At least one volume id has to be specified")
 	}
-	payload := c.GetAddVolumeToSGPayload(false, volumeIDs...)
+	payload := c.GetAddVolumeToSGPayload(false, force, "", "", volumeIDs...)
 	job, err := c.UpdateStorageGroup(symID, storageGroupID, payload)
 	if err != nil || job == nil {
 		return fmt.Errorf("A job was not returned from UpdateStorageGroup")
@@ -669,7 +675,7 @@ func (c *Client) AddVolumesToStorageGroup(symID string, storageGroupID string, v
 }
 
 // AddVolumesToStorageGroupS adds one or more volumes (given by their volumeIDs) to a StorageGroup.
-func (c *Client) AddVolumesToStorageGroupS(symID string, storageGroupID string, volumeIDs ...string) error {
+func (c *Client) AddVolumesToStorageGroupS(symID, storageGroupID string, force bool, volumeIDs ...string) error {
 	defer c.TimeSpent("AddVolumesToStorageGroupS", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return err
@@ -678,7 +684,25 @@ func (c *Client) AddVolumesToStorageGroupS(symID string, storageGroupID string, 
 	if len(volumeIDs) == 0 {
 		return fmt.Errorf("at least one volume id has to be specified")
 	}
-	payload := c.GetAddVolumeToSGPayload(true, volumeIDs...)
+	payload := c.GetAddVolumeToSGPayload(true, force, "", "", volumeIDs...)
+	err := c.UpdateStorageGroupS(symID, storageGroupID, payload)
+	if err != nil {
+		return fmt.Errorf("An error(%s) was returned from UpdateStorageGroup", err.Error())
+	}
+	return nil
+}
+
+// AddVolumesToProtectedStorageGroup adds one or more volumes (given by their volumeIDs) to a Protected StorageGroup.
+func (c *Client) AddVolumesToProtectedStorageGroup(symID, storageGroupID, remoteSymID, remoteStorageGroupID string, force bool, volumeIDs ...string) error {
+	defer c.TimeSpent("AddVolumesToProtectedStorageGroup", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return err
+	}
+	// Check if the volume id list is not empty
+	if len(volumeIDs) == 0 {
+		return fmt.Errorf("at least one volume id has to be specified")
+	}
+	payload := c.GetAddVolumeToSGPayload(true, force, remoteSymID, remoteStorageGroupID, volumeIDs...)
 	err := c.UpdateStorageGroupS(symID, storageGroupID, payload)
 	if err != nil {
 		return fmt.Errorf("An error(%s) was returned from UpdateStorageGroup", err.Error())
@@ -687,12 +711,16 @@ func (c *Client) AddVolumesToStorageGroupS(symID string, storageGroupID string, 
 }
 
 // RemoveVolumesFromStorageGroup removes one or more volumes (given by their volumeIDs) from a StorageGroup.
-func (c *Client) RemoveVolumesFromStorageGroup(symID string, storageGroupID string, volumeIDs ...string) (*types.StorageGroup, error) {
+func (c *Client) RemoveVolumesFromStorageGroup(symID string, storageGroupID string, force bool, volumeIDs ...string) (*types.StorageGroup, error) {
 	defer c.TimeSpent("RemoveVolumesFromStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
-	payload := c.GetRemoveVolumeFromSGPayload(volumeIDs...)
+	// Check if the volume id list is not empty
+	if len(volumeIDs) == 0 {
+		return nil, fmt.Errorf("at least one volume id has to be specified")
+	}
+	payload := c.GetRemoveVolumeFromSGPayload(force, "", "", volumeIDs...)
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XStorageGroup + "/" + storageGroupID
 	fields := map[string]interface{}{
 		http.MethodPut: URL,
@@ -711,8 +739,38 @@ func (c *Client) RemoveVolumesFromStorageGroup(symID string, storageGroupID stri
 	return updatedStorageGroup, nil
 }
 
+// RemoveVolumesFromProtectedStorageGroup removes one or more volumes (given by their volumeIDs) from a Protected StorageGroup.
+func (c *Client) RemoveVolumesFromProtectedStorageGroup(symID string, storageGroupID, remoteSymID, remoteStorageGroupID string, force bool, volumeIDs ...string) (*types.StorageGroup, error) {
+	defer c.TimeSpent("RemoveVolumesFromStorageGroup", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	// Check if the volume id list is not empty
+	if len(volumeIDs) == 0 {
+		return nil, fmt.Errorf("at least one volume id has to be specified")
+	}
+	payload := c.GetRemoveVolumeFromSGPayload(force, remoteSymID, remoteStorageGroupID, volumeIDs...)
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XStorageGroup + "/" + storageGroupID
+	fields := map[string]interface{}{
+		http.MethodPut: URL,
+	}
+
+	updatedStorageGroup := &types.StorageGroup{}
+	ctx, cancel := GetTimeoutContext()
+	defer cancel()
+	err := c.api.Put(
+		ctx, URL, c.getDefaultHeaders(), payload, updatedStorageGroup)
+	if err != nil {
+		log.WithFields(fields).Error("Error in RemoveVolumesFromProtectedStorageGroup: " + err.Error())
+		return nil, err
+	}
+	log.Info(fmt.Sprintf("Successfully removed volumes: [%s] from SG: %s", strings.Join(volumeIDs, " "), storageGroupID))
+	return updatedStorageGroup, nil
+}
+
 // GetCreateVolInSGPayload returns payload for adding volume/s to SG.
-func (c *Client) GetCreateVolInSGPayload(sizeInCylinders int, volumeName string, isSync bool) (payload interface{}) {
+// if remoteSymID is passed then the payload includes RemoteSymmSGInfoParam.
+func (c *Client) GetCreateVolInSGPayload(sizeInCylinders int, volumeName string, isSync bool, remoteSymID, remoteStorageGroupID string, opts ...http.Header) (payload interface{}) {
 	var executionOption string
 	size := strconv.Itoa(sizeInCylinders)
 	if c.version == "90" {
@@ -744,6 +802,17 @@ func (c *Client) GetCreateVolInSGPayload(sizeInCylinders int, volumeName string,
 			ExecutionOption: executionOption,
 		}
 
+		if opts != nil && len(opts) != 0 {
+			// If the payload has a SetMetaData method, set the metadata headers.
+			if t, ok := interface{}(payload).(interface {
+				SetMetaData(metadata http.Header)
+			}); ok {
+				t.SetMetaData(opts[0])
+			} else {
+				log.Println("warning: gopowermax.UpdateStorageGroupPayload: no SetMetaData method exists, consider updating gopowermax library.")
+			}
+		}
+
 	} else {
 		if isSync {
 			executionOption = types91.ExecutionOptionSynchronous
@@ -764,8 +833,14 @@ func (c *Client) GetCreateVolInSGPayload(sizeInCylinders int, volumeName string,
 					VolumeSize:   size,
 				},
 			},
+			RemoteSymmSGInfoParam: types91.RemoteSymmSGInfoParam{
+				Force: true,
+			},
 		}
-
+		if remoteSymID != "" {
+			addVolumeParam.RemoteSymmSGInfoParam.RemoteSymmetrix1ID = remoteSymID
+			addVolumeParam.RemoteSymmSGInfoParam.RemoteSymmetrix1SGs = []string{remoteStorageGroupID}
+		}
 		payload = &types91.UpdateStorageGroupPayload{
 			EditStorageGroupActionParam: types91.EditStorageGroupActionParam{
 				ExpandStorageGroupParam: &types91.ExpandStorageGroupParam{
@@ -773,6 +848,16 @@ func (c *Client) GetCreateVolInSGPayload(sizeInCylinders int, volumeName string,
 				},
 			},
 			ExecutionOption: executionOption,
+		}
+		if opts != nil && len(opts) != 0 {
+			// If the payload has a SetMetaData method, set the metadata headers.
+			if t, ok := interface{}(payload).(interface {
+				SetMetaData(metadata http.Header)
+			}); ok {
+				t.SetMetaData(opts[0])
+			} else {
+				log.Println("warning: gopowermax.UpdateStorageGroupPayload: no SetMetaData method exists, consider updating gopowermax library.")
+			}
 		}
 	}
 	if payload != nil {
@@ -782,7 +867,7 @@ func (c *Client) GetCreateVolInSGPayload(sizeInCylinders int, volumeName string,
 }
 
 // GetAddVolumeToSGPayload returns payload for adding specific volume/s to SG.
-func (c *Client) GetAddVolumeToSGPayload(isSync bool, volumeIDs ...string) (payload interface{}) {
+func (c *Client) GetAddVolumeToSGPayload(isSync, force bool, remoteSymID, remoteStorageGroupID string, volumeIDs ...string) (payload interface{}) {
 	executionOption := ""
 	if c.version == "90" {
 		if isSync {
@@ -809,6 +894,13 @@ func (c *Client) GetAddVolumeToSGPayload(isSync bool, volumeIDs ...string) (payl
 		}
 		addSpecificVolumeParam := &types91.AddSpecificVolumeParam{
 			VolumeIDs: volumeIDs,
+			RemoteSymmSGInfoParam: types91.RemoteSymmSGInfoParam{
+				Force: force,
+			},
+		}
+		if remoteSymID != "" {
+			addSpecificVolumeParam.RemoteSymmSGInfoParam.RemoteSymmetrix1ID = remoteSymID
+			addSpecificVolumeParam.RemoteSymmSGInfoParam.RemoteSymmetrix1SGs = []string{remoteStorageGroupID}
 		}
 		payload = &types91.UpdateStorageGroupPayload{
 			EditStorageGroupActionParam: types91.EditStorageGroupActionParam{
@@ -826,7 +918,7 @@ func (c *Client) GetAddVolumeToSGPayload(isSync bool, volumeIDs ...string) (payl
 }
 
 // GetRemoveVolumeFromSGPayload returns payload for removing volume/s from SG.
-func (c *Client) GetRemoveVolumeFromSGPayload(volumeIDs ...string) (payload interface{}) {
+func (c *Client) GetRemoveVolumeFromSGPayload(force bool, remoteSymID, remoteStorageGroupID string, volumeIDs ...string) (payload interface{}) {
 	if c.version == "90" {
 		removeVolumeParam := &types.RemoveVolumeParam{
 			VolumeIDs: volumeIDs,
@@ -840,6 +932,13 @@ func (c *Client) GetRemoveVolumeFromSGPayload(volumeIDs ...string) (payload inte
 	} else {
 		removeVolumeParam := &types91.RemoveVolumeParam{
 			VolumeIDs: volumeIDs,
+			RemoteSymmSGInfoParam: types91.RemoteSymmSGInfoParam{
+				Force: force,
+			},
+		}
+		if remoteSymID != "" {
+			removeVolumeParam.RemoteSymmSGInfoParam.RemoteSymmetrix1ID = remoteSymID
+			removeVolumeParam.RemoteSymmSGInfoParam.RemoteSymmetrix1SGs = []string{remoteStorageGroupID}
 		}
 		payload = &types91.UpdateStorageGroupPayload{
 			EditStorageGroupActionParam: types91.EditStorageGroupActionParam{

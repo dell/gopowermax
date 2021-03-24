@@ -14,6 +14,10 @@
 
 package types
 
+import (
+	"net/http"
+)
+
 // This file contains structures declaration of REST paylod to Unisphere
 
 // StorageGroupIDList : list of sg's
@@ -227,6 +231,20 @@ type UpdateStorageGroupPayload struct {
 	EditStorageGroupActionParam EditStorageGroupActionParam `json:"editStorageGroupActionParam"`
 	// ExecutionOption "SYNCHRONOUS" or "ASYNCHRONOUS"
 	ExecutionOption string `json:"executionOption"`
+	metadata        http.Header
+}
+
+// MetaData returns the metadata headers.
+func (vp *UpdateStorageGroupPayload) MetaData() http.Header {
+	if vp.metadata == nil {
+		return make(http.Header)
+	}
+	return vp.metadata
+}
+
+// SetMetaData sets the metadata headers.
+func (vp *UpdateStorageGroupPayload) SetMetaData(metadata http.Header) {
+	vp.metadata = metadata
 }
 
 // UseExistingStorageGroupParam : use this sg ID
