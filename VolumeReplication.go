@@ -30,6 +30,7 @@ import (
 const (
 	XRDFGroup = "/rdf_group"
 	ASYNC     = "ASYNC"
+	METRO     = "METRO"
 )
 
 // GetRDFGroup returns RDF group information given the RDF group number
@@ -119,6 +120,40 @@ func (c *Client) ExecuteReplicationActionOnSG(symID, action, storageGroup, rdfGr
 			Action:          action,
 			ExecutionOption: types.ExecutionOptionSynchronous,
 		}
+	case "Failback":
+		actionParam := &types.Failback{
+			Force:        force,
+			SymForce:     false,
+			Star:         false,
+			Hop2:         false,
+			Bypass:       false,
+			Remote:       false,
+			RecoverPoint: false,
+		}
+		modifyParam = &types.ModifySGRDFGroup{
+			Failback:        actionParam,
+			Action:          action,
+			ExecutionOption: types.ExecutionOptionSynchronous,
+		}
+	case "Failover":
+		actionParam := &types.Failover{
+			Force:      force,
+			SymForce:   false,
+			Star:       false,
+			Hop2:       false,
+			Bypass:     false,
+			Remote:     false,
+			Immediate:  false,
+			ConsExempt: exemptConsistency,
+			MetroBias:  false,
+			Establish:  false,
+			Restore:    false,
+		}
+		modifyParam = &types.ModifySGRDFGroup{
+			Failover:        actionParam,
+			Action:          action,
+			ExecutionOption: types.ExecutionOptionSynchronous,
+		}
 	default:
 		return fmt.Errorf("not a supported action on a protected storage group")
 	}
@@ -142,7 +177,8 @@ func (c *Client) ExecuteReplicationActionOnSG(symID, action, storageGroup, rdfGr
 func (c *Client) GetCreateSGReplicaPayload(remoteSymID string, rdfMode string, rdfgNo int, remoteSGName string, remoteServiceLevel string, establish bool) *types.CreateSGSRDF {
 
 	var payload *types.CreateSGSRDF
-	if rdfMode == ASYNC {
+	switch rdfMode {
+	case ASYNC:
 		payload = &types.CreateSGSRDF{
 			ReplicationMode:        "Asynchronous",
 			RemoteSLO:              remoteServiceLevel,
@@ -150,6 +186,17 @@ func (c *Client) GetCreateSGReplicaPayload(remoteSymID string, rdfMode string, r
 			RdfgNumber:             rdfgNo,
 			RemoteStorageGroupName: remoteSGName,
 			Establish:              establish,
+			ExecutionOption:        types.ExecutionOptionSynchronous,
+		}
+	case METRO:
+		payload = &types.CreateSGSRDF{
+			ReplicationMode:        "Active",
+			RemoteSLO:              remoteServiceLevel,
+			RemoteSymmID:           remoteSymID,
+			RdfgNumber:             rdfgNo,
+			RemoteStorageGroupName: remoteSGName,
+			Establish:              establish,
+			MetroBias:              true,
 			ExecutionOption:        types.ExecutionOptionSynchronous,
 		}
 	}
@@ -189,10 +236,21 @@ func (c *Client) CreateSGReplica(symID, remoteSymID, rdfMode, rdfGroupNo, source
 func (c *Client) GetCreateRDFPairPayload(devList types.LocalDeviceListCriteria, rdfMode, rdfType string, establish, exemptConsistency bool) *types.CreateRDFPair {
 
 	var payload *types.CreateRDFPair
-	if rdfMode == ASYNC {
+	switch rdfMode {
+	case ASYNC:
 		payload = &types.CreateRDFPair{
 			RdfMode:                 "Asynchronous",
 			RdfType:                 rdfType,
+			Establish:               establish,
+			Exempt:                  exemptConsistency,
+			LocalDeviceListCriteria: &devList,
+			ExecutionOption:         types.ExecutionOptionSynchronous,
+		}
+	case METRO:
+		payload = &types.CreateRDFPair{
+			RdfMode:                 "Active",
+			RdfType:                 "RDF1",
+			Bias:                    true,
 			Establish:               establish,
 			Exempt:                  exemptConsistency,
 			LocalDeviceListCriteria: &devList,

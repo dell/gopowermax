@@ -34,6 +34,7 @@ type Client struct {
 	api           api.Client
 	allowedArrays []string
 	version       string
+	symmetrixID   string
 }
 
 var (
@@ -185,6 +186,13 @@ func NewClientWithArgs(
 	return client, nil
 }
 
+// WithSymmetrixID sets the default array for the client
+func (c *Client) WithSymmetrixID(symmetrixID string) Pmax {
+	client := *c
+	client.symmetrixID = symmetrixID
+	return &client
+}
+
 func (c *Client) getDefaultHeaders() map[string]string {
 	headers := make(map[string]string)
 	headers["Accept"] = accHeader
@@ -194,5 +202,8 @@ func (c *Client) getDefaultHeaders() map[string]string {
 	headers["Content-Type"] = conHeader
 	basicAuthString := basicAuth(c.configConnect.Username, c.configConnect.Password)
 	headers["Authorization"] = "Basic " + basicAuthString
+	if c.symmetrixID != "" {
+		headers["symid"] = c.symmetrixID
+	}
 	return headers
 }
