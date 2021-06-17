@@ -67,10 +67,12 @@ type Resume struct {
 
 // ModifySGRDFGroup holds parameters for rdf storage group updates
 type ModifySGRDFGroup struct {
-	Action          string   `json:"action"`
-	Suspend         *Suspend `json:"suspend,omitempty"`
-	Resume          *Resume  `json:"resume,omitempty"`
-	ExecutionOption string   `json:"executionOption"`
+	Action          string    `json:"action"`
+	Suspend         *Suspend  `json:"suspend,omitempty"`
+	Resume          *Resume   `json:"resume,omitempty"`
+	Failback        *Failback `json:"failback,omitempty"`
+	Failover        *Failover `json:"failover,omitempty"`
+	ExecutionOption string    `json:"executionOption"`
 }
 
 // CreateSGSRDF contains parameters to create storage group replication {in u4p a.k.a "storageGroupSrdfCreate"}
@@ -195,4 +197,30 @@ type StorageGroupRDFG struct {
 	VolumeRdfTypes   []string `json:"volumeRdfTypes"`
 	States           []string `json:"states"`
 	Modes            []string `json:"modes"`
+}
+
+// Failover action
+type Failover struct {
+	Force      bool `json:"force"`
+	SymForce   bool `json:"symForce"`
+	Star       bool `json:"star"`
+	Hop2       bool `json:"hop2"`
+	Bypass     bool `json:"bypass"`
+	Immediate  bool `json:"immediate"`
+	ConsExempt bool `json:"consExempt"`
+	MetroBias  bool `json:"metroBias"`
+	Establish  bool `json:"establish"`
+	Restore    bool `json:"restore"`
+	Remote     bool `json:"remote"`
+}
+
+// Failback action
+type Failback struct {
+	Force        bool `json:"force"`
+	SymForce     bool `json:"symForce"`
+	Star         bool `json:"star"`
+	Hop2         bool `json:"hop2"`
+	Bypass       bool `json:"bypass"`
+	Remote       bool `json:"remote"`
+	RecoverPoint bool `json:"recoverPoint"`
 }

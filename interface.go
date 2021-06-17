@@ -54,6 +54,10 @@ type Pmax interface {
 	// Authenticate causes authentication and tests the connection
 	Authenticate(configConnect *ConfigConnect) error
 
+	// WithSymmetrixID set a default symmetrix ID for the admin client,
+	// for it to be added to the request header.
+	WithSymmetrixID(symmetrixID string) Pmax
+
 	// SLO provisioning are the methods for SLO provisioning. All the methods requre a
 	// symID to identify the Symmetrix.
 
