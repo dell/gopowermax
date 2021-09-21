@@ -48,6 +48,7 @@ var (
 
 // Client is an API client.
 type Client interface {
+	GetHTTPClient() *http.Client
 
 	// Do sends an HTTP request to the API.
 	Do(
@@ -134,7 +135,6 @@ type ClientOptions struct {
 
 // New returns a new API client.
 func New(
-	ctx context.Context,
 	host string,
 	opts ClientOptions,
 	debug bool) (Client, error) {
@@ -182,6 +182,10 @@ func New(
 	c.debug = debug
 
 	return c, nil
+}
+
+func (c *client) GetHTTPClient() *http.Client {
+	return c.http
 }
 
 func (c *client) Get(

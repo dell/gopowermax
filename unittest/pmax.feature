@@ -50,7 +50,7 @@ Feature: PMAX Client library
 
   Scenario Outline: Test cases for GetVolumeIDList
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have <nvols> volumes
     And I induce error <induced>
     When I call GetVolumeIDList <volume_identifier> 
@@ -58,7 +58,7 @@ Feature: PMAX Client library
     And I get a valid VolumeIDList with <vols> if no error
     
     Examples:                # volumes are numbered 1...n  Vol00001, Vol00002, ...
-    | nvols      | vols  | volume_identifier | induced                    | errormsg                      | whitelist |
+    | nvols      | vols  | volume_identifier | induced                    | errormsg                      | arrays    |
     | 7          | 7     | ""                | "none"                     | "none"                        | ""        |
     | 10         | 10    | ""                | "none"                     | "none"                        | ""        |
     | 11         | 11    | ""                | "none"                     | "none"                        | ""        |
@@ -73,11 +73,11 @@ Feature: PMAX Client library
     | 23         | 9     | "<like>Vol0000"   | "none"                     | "none"                        | ""        |
     | 23         | 10    | "<like>Vol0001"   | "none"                     | "none"                        | ""        |
     | 23         | 4     | "<like>Vol0002"   | "none"                     | "none"                        | ""        |
-    | 5          | 5     | ""                | "none"                     | "ignored via a whitelist"     | "ignore"  |
+    | 5          | 5     | ""                | "none"                     | "ignored as it is not managed"| "ignore"  |
 
   Scenario Outline: Test cases for GetVolumeByID
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have 5 volumes
     And I induce error <induced>
     When I call GetVolumeByID <id>
@@ -85,14 +85,14 @@ Feature: PMAX Client library
     And I get a valid Volume Object <id> if no error
 
     Examples:
-    | id              | induced               | errormsg                      | whitelist |
+    | id              | induced               | errormsg                      | arrays    |
     | "00001"         | "none"                | "none"                        | ""        |
     | "00003"         | "none"                | "none"                        | ""        |
     | "00010"         | "none"                | "cannot be found"             | ""        |
     | "00001"         | "GetVolumeError"      | "induced error"               | ""        |
     | "00001"         | "httpStatus500"       | "Internal Error"              | ""        |
     | "00001"         | "InvalidJSON"         | "invalid character"           | ""        |
-    | "00001"         | "none"                | "ignored via a whitelist"     | "ignored" |
+    | "00001"         | "none"                | "ignored as it is not managed"| "ignored" |
 
   Scenario Outline: Test cases for volume expand
     Given a valid connection
@@ -110,57 +110,57 @@ Feature: PMAX Client library
 
   Scenario Outline: Test cases for GetStorageGroupIDList
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call GetStorageGroupIDList
     Then the error message contains <errormsg>
     And I get a valid StorageGroupIDList if no errors
 
     Examples:
-    | induced               | errormsg                      | whitelist |
+    | induced               | errormsg                      | arrays    |
     | "none"                | "none"                        | ""        |
     | "GetStorageGroupError"| "induced error"               | ""        |
     | "httpStatus500"       | "Internal Error"              | ""        |
     | "InvalidJSON"         | "invalid character"           | ""        |
-    | "none"                | "ignored via a whitelist"     | "ignored" |
+    | "none"                | "ignored as it is not managed"| "ignored" |
     | "InvalidResponse"     | "EOF"                         | ""        |
 
   Scenario Outline: Test cases for GetStorageGroup
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call GetStorageGroup <name>
     Then the error message contains <errormsg>
     And I get a valid StorageGroup if no errors
 
     Examples:
-    | name               | induced               | errormsg                      | whitelist |
+    | name               | induced               | errormsg                      | arrays    |
     | "CSI-Test-SG-1"    | "none"                | "none"                        | ""        |
     | "CSI-Test-SG-1"    | "GetStorageGroupError"| "induced error"               | ""        |
     | "CSI-Test-SG-1"    | "httpStatus500"       | "Internal Error"              | ""        |
     | "CSI-Test-SG-1"    | "InvalidJSON"         | "invalid character"           | ""        |
-    | "CSI-Test-SG-1"    | "none"                | "ignored via a whitelist"     | "ignored" |
+    | "CSI-Test-SG-1"    | "none"                | "ignored as it is not managed"| "ignored" |
     | "CSI-Test-SG-1"    | "InvalidResponse"     | "EOF"                         | ""        |
 
   Scenario Outline: Test cases for GetStoragePool
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call GetStoragePool <name>
     Then the error message contains <errormsg>
     And I get a valid GetStoragePool if no errors
 
     Examples:
-    | name     | induced               | errormsg                      | whitelist |
+    | name     | induced               | errormsg                      | arrays    |
     | "SRP_1"  | "none"                | "none"                        | ""        |
     | "SRP_1"  | "GetStoragePoolError" | "induced error"               | ""        |
     | "SRP_1"  | "httpStatus500"       | "Internal Error"              | ""        |
     | "SRP_1"  | "InvalidJSON"         | "invalid character"           | ""        |
-    | "SRP_1"  | "none"                | "ignored via a whitelist"     | "ignored" |
+    | "SRP_1"  | "none"                | "ignored as it is not managed"| "ignored" |
 
   Scenario Outline: Test cases for GetJobIDList
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     And I have <njobs> jobs
     When I call GetJobIDList with <status>
@@ -168,7 +168,7 @@ Feature: PMAX Client library
     And I get a valid JobsIDList with <njobs> if no errors
 
     Examples:
-    | njobs         | induced                     | status       | errormsg                        | whitelist |
+    | njobs         | induced                     | status       | errormsg                        | arrays    |
     | 1             | "none"                      | ""           | "none"                          | ""        |
     | 0             | "none"                      | ""           | "none"                          | ""        |
     | 20            | "none"                      | ""           | "none"                          | ""        |
@@ -176,11 +176,11 @@ Feature: PMAX Client library
     | 1             | "GetJobError"               | ""           | "induced error"                 | ""        |
     | 20            | "httpStatus500"             | ""           | "Internal Error"                | ""        |
     | 20            | "InvalidJSON"               | ""           | "invalid character"             | ""        |
-    | 1             | "none"                      | ""           | "ignored via a whitelist"       | "ignored" |
+    | 1             | "none"                      | ""           | "ignored as it is not managed"  | "ignored" |
 
   Scenario Outline: Test cases for GetJobByID
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     And I create a job with initial state <initial> and final state <final>
     When I call GetJobByID
@@ -190,19 +190,19 @@ Feature: PMAX Client library
     And I get a valid Job with state <final> if no error
 
     Examples:
-    | initial        | final            | induced                       | errormsg                  | whitelist |
-    | "RUNNING"      | "SUCCEEDED"      | "none"                        | "none"                    | ""        |
-    | "RUNNING"      | "FAILED"         | "none"                        | "none"                    | ""        |
-    | "RUNNING"      | "RUNNING"        | "none"                        | "none"                    | ""        |
-    | "RUNNING"      | "SUCCEEDED"      | "GetJobError"                 | "induced error"           | ""        |
-    | "RUNNING"      | "SUCCEEDED"      | "httpStatus500"               | "Internal Error"          | ""        |
-    | "RUNNING"      | "SUCCEEDED"      | "InvalidJSON"                 | "invalid character"       | ""        |
-    | "RUNNING"      | "SUCCEEDED"      | "GetJobCannotFindRoleForUser" | "none"                    | ""        |
-    | "RUNNING"      | "SUCCEEDED"      | "none"                        | "ignored via a whitelist" | "ignored" |
+    | initial        | final            | induced                       | errormsg                       | arrays    |
+    | "RUNNING"      | "SUCCEEDED"      | "none"                        | "none"                         | ""        |
+    | "RUNNING"      | "FAILED"         | "none"                        | "none"                         | ""        |
+    | "RUNNING"      | "RUNNING"        | "none"                        | "none"                         | ""        |
+    | "RUNNING"      | "SUCCEEDED"      | "GetJobError"                 | "induced error"                | ""        |
+    | "RUNNING"      | "SUCCEEDED"      | "httpStatus500"               | "Internal Error"               | ""        |
+    | "RUNNING"      | "SUCCEEDED"      | "InvalidJSON"                 | "invalid character"            | ""        |
+    | "RUNNING"      | "SUCCEEDED"      | "GetJobCannotFindRoleForUser" | "none"                         | ""        |
+    | "RUNNING"      | "SUCCEEDED"      | "none"                        | "ignored as it is not managed" | "ignored" |
 
   Scenario Outline: Test cases WaitOnJobCompletion
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     And I create a job with initial state <initial> and final state <final>
     When I call WaitOnJobCompletion
@@ -210,23 +210,23 @@ Feature: PMAX Client library
     And I get a valid Job with state <final> if no error
 
     Examples:
-    | initial        | final            | induced          | errormsg                  | whitelist |
-    | "RUNNING"      | "SUCCEEDED"      | "none"           | "none"                    | ""        |
-    | "RUNNING"      | "FAILED"         | "none"           | "none"                    | ""        |
-    | "RUNNING"      | "RUNNING"        | "none"           | "timed out after"         | ""        |
-    | "RUNNING"      | "SUCCEEDED"      | "GetJobError"    | "induced error"           | ""        |
-    | "RUNNING"      | "SUCCEEDED"      | "none"           | "ignored via a whitelist" | "ignored" |
+    | initial        | final            | induced          | errormsg                       | arrays    |
+    | "RUNNING"      | "SUCCEEDED"      | "none"           | "none"                         | ""        |
+    | "RUNNING"      | "FAILED"         | "none"           | "none"                         | ""        |
+    | "RUNNING"      | "RUNNING"        | "none"           | "timed out after"              | ""        |
+    | "RUNNING"      | "SUCCEEDED"      | "GetJobError"    | "induced error"                | ""        |
+    | "RUNNING"      | "SUCCEEDED"      | "none"           | "ignored as it is not managed" | "ignored" |
 
   Scenario Outline: Test cases for CreateVolumeInStorageGroup for v90
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call CreateVolumeInStorageGroup with name <volname> and size <size>
     Then the error message contains <errormsg>
     And I get a valid Volume with name <volname> if no error
 
     Examples:
-    | volname                                                                        | size     | induced                   | errormsg                                               | whitelist |
+    | volname                                                                        | size     | induced                   | errormsg                                               | arrays    |
     | "IntgA"                                                                        | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgB"                                                                        | 5        | "none"                    | "none"                                                 | ""        |
     | "IntgC"                                                                        | 1        | "UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"       | ""        |
@@ -237,54 +237,54 @@ Feature: PMAX Client library
     | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
-    | "IntgA"                                                                        | 1        | "none"                    | "ignored via a whitelist"                              | "ignored" |
+    | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
 
 Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup for v90
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call CreateVolumeInStorageGroupS with name <volname> and size <size>
     Then the error message contains <errormsg>
     And I get a valid Volume with name <volname> if no error
 
     Examples:
-    | volname                                                                        | size     | induced                   | errormsg                                               | whitelist |
+    | volname                                                                        | size     | induced                   | errormsg                                               | arrays    |
     | "IntgA"                                                                        | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgB"                                                                        | 5        | "none"                    | "none"                                                 | ""        |
     | "IntgG"                                                                        | 1        | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
     | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
-    | "IntgA"                                                                        | 1        | "none"                    | "ignored via a whitelist"                              | "ignored" |
+    | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
 
 Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with metadata headers for v90
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call CreateVolumeInStorageGroupSWithMetaDataHeaders with name <volname> and size <size>
     Then the error message contains <errormsg>
     And I get a valid Volume with name <volname> if no error
 
     Examples:
-    | volname                                                                        | size     | induced                   | errormsg                                               | whitelist |
+    | volname                                                                        | size     | induced                   | errormsg                                               | arrays    |
     | "IntgA"                                                                        | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgB"                                                                        | 5        | "none"                    | "none"                                                 | ""        |
     | "IntgG"                                                                        | 1        | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
     | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
-    | "IntgA"                                                                        | 1        | "none"                    | "ignored via a whitelist"                              | "ignored" |
+    | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
   
   Scenario Outline: Test cases for CreateVolumeInStorageGroup for v91
     Given a valid v91 connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call CreateVolumeInStorageGroup with name <volname> and size <size>
     Then the error message contains <errormsg>
     And I get a valid Volume with name <volname> if no error
 
     Examples:
-    | volname                                                                        | size     | induced                   | errormsg                                               | whitelist |
+    | volname                                                                        | size     | induced                   | errormsg                                               | arrays    |
     | "IntgA"                                                                        | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgB"                                                                        | 5        | "none"                    | "none"                                                 | ""        |
     | "IntgC"                                                                        | 1        | "UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"       | ""        |
@@ -295,186 +295,186 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with met
     | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
-    | "IntgA"                                                                        | 1        | "none"                    | "ignored via a whitelist"                              | "ignored" |
+    | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
 
   Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup for v91
     Given a valid v91 connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call CreateVolumeInStorageGroup with name <volname> and size <size>
     Then the error message contains <errormsg>
     And I get a valid Volume with name <volname> if no error
 
     Examples:
-    | volname                                                                        | size     | induced                   | errormsg                                               | whitelist |
+    | volname                                                                        | size     | induced                   | errormsg                                               | arrays    |
     | "IntgA"                                                                        | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgB"                                                                        | 5        | "none"                    | "none"                                                 | ""        |
     | "IntgG"                                                                        | 1        | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
     | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
-    | "IntgA"                                                                        | 1        | "none"                    | "ignored via a whitelist"                              | "ignored" |
+    | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
 
   Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with metadata headers for v91
     Given a valid v91 connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call CreateVolumeInStorageGroupSWithMetaDataHeaders with name <volname> and size <size>
     Then the error message contains <errormsg>
     And I get a valid Volume with name <volname> if no error
 
     Examples:
-    | volname                                                                        | size     | induced                   | errormsg                                               | whitelist |
+    | volname                                                                        | size     | induced                   | errormsg                                               | arrays    |
     | "IntgA"                                                                        | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgB"                                                                        | 5        | "none"                    | "none"                                                 | ""        |
     | "IntgG"                                                                        | 1        | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
     | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
-    | "IntgA"                                                                        | 1        | "none"                    | "ignored via a whitelist"                              | "ignored" |
+    | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
 
   Scenario Outline: Test cases for Remove Volume From Storage Group
     Given a valid connection
     And I call CreateVolumeInStorageGroup with name "IntM" and size 1
     And I induce error <induced>
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     When I call RemoveVolumeFromStorageGroup
     Then the error message contains <errormsg>
     And the volume is no longer a member of the Storage Group if no error
 
     Examples:
-    | induced                   | errormsg                                         | whitelist |
+    | induced                   | errormsg                                         | arrays    |
     | "none"                    | "none"                                           | ""        |
     | "UpdateStorageGroupError" | "induced error"                                  | ""        |
-    | "none"                    | "ignored via a whitelist"                        | "ignored" |
+    | "none"                    | "ignored as it is not managed"                   | "ignored" |
 
     Scenario Outline: Test cases for Remove Volume From Storage Group for v91
     Given a valid v91 connection
     And I call CreateVolumeInStorageGroup with name "IntM" and size 1
     And I induce error <induced>
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     When I call RemoveVolumeFromStorageGroup
     Then the error message contains <errormsg>
     And the volume is no longer a member of the Storage Group if no error
 
     Examples:
-    | induced                   | errormsg                                         | whitelist |
+    | induced                   | errormsg                                         | arrays    |
     | "none"                    | "none"                                           | ""        |
     | "UpdateStorageGroupError" | "induced error"                                  | ""        |
-    | "none"                    | "ignored via a whitelist"                        | "ignored" |
+    | "none"                    | "ignored as it is not managed"                   | "ignored" |
 
   Scenario Outline: Test cases for Rename Volume
     Given a valid connection
     And I call CreateVolumeInStorageGroup with name "IntN" and size 1
     And I induce error <induced>
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     When I call RenameVolume with <newname>
     Then the error message contains <errormsg>
     And I get a valid Volume with name <newname> if no error
 
     Examples:
-    | newname              | induced                   | errormsg                                         | whitelist |
+    | newname              | induced                   | errormsg                                         | arrays    |
     | "Renamed"            | "none"                    | "none"                                           | ""        |               
     | "Renamed"            | "UpdateVolumeError"       | "induced error"                                  | ""        |
-    | "Renamed"            | "none"                    | "ignored via a whitelist"                        | "ignored" |         
+    | "Renamed"            | "none"                    | "ignored as it is not managed"                   | "ignored" |
 
     Scenario Outline: Test cases for Initiate Deallocation of Tracks
     Given a valid connection
     And I call CreateVolumeInStorageGroup with name "IntO" and size 1
     And I induce error <induced>
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     When I call InitiateDeallocationOfTracksFromVolume
     Then the error message contains <errormsg>
     And I get a valid Job with state "RUNNING" if no error
 
     Examples:
-    | induced                   | errormsg                                         | whitelist |
+    | induced                   | errormsg                                         | arrays    |
     | "none"                    | "none"                                           | ""        |               
     | "UpdateVolumeError"       | "induced error"                                  | ""        |
-    | "none"                    | "ignored via a whitelist"                        | "ignored" |
+    | "none"                    | "ignored as it is not managed"                   | "ignored" |
 
   Scenario Outline: Test cases for Delete Volume
     Given a valid connection
     And I call CreateVolumeInStorageGroup with name "IntP" and size 1
     And I induce error <induced>
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     When I call DeleteVolume
     Then the error message contains <errormsg>
 
     Examples:
-    | induced                   | errormsg                                         | whitelist |
+    | induced                   | errormsg                                         | arrays    |
     | "none"                    | "none"                                           | ""        |               
     | "DeleteVolumeError"       | "induced error"                                  | ""        |
-    | "none"                    | "ignored via a whitelist"                        | "ignored" |
+    | "none"                    | "ignored as it is not managed"                   | "ignored" |
 
   Scenario Outline: Test cases for CreateStorageGroup for v90
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call CreateStorageGroup with name <sgname> and srp <srp> and sl <sl>
     Then the error message contains <errormsg>
     And I get a valid StorageGroup with name <sgname> if no error
 
     Examples:
-    | sgname               | srp      | sl           | induced                    | errormsg                                              | whitelist |
+    | sgname               | srp      | sl           | induced                    | errormsg                                              | arrays    |
     | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "none"                     | "none"                                                | ""        |
     | "CSI-Test-New-SG1"   | "None"   | "Diamond"    | "none"                     | "none"                                                | ""        |
     | "CSI-Test-New-SG2"   | "SRP_1"  | "Optimized"  | "none"                     | "none"                                                | ""        |
     | "CSI-Test-New-SG2"   | "SRP_1"  | "Optimized"  | "StorageGroupAlreadyExists"| "The requested storage group resource already exists" | ""        |
     | "CSI-Test-New-SG3"   | "SRP_1"  | "Diamond"    | "CreateStorageGroupError"  | "induced error"                                       | ""        |
     | "CSI-Test-New-SG4"   | "SRP_1"  | "Diamond"    | "httpStatus500"            | "Internal Error"                                      | ""        |
-    | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "none"                     | "ignored via a whitelist"                             | "ignored" |
+    | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "none"                     | "ignored as it is not managed"                        | "ignored" |
     | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "InvalidResponse"          | "EOF"                                                 | ""        |
 
   Scenario Outline: Test cases for CreateStorageGroup for v91
     Given a valid v91 connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call CreateStorageGroup with name <sgname> and srp <srp> and sl <sl>
     Then the error message contains <errormsg>
     And I get a valid StorageGroup with name <sgname> if no error
 
     Examples:
-    | sgname               | srp      | sl           | induced                    | errormsg                                              | whitelist |
+    | sgname               | srp      | sl           | induced                    | errormsg                                              | arrays    |
     | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "none"                     | "none"                                                | ""        |
     | "CSI-Test-New-SG1"   | "None"   | "Diamond"    | "none"                     | "none"                                                | ""        |
     | "CSI-Test-New-SG2"   | "SRP_1"  | "Optimized"  | "none"                     | "none"                                                | ""        |
     | "CSI-Test-New-SG2"   | "SRP_1"  | "Optimized"  | "StorageGroupAlreadyExists"| "The requested storage group resource already exists" | ""        |
     | "CSI-Test-New-SG3"   | "SRP_1"  | "Diamond"    | "CreateStorageGroupError"  | "induced error"                                       | ""        |
     | "CSI-Test-New-SG4"   | "SRP_1"  | "Diamond"    | "httpStatus500"            | "Internal Error"                                      | ""        |
-    | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "none"                     | "ignored via a whitelist"                             | "ignored" |
+    | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "none"                     | "ignored as it is not managed"                        | "ignored" |
     | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "InvalidResponse"          | "EOF"                                                 | ""        |
 
   Scenario Outline: Test DeleteStorageGroup
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call DeleteStorageGroup <name>
     Then the error message contains <errormsg>
 
     Examples:
-    | induced                        | name                  | errormsg                           | whitelist |
+    | induced                        | name                  | errormsg                           | arrays    |
     | "none"                         | "CSI-Test-SG-2"       | "none"                             | ""        |
     | "DeleteStorageGroupError"      | "CSI-Test-SG-3"       | "induced error"                    | ""        |
-    | "none"                         | "CSI-Test-SG-3"       |"ignored via a whitelist"           | "ignored" |
+    | "none"                         | "CSI-Test-SG-3"       |"ignored as it is not managed"      | "ignored" |
 
   Scenario Outline: Test GetStoragePoolList
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call GetStoragePoolList
     Then the error message contains <errormsg>
     And I get a valid StoragePoolList if no error
 
     Examples:
-    | induced                        | errormsg                                              | whitelist |
+    | induced                        | errormsg                                              | arrays    |
     | "none"                         | "none"                                                | ""        |
     | "GetStoragePoolListError"      | "induced error"                                       | ""        |
-    | "none"                         | "ignored via a whitelist"                             | "ignored" |
+    | "none"                         | "ignored as it is not managed"                        | "ignored" |
 
   Scenario Outline: Test GetMaskingViewList
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a MaskingView <mvname>
     And I induce error <induced>
     When I call GetMaskingViewList
@@ -482,14 +482,14 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with met
     And I get a valid MaskingViewList if no error
 
     Examples:
-    | induced                        | errormsg                              | mvname            | whitelist |
+    | induced                        | errormsg                              | mvname            | arrays    |
     | "none"                         | "none"                                | "CSI-Test-MV"     | ""        |
     | "GetMaskingViewError"          | "induced error"                       | "CSI-Test-MV"     | ""        |
-    | "none"                         | "ignored via a whitelist"             | "CSI-Test-MV"     | "ignored" |
+    | "none"                         | "ignored as it is not managed"        | "CSI-Test-MV"     | "ignored" |
 
   Scenario Outline: Test GetMaskingViewByID
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a MaskingView <mvname>
     And I induce error <induced>
     When I call GetMaskingViewByID <mvname>
@@ -497,28 +497,28 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with met
     And I get a valid MaskingView if no error
 
     Examples:
-    | mvname                | induced                        | errormsg                                              | whitelist |
+    | mvname                | induced                        | errormsg                                              | arrays    |
     | "Test-MV"             | "none"                         | "none"                                                | ""        |
     | "Test-MV"             | "GetMaskingViewError"          | "induced error"                                       | ""        |
-    | "Test-MV"             | "none"                         | "ignored via a whitelist"                             | "ignored" |
+    | "Test-MV"             | "none"                         | "ignored as it is not managed"                        | "ignored" |
 
   Scenario Outline: Test DeleteMaskingView
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a MaskingView <mvname>
     And I induce error <induced>
     When I call DeleteMaskingView
     Then the error message contains <errormsg>
 
     Examples:
-    | induced                        | errormsg                     | mvname                 | whitelist |
-    | "none"                         | "none"                       | "CSI-Test-MV"          | ""        |
-    | "DeleteMaskingViewError"       | "induced error"              | "CSI-Test-MV"          | ""        |
-    | "none"                         | "ignored via a whitelist"    | "CSI-Test-MV"          | "ignored" |
+    | induced                        | errormsg                          | mvname                 | arrays    |
+    | "none"                         | "none"                            | "CSI-Test-MV"          | ""        |
+    | "DeleteMaskingViewError"       | "induced error"                   | "CSI-Test-MV"          | ""        |
+    | "none"                         | "ignored as it is not managed"    | "CSI-Test-MV"          | "ignored" |
 
   Scenario Outline: Test GetPortGroupList
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a PortGroup
     And I induce error <induced>
     When I call GetPortGroupList
@@ -526,14 +526,14 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with met
     And I get a valid PortGroupList if no error
 
     Examples:
-    | induced                        | errormsg                                              | whitelist |
+    | induced                        | errormsg                                              | arrays    |
     | "none"                         | "none"                                                | ""        |
     | "GetPortGroupError"            | "induced error"                                       | ""        |
-    | "none"                         | "ignored via a whitelist"                             | "ignored" |
+    | "none"                         | "ignored as it is not managed"                        | "ignored" |
 
   Scenario Outline: Test GetPortGroupByID
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a PortGroup
     And I induce error <induced>
     When I call GetPortGroupByID
@@ -541,10 +541,10 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with met
     And I get a valid PortGroup if no error
 
     Examples:
-    | induced                        | errormsg                                              | whitelist |
+    | induced                        | errormsg                                              | arrays    |
     | "none"                         | "none"                                                | ""        |
     | "GetPortGroupError"            | "induced error"                                       | ""        |
-    | "none"                         | "ignored via a whitelist"                             | "ignored" |
+    | "none"                         | "ignored as it is not managed"                        | "ignored" |
 
 Scenario Outline: Test CreatePortGroup
   Given a valid connection
@@ -593,7 +593,7 @@ Scenario Outline: Test DeletePortGroup
 
 Scenario Outline: Test GetHostList
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a FC Host <fchostname>
     And I have a ISCSI Host <hostname>
     And I induce error <induced>
@@ -602,14 +602,14 @@ Scenario Outline: Test GetHostList
     And I get a valid HostList if no error
 
     Examples:
-    | fchostname     | hostname     | induced                        | errormsg                                              | whitelist |
+    | fchostname     | hostname     | induced                        | errormsg                                              | arrays    |
     | "Test-Host-FC" | "Test-Host"  | "none"                         | "none"                                                | ""        |
     | "Test-Host-FC" | "Test-Host"  | "GetHostError"                 | "induced error"                                       | ""        |
-    | "Test-Host-FC" | "Test-Host"  | "none"                         | "ignored via a whitelist"                             | "ignored" |
+    | "Test-Host-FC" | "Test-Host"  | "none"                         | "ignored as it is not managed"                        | "ignored" |
 
   Scenario Outline: Test GetHostByID
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a ISCSI Host <hostname>
     And I induce error <induced>
     When I call GetHostByID <hostname>
@@ -617,28 +617,28 @@ Scenario Outline: Test GetHostList
     And I get a valid Host if no error
 
     Examples:
-    | hostname     | induced                        | errormsg                                              | whitelist |
+    | hostname     | induced                        | errormsg                                              | arrays    |
     | "Test-Host"  | "none"                         | "none"                                                | ""        |
     | "Test-Host"  | "GetHostError"                 | "induced error"                                       | ""        |
-    | "Test-Host"  | "none"                         | "ignored via a whitelist"                             | "ignored" |
+    | "Test-Host"  | "none"                         | "ignored as it is not managed"                        | "ignored" |
 
   Scenario Outline: Test CreateHost
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call CreateHost <hostname>
     Then the error message contains <errormsg>
     And I get a valid Host if no error
 
     Examples:
-    | hostname       | induced                        | errormsg                                              | whitelist |
+    | hostname       | induced                        | errormsg                                              | arrays    |
     | "Test-Host"    | "none"                         | "none"                                                | ""        |
     | "Test-Host"    | "CreateHostError"              | "induced error"                                       | ""        |
-    | "Test-Host"    | "none"                         | "ignored via a whitelist"                             | "ignored" |
+    | "Test-Host"    | "none"                         | "ignored as it is not managed"                        | "ignored" |
 
   Scenario Outline: Test UpdateHost
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call CreateHost <hostname>
     And I get a valid Host if no error
@@ -647,14 +647,14 @@ Scenario Outline: Test GetHostList
     And I get a valid Host if no error
 
     Examples:
-    | hostname       | induced                        | errormsg                                              | whitelist |
+    | hostname       | induced                        | errormsg                                              | arrays    |
     | "Test-Host"    | "none"                         | "none"                                                | ""        |
     | "Test-Host"    | "UpdateHostError"              | "induced error"                                       | ""        |
-    | "Test-Host"    | "none"                         | "ignored via a whitelist"                             | "ignored" |
+    | "Test-Host"    | "none"                         | "ignored as it is not managed"                        | "ignored" |
 
   Scenario Outline: Test DeleteHost
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call CreateHost <hostname>
     And I get a valid Host if no error
@@ -662,14 +662,14 @@ Scenario Outline: Test GetHostList
     Then the error message contains <errormsg>
 
     Examples:
-    | hostname            | induced                        | errormsg                                              | whitelist |
+    | hostname            | induced                        | errormsg                                              | arrays    |
     | "Test-Host"         | "none"                         | "none"                                                | ""        |
     | "Test-Host"         | "DeleteHostError"              | "induced error"                                       | ""        |
-    | "Test-Host"         | "none"                         | "ignored via a whitelist"                             | "ignored" |
+    | "Test-Host"         | "none"                         | "ignored as it is not managed"                        | "ignored" |
 
     Scenario Outline: Test GetInitiatorList
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a Initiator
     And I induce error <induced>
     When I call GetInitiatorList
@@ -677,25 +677,25 @@ Scenario Outline: Test GetHostList
     And I get a valid InitiatorList if no error
 
     Examples:
-    | induced                        | errormsg                                              | whitelist |
+    | induced                        | errormsg                                              | arrays    |
     | "none"                         | "none"                                                | ""        |
     | "GetInitiatorError"            | "induced error"                                       | ""        |
-    | "none"                         | "ignored via a whitelist"                             | "ignored" |
+    | "none"                         | "ignored as it is not managed"                        | "ignored" |
 
     Scenario Outline: Test GetInitiatorList with filters
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a Initiator
     When I call GetInitiatorList with filters
     Then the error message contains <errormsg>
 
     Examples:
-    |errormsg          | whitelist |
+    |errormsg          | arrays    |
     | "none"           | ""        |
 
   Scenario Outline: Test GetInitiatorByID
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a Initiator
     And I induce error <induced>
     When I call GetInitiatorByID
@@ -703,14 +703,14 @@ Scenario Outline: Test GetHostList
     And I get a valid Initiator if no error
 
     Examples:
-    | induced                        | errormsg                                              | whitelist |
+    | induced                        | errormsg                                              | arrays    |
     | "none"                         | "none"                                                | ""        |
     | "GetInitiatorError"            | "induced error"                                       | ""        |
-    | "none"                         | "ignored via a whitelist"                             | "ignored" |
+    | "none"                         | "ignored as it is not managed"                        | "ignored" |
 
   Scenario Outline: Test cases for CreateMaskingViewWithHost
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a ISCSI Host <hostname>
     And I have a PortGroup
     And I have a StorageGroup <sgname>
@@ -720,18 +720,18 @@ Scenario Outline: Test GetHostList
     And I get a valid MaskingView if no error
 
     Examples:
-    | hostname     | sgname      | mvname         | induced                      | errormsg                                              | whitelist |
+    | hostname     | sgname      | mvname         | induced                      | errormsg                                              | arrays    |
     | "TestHost"   | "TestSG"    | "TestMV"       | "none"                       | "none"                                                | ""        |
     | "TestHost"   | "TestSG"    | "TestMV"       | "CreateMaskingViewError"     | "Failed to create masking view"                       | ""        |
     | "TestHost"   | "TestSG"    | "TestMV"       | "MaskingViewAlreadyExists"   | "The requested masking view resource already exists"  | ""        |
     | "TestHost"   | "TestSG"    | "TestMV"       | "PortGroupNotFoundError"     | "Port Group on Symmetrix cannot be found"             | ""        |
     | "TestHost"   | "TestSG"    | "TestMV"       | "InitiatorGroupNotFoundError"| "Initiator Group on Symmetrix cannot be found"        | ""        |
     | "TestHost"   | "TestSG"    | "TestMV"       | "StorageGroupNotFoundError"  | "Storage Group on Symmetrix cannot be found"          | ""        |
-    | "TestHost"   | "TestSG"    | "TestMV"       | "none"                       | "ignored via a whitelist"                             | "ignored" |
+    | "TestHost"   | "TestSG"    | "TestMV"       | "none"                       | "ignored as it is not managed"                        | "ignored" |
 
   Scenario Outline: Test cases for CreateMaskingViewWithHostGroup
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a HostGroup <hostname>
     And I have a PortGroup
     And I have a StorageGroup <sgname>
@@ -740,14 +740,14 @@ Scenario Outline: Test GetHostList
     Then the error message contains <errormsg>
     And I get a valid MaskingView if no error
     Examples:
-    | hostname     | sgname      | mvname         | induced                      | errormsg                                              | whitelist |
+    | hostname     | sgname      | mvname         | induced                      | errormsg                                              | arrays    |
     | "TestHostGrp"| "TestSG"    | "TestMV"       | "none"                       | "none"                                                | ""        |
     | "TestHostGrp"| "TestSG"    | "TestMV"       | "InitiatorGroupNotFoundError"| "Initiator Group on Symmetrix cannot be found"        | ""        |
-    | "TestHostGrp"| "TestSG"    | "TestMV"       | "none"                       | "ignored via a whitelist"                             | "ignored" |
+    | "TestHostGrp"| "TestSG"    | "TestMV"       | "none"                       | "ignored as it is not managed"                        | "ignored" |
 
   Scenario Outline: Test cases for Asynchronous AddVolumesToStorageGroup
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a StorageGroup <sgname>
     And I have <nvols> volumes
     And I induce error <induced>
@@ -755,7 +755,7 @@ Scenario Outline: Test GetHostList
     Then the error message contains <errormsg>
     And then the Volumes are part of StorageGroup if no error
     Examples:
-    | nvols | sgname        |induced                   | errormsg                                                 | whitelist |
+    | nvols | sgname        |induced                   | errormsg                                                 | arrays    |
     | 5     | "TestSG"      |"none"                    | "none"                                                   | ""        |
     | 1     | "TestSG"      |"none"                    | "none"                                                   | ""        |
     | 0     | "TestSG"      |"none"                    | "At least one volume id has to be specified"             | ""        |
@@ -763,11 +763,11 @@ Scenario Outline: Test GetHostList
     | 3     | "TestSG"      |"UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"         | ""        |
     | 1     | "TestSG"      |"JobFailedError"          | "The UpdateStorageGroup job failed"                      | ""        |
     | 1     | "TestSG"      |"GetJobError"             | "induced error"                                          | ""        |
-    | 1     | "TestSG"      |"none"                    | "ignored via a whitelist"                                | "ignored" |
+    | 1     | "TestSG"      |"none"                    | "ignored as it is not managed"                           | "ignored" |
 
   Scenario Outline: Test cases for Synchronous AddVolumesToStorageGroup
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a StorageGroup <sgname>
     And I have <nvols> volumes
     And I induce error <induced>
@@ -775,17 +775,17 @@ Scenario Outline: Test GetHostList
     Then the error message contains <errormsg>
     And then the Volumes are part of StorageGroup if no error
     Examples:
-    | nvols | sgname        |induced                   | errormsg                                          | whitelist |
+    | nvols | sgname        |induced                   | errormsg                                          | arrays    |
     | 5     | "TestSG"      |"none"                    | "none"                                            | ""        |
     | 1     | "TestSG"      |"none"                    | "none"                                            | ""        |
     | 0     | "TestSG"      |"none"                    | "at least one volume id has to be specified"      | ""        |
     | 5     | "TestSG"      |"VolumeNotAddedError"     | "Error adding volume to the SG"                   | ""        |
     | 3     | "TestSG"      |"UpdateStorageGroupError" | "Error updating Storage Group: induced error"     | ""        |
-    | 1     | "TestSG"      |"none"                    | "ignored via a whitelist"                         | "ignored" |
+    | 1     | "TestSG"      |"none"                    | "ignored as it is not managed"                    | "ignored" |
 
   Scenario Outline: Test cases for Asynchronous AddVolumesToStorageGroup for v91
     Given a valid v91 connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a StorageGroup <sgname>
     And I have <nvols> volumes
     And I induce error <induced>
@@ -793,7 +793,7 @@ Scenario Outline: Test GetHostList
     Then the error message contains <errormsg>
     And then the Volumes are part of StorageGroup if no error
     Examples:
-    | nvols | sgname        |induced                   | errormsg                                                 | whitelist |
+    | nvols | sgname        |induced                   | errormsg                                                 | arrays    |
     | 5     | "TestSG"      |"none"                    | "none"                                                   | ""        |
     | 1     | "TestSG"      |"none"                    | "none"                                                   | ""        |
     | 0     | "TestSG"      |"none"                    | "At least one volume id has to be specified"             | ""        |
@@ -801,11 +801,11 @@ Scenario Outline: Test GetHostList
     | 3     | "TestSG"      |"UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"         | ""        |
     | 1     | "TestSG"      |"JobFailedError"          | "The UpdateStorageGroup job failed"                      | ""        |
     | 1     | "TestSG"      |"GetJobError"             | "induced error"                                          | ""        |
-    | 1     | "TestSG"      |"none"                    | "ignored via a whitelist"                                | "ignored" |
+    | 1     | "TestSG"      |"none"                    | "ignored as it is not managed"                           | "ignored" |
 
   Scenario Outline: Test cases for Synchronous AddVolumesToStorageGroup for v91
     Given a valid v91 connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have a StorageGroup <sgname>
     And I have <nvols> volumes
     And I induce error <induced>
@@ -813,74 +813,74 @@ Scenario Outline: Test GetHostList
     Then the error message contains <errormsg>
     And then the Volumes are part of StorageGroup if no error
     Examples:
-    | nvols | sgname        |induced                   | errormsg                                          | whitelist |
+    | nvols | sgname        |induced                   | errormsg                                          | arrays    |
     | 5     | "TestSG"      |"none"                    | "none"                                            | ""        |
     | 1     | "TestSG"      |"none"                    | "none"                                            | ""        |
     | 0     | "TestSG"      |"none"                    | "at least one volume id has to be specified"      | ""        |
     | 5     | "TestSG"      |"VolumeNotAddedError"     | "Error adding volume to the SG"                   | ""        |
     | 3     | "TestSG"      |"UpdateStorageGroupError" | "Error updating Storage Group: induced error"     | ""        |
-    | 1     | "TestSG"      |"none"                    | "ignored via a whitelist"                         | "ignored" |
+    | 1     | "TestSG"      |"none"                    | "ignored as it is not managed"                    | "ignored" |
 
   Scenario Outline: Test case for retriving list of target IP addresses
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call GetListOfTargetAddresses
     Then the error message contains <errormsg>
     And I recieve <count> IP addresses
     Examples:
-    | count | induced                   | errormsg                                                 | whitelist |
+    | count | induced                   | errormsg                                                 | arrays    |
     | 8     | "none"                    | "none"                                                   | ""        |
     | 0     | "GetPortError"            | "none"                                                   | ""        |
     | 0     | "GetDirectorError"        | "Error retrieving Director"                              | ""        |
-    | 0     | "none"                    | "ignored via a whitelist"                                | "ignored" |
+    | 0     | "none"                    | "ignored as it is not managed"                           | "ignored" |
 
-  Scenario Outline: Test Array whitelists
+  Scenario Outline: Test Array allowed lists
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And it contains <count> arrays
     And should include <included>
     And should not include <excluded>
     Examples:
-    | whitelist     | count | included       | excluded     |
+    | arrays        | count | included       | excluded     |
     | ""            | 0     | "1,2,3"        | ""           |
     | "1"           | 1     | "1"            | "2"          |
     | "1,2,3,4"     | 4     | "1,2,3,4"      | "8,9"        |
 
-  Scenario Outline: TestCases for GetSymmetrixIDList with a Whitelist
+  Scenario Outline: TestCases for GetSymmetrixIDList with an allowed list of arrays
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     When I call GetSymmetrixIDList
     Then I get a valid Symmetrix ID List that contains <included> and does not contains <excluded>
     Examples:
-    | whitelist                     | included                       | excluded         | explanation                                      |
-    | ""                            | "000197802104, 000197900046"   | ""               | an empty whitelist will allow any array          |
+    | arrays                        | included                       | excluded         | explanation                                      |
+    | ""                            | "000197802104, 000197900046"   | ""               | an empty allowed list will allow any array       |
     | "000197900046"                | "000197900046"                 | "000197802104"   | including one specific array will exclude others |
     | "000197802104, 999999999999"  | "000197802104"                 | "999999999999"   | make sure that non existent arrays are not found |
 
-  Scenario Outline: Get Symmetrix System with a Whitelist
+  Scenario Outline: Get Symmetrix System with an allowed list of arrays
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     When I call GetSymmetrixByID <id>
     Then the error message contains <errormsg>
     And I get a valid Symmetrix Object if no error
     Examples:
-    | id              | whitelist             | errormsg                    |
-    | "000197900046"  | ""                    | "none"                      |
-    | "000000000000"  | "none"                | "ignored via a whitelist"   |
-    | "000197900046"  | "000197900046"        | "none"                      |
-    | "000197900046"  | "000197802104"        | "ignored via a whitelist"   |
+    | id              | arrays                | errormsg                         |
+    | "000197900046"  | ""                    | "none"                           |
+    | "000000000000"  | "none"                | "ignored as it is not managed"   |
+    | "000197900046"  | "000197900046"        | "none"                           |
+    | "000197900046"  | "000197802104"        | "ignored as it is not managed"   |
 
   Scenario Outline: Get ISCSI targets
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     When I call GetISCSITargets
     Then the error message contains <errormsg>
     And I recieve <count> targets
     Examples:
-    | whitelist        | induced                   | errormsg                         | count |
-    | "000000000000"   | "none"                    | "ignored via a whitelist"        | 0     |
+    | arrays           | induced                   | errormsg                         | count |
+    | "000000000000"   | "none"                    | "ignored as it is not managed"   | 0     |
     | "000197900046"   | "GetDirectorError"        | "Error retrieving Director"      | 0     |
     | "000197900046"   | "GetPortGigEError"        | "none"                           | 0     |
     | "000197900046"   | "GetPortISCSITargetError" | "Error retrieving ISCSI targets" | 0     |
@@ -889,7 +889,7 @@ Scenario Outline: Test GetHostList
 
   Scenario Outline: Test UpdateHostName
       Given a valid connection
-      And I have a whitelist of <whitelist>
+      And I have an allowed list of <arrays>
       And I induce error <induced>
       When I call CreateHost <hostname>
       And I get a valid Host if no error
@@ -898,8 +898,8 @@ Scenario Outline: Test GetHostList
       And I get a valid Host if no error
 
       Examples:
-      | hostname       | newname      | induced                        | errormsg                                              | whitelist |
+      | hostname       | newname      | induced                        | errormsg                                              | arrays    |
       | "Test-Host"    | "Test-Host"  | "none"                         | "none"                                                | ""        |
       | "Test-Host"    | "Test-Host"  | "UpdateHostError"              | "induced error"                                       | ""        |
-      | "Test-Host"    | "Test-Host"  | "none"                         | "ignored via a whitelist"                             | "ignored" |
+      | "Test-Host"    | "Test-Host"  | "none"                         | "ignored as it is not managed"                        | "ignored" |
       

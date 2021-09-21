@@ -1155,7 +1155,7 @@ func handleStorageGroup(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error retrieving Storage Group(s): induced error", http.StatusRequestTimeout)
 			return
 		}
-		if vars["symid"] == Data.RDFGroup.RemoteSymmetrix {
+		if vars["symid"] == Data.RDFGroup.RemoteSymmetrix && strings.Contains(sgID, "rep"){
 			ReturnStorageGroup(w, sgID, true)
 		} else {
 			ReturnStorageGroup(w, sgID, false)

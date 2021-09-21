@@ -46,19 +46,6 @@ const (
 	MaxVolIdentifierLength = 64
 )
 
-var (
-	// PmaxTimeout is the timeout value for pmax calls in sloprovisioning or system.
-	// If Unisphere fails to answer after this period, an error will be returned.
-	PmaxTimeout = 300 * time.Second
-)
-
-// GetTimeoutContext sets up a timeout of time PmaxTimeout for the returned context.
-// The user caller should call the cancel function that is returned.
-func GetTimeoutContext() (context.Context, context.CancelFunc) {
-	ctx, cancel := context.WithTimeout(context.Background(), PmaxTimeout)
-	return ctx, cancel
-}
-
 //TimeSpent - Calculates and prints time spent for a caller function
 func (c *Client) TimeSpent(functionName string, startTime time.Time) {
 	if logResponseTimes {
@@ -75,7 +62,7 @@ func (c *Client) TimeSpent(functionName string, startTime time.Time) {
 }
 
 // GetVolumeIDsIterator returns a VolumeIDs Iterator. It generally fetches the first page in the result as part of the operation.
-func (c *Client) GetVolumeIDsIterator(symID string, volumeIdentifierMatch string, like bool) (*types.VolumeIterator, error) {
+func (c *Client) GetVolumeIDsIterator(ctx context.Context, symID string, volumeIdentifierMatch string, like bool) (*types.VolumeIterator, error) {
 	defer c.TimeSpent("GetVolumeIDsIterator", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -89,28 +76,28 @@ func (c *Client) GetVolumeIDsIterator(symID string, volumeIdentifierMatch string
 		}
 	}
 
-	return c.getVolumeIDsIteratorBase(symID, query)
+	return c.getVolumeIDsIteratorBase(ctx, symID, query)
 }
 
 // GetVolumesInStorageGroupIterator returns a iterator of a list of volumes associated with a StorageGroup.
-func (c *Client) GetVolumesInStorageGroupIterator(symID string, storageGroupID string) (*types.VolumeIterator, error) {
+func (c *Client) GetVolumesInStorageGroupIterator(ctx context.Context, symID string, storageGroupID string) (*types.VolumeIterator, error) {
 	var query string
 	if storageGroupID == "" {
 		return nil, fmt.Errorf("storageGroupID is empty")
 	}
 
 	query = fmt.Sprintf("?storageGroupId=%s", storageGroupID)
-	return c.getVolumeIDsIteratorBase(symID, query)
+	return c.getVolumeIDsIteratorBase(ctx, symID, query)
 }
 
 // GetVolumeIDsIterator returns a VolumeIDs Iterator. It generally fetches the first page in the result as part of the operation.
-func (c *Client) getVolumeIDsIteratorBase(symID string, query string) (*types.VolumeIterator, error) {
+func (c *Client) getVolumeIDsIteratorBase(ctx context.Context, symID string, query string) (*types.VolumeIterator, error) {
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XVolume
 	if query != "" {
 		URL = URL + query
 	}
 
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
@@ -132,7 +119,7 @@ func (c *Client) getVolumeIDsIteratorBase(symID string, query string) (*types.Vo
 }
 
 // GetVolumeIDsIteratorPage fetches the next page of the iterator's result. From is the starting point. To can be left as 0, or can be set to the last element desired.
-func (c *Client) GetVolumeIDsIteratorPage(iter *types.VolumeIterator, from, to int) ([]string, error) {
+func (c *Client) GetVolumeIDsIteratorPage(ctx context.Context, iter *types.VolumeIterator, from, to int) ([]string, error) {
 	defer c.TimeSpent("GetVolumeIDsIteratorPage", time.Now())
 	if to == 0 || to-from+1 > iter.MaxPageSize {
 		to = from + iter.MaxPageSize - 1
@@ -143,7 +130,7 @@ func (c *Client) GetVolumeIDsIteratorPage(iter *types.VolumeIterator, from, to i
 	queryParams := fmt.Sprintf("?from=%d&to=%d", from, to)
 	URL := RESTPrefix + IteratorX + iter.ID + XPage + queryParams
 
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
@@ -170,10 +157,10 @@ func (c *Client) GetVolumeIDsIteratorPage(iter *types.VolumeIterator, from, to i
 }
 
 // DeleteVolumeIDsIterator deletes a volume iterator.
-func (c *Client) DeleteVolumeIDsIterator(iter *types.VolumeIterator) error {
+func (c *Client) DeleteVolumeIDsIterator(ctx context.Context, iter *types.VolumeIterator) error {
 	defer c.TimeSpent("DeleteVolumeIDsIterator", time.Now())
 	URL := RESTPrefix + IteratorX + iter.ID
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Delete(ctx, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
@@ -186,31 +173,31 @@ func (c *Client) DeleteVolumeIDsIterator(iter *types.VolumeIterator) error {
 // all volumes are returned. Otherwise the volumes are filtered to volumes whose VolumeIdentifier
 // exactly matches the volumeIdentfierMatch argument (when like is false), or whose VolumeIdentifier
 // contains the volumeIdentifierMatch argument (when like is true).
-func (c *Client) GetVolumeIDList(symID string, volumeIdentifierMatch string, like bool) ([]string, error) {
+func (c *Client) GetVolumeIDList(ctx context.Context, symID string, volumeIdentifierMatch string, like bool) ([]string, error) {
 	defer c.TimeSpent("GetVolumeIDList", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
-	iter, err := c.GetVolumeIDsIterator(symID, volumeIdentifierMatch, like)
+	iter, err := c.GetVolumeIDsIterator(ctx, symID, volumeIdentifierMatch, like)
 	if err != nil {
 		return nil, err
 	}
-	return c.volumeIteratorToVolIDList(iter)
+	return c.volumeIteratorToVolIDList(ctx, iter)
 }
 
 // GetVolumeIDListInStorageGroup - Gets a list of volume in a SG
-func (c *Client) GetVolumeIDListInStorageGroup(symID string, storageGroupID string) ([]string, error) {
-	iter, err := c.GetVolumesInStorageGroupIterator(symID, storageGroupID)
+func (c *Client) GetVolumeIDListInStorageGroup(ctx context.Context, symID string, storageGroupID string) ([]string, error) {
+	iter, err := c.GetVolumesInStorageGroupIterator(ctx, symID, storageGroupID)
 	if err != nil {
 		return nil, err
 	}
-	return c.volumeIteratorToVolIDList(iter)
+	return c.volumeIteratorToVolIDList(ctx, iter)
 }
 
-func (c *Client) volumeIteratorToVolIDList(iter *types.VolumeIterator) ([]string, error) {
+func (c *Client) volumeIteratorToVolIDList(ctx context.Context, iter *types.VolumeIterator) ([]string, error) {
 	if iter.MaxPageSize < iter.Count {
 		// The iterator only needs to be deleted if there are more entries than MaxPageSize?
-		defer c.DeleteVolumeIDsIterator(iter)
+		defer c.DeleteVolumeIDsIterator(ctx, iter)
 	}
 
 	// Get the initial results
@@ -222,7 +209,7 @@ func (c *Client) volumeIteratorToVolIDList(iter *types.VolumeIterator) ([]string
 
 	// Iterate through addiional pages
 	for from := result.To + 1; from <= iter.Count; {
-		idlist, err := c.GetVolumeIDsIteratorPage(iter, from, 0)
+		idlist, err := c.GetVolumeIDsIteratorPage(ctx, iter, from, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -236,13 +223,13 @@ func (c *Client) volumeIteratorToVolIDList(iter *types.VolumeIterator) ([]string
 }
 
 // GetVolumeByID returns a Volume structure given the symmetrix and volume ID (volume ID is 5-digit hex field)
-func (c *Client) GetVolumeByID(symID string, volumeID string) (*types.Volume, error) {
+func (c *Client) GetVolumeByID(ctx context.Context, symID string, volumeID string) (*types.Volume, error) {
 	defer c.TimeSpent("GetVolumeByID", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XVolume + "/" + volumeID
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
@@ -264,14 +251,14 @@ func (c *Client) GetVolumeByID(symID string, volumeID string) (*types.Volume, er
 }
 
 // GetStorageGroupIDList returns a list of StorageGroupIds in a StorageGroupIDList type.
-func (c *Client) GetStorageGroupIDList(symID string) (*types.StorageGroupIDList, error) {
+func (c *Client) GetStorageGroupIDList(ctx context.Context, symID string) (*types.StorageGroupIDList, error) {
 	defer c.TimeSpent("GetStorageGroupIDList", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XStorageGroup
 
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
@@ -353,14 +340,14 @@ func (c *Client) GetCreateStorageGroupPayload(storageGroupID, srpID, serviceLeve
 
 // CreateStorageGroup creates a Storage Group given the storageGroupID (name), srpID (storage resource pool), service level, and boolean for thick volumes.
 // If srpID is "None" then serviceLevel and thickVolumes settings are ignored
-func (c *Client) CreateStorageGroup(symID, storageGroupID, srpID, serviceLevel string, thickVolumes bool) (*types.StorageGroup, error) {
+func (c *Client) CreateStorageGroup(ctx context.Context, symID, storageGroupID, srpID, serviceLevel string, thickVolumes bool) (*types.StorageGroup, error) {
 	defer c.TimeSpent("CreateStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XStorageGroup
 	payload := c.GetCreateStorageGroupPayload(storageGroupID, srpID, serviceLevel, thickVolumes)
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodPost, URL, c.getDefaultHeaders(), payload)
@@ -378,13 +365,13 @@ func (c *Client) CreateStorageGroup(symID, storageGroupID, srpID, serviceLevel s
 }
 
 //DeleteStorageGroup deletes a storage group
-func (c *Client) DeleteStorageGroup(symID string, storageGroupID string) error {
+func (c *Client) DeleteStorageGroup(ctx context.Context, symID string, storageGroupID string) error {
 	defer c.TimeSpent("DeleteStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XStorageGroup + "/" + storageGroupID
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Delete(ctx, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
@@ -396,13 +383,13 @@ func (c *Client) DeleteStorageGroup(symID string, storageGroupID string) error {
 }
 
 //DeleteMaskingView deletes a storage group
-func (c *Client) DeleteMaskingView(symID string, maskingViewID string) error {
+func (c *Client) DeleteMaskingView(ctx context.Context, symID string, maskingViewID string) error {
 	defer c.TimeSpent("DeleteMaskingView", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XMaskingView + "/" + maskingViewID
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Delete(ctx, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
@@ -414,13 +401,13 @@ func (c *Client) DeleteMaskingView(symID string, maskingViewID string) error {
 }
 
 // GetStorageGroup returns a StorageGroup given the Symmetrix ID and Storage Group ID (which is really a name).
-func (c *Client) GetStorageGroup(symID string, storageGroupID string) (*types.StorageGroup, error) {
+func (c *Client) GetStorageGroup(ctx context.Context, symID string, storageGroupID string) (*types.StorageGroup, error) {
 	defer c.TimeSpent("GetStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XStorageGroup + "/" + storageGroupID
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
@@ -442,14 +429,14 @@ func (c *Client) GetStorageGroup(symID string, storageGroupID string) (*types.St
 }
 
 // GetStoragePool returns a StoragePool given the Symmetrix ID and Storage Pool ID
-func (c *Client) GetStoragePool(symID string, storagePoolID string) (*types.StoragePool, error) {
+func (c *Client) GetStoragePool(ctx context.Context, symID string, storagePoolID string) (*types.StoragePool, error) {
 	defer c.TimeSpent("GetStoragePool", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + "/" + StorageResourcePool + "/" + storagePoolID
 	storagePool := &types.StoragePool{}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), storagePool)
 	if err != nil {
@@ -460,7 +447,7 @@ func (c *Client) GetStoragePool(symID string, storagePoolID string) (*types.Stor
 }
 
 // UpdateStorageGroup is a general method to update a StorageGroup (PUT operation) using a UpdateStorageGroupPayload.
-func (c *Client) UpdateStorageGroup(symID string, storageGroupID string, payload interface{}) (*types.Job, error) {
+func (c *Client) UpdateStorageGroup(ctx context.Context, symID string, storageGroupID string, payload interface{}) (*types.Job, error) {
 	defer c.TimeSpent("UpdateStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -471,7 +458,7 @@ func (c *Client) UpdateStorageGroup(symID string, storageGroupID string, payload
 		http.MethodPut: URL,
 	}
 
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Put(
 		ctx, URL, c.getDefaultHeaders(), payload, job)
@@ -483,7 +470,7 @@ func (c *Client) UpdateStorageGroup(symID string, storageGroupID string, payload
 }
 
 // UpdateStorageGroupS is a general method to update a StorageGroup (PUT operation) using a UpdateStorageGroupPayload.
-func (c *Client) UpdateStorageGroupS(symID string, storageGroupID string, payload interface{}) error {
+func (c *Client) UpdateStorageGroupS(ctx context.Context, symID string, storageGroupID string, payload interface{}) error {
 	defer c.TimeSpent("UpdateStorageGroupS", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return err
@@ -493,7 +480,7 @@ func (c *Client) UpdateStorageGroupS(symID string, storageGroupID string, payloa
 		http.MethodPut: URL,
 	}
 
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Put(
 		ctx, URL, c.getDefaultHeaders(), payload, nil)
@@ -519,7 +506,7 @@ func ifDebugLogPayload(payload interface{}) {
 // CreateVolumeInStorageGroup creates a volume in the specified Storage Group with a given volumeName
 // and the size of the volume in cylinders.
 func (c *Client) CreateVolumeInStorageGroup(
-	symID string, storageGroupID string, volumeName string, sizeInCylinders int) (*types.Volume, error) {
+	ctx context.Context, symID string, storageGroupID string, volumeName string, sizeInCylinders int) (*types.Volume, error) {
 	defer c.TimeSpent("CreateVolumeInStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -532,11 +519,11 @@ func (c *Client) CreateVolumeInStorageGroup(
 	job := &types.Job{}
 	var err error
 	payload := c.GetCreateVolInSGPayload(sizeInCylinders, volumeName, false, "", "")
-	job, err = c.UpdateStorageGroup(symID, storageGroupID, payload)
+	job, err = c.UpdateStorageGroup(ctx, symID, storageGroupID, payload)
 	if err != nil || job == nil {
 		return nil, fmt.Errorf("A job was not returned from UpdateStorageGroup")
 	}
-	job, err = c.WaitOnJobCompletion(symID, job.JobID)
+	job, err = c.WaitOnJobCompletion(ctx, symID, job.JobID)
 	if err != nil {
 		return nil, err
 	}
@@ -545,13 +532,13 @@ func (c *Client) CreateVolumeInStorageGroup(
 	case types.JobStatusFailed:
 		return nil, fmt.Errorf("The UpdateStorageGroup job failed: " + c.JobToString(job))
 	}
-	volume, err := c.GetVolumeByIdentifier(symID, storageGroupID, volumeName, sizeInCylinders)
+	volume, err := c.GetVolumeByIdentifier(ctx, symID, storageGroupID, volumeName, sizeInCylinders)
 	return volume, err
 }
 
 // GetVolumeByIdentifier on the given symmetrix in specific storage group with a volume name and having size in cylinders
-func (c *Client) GetVolumeByIdentifier(symID, storageGroupID string, volumeName string, sizeInCylinders int) (*types.Volume, error) {
-	volIDList, err := c.GetVolumeIDList(symID, volumeName, false)
+func (c *Client) GetVolumeByIdentifier(ctx context.Context, symID, storageGroupID string, volumeName string, sizeInCylinders int) (*types.Volume, error) {
+	volIDList, err := c.GetVolumeIDList(ctx, symID, volumeName, false)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't get Volume ID List: " + err.Error())
 	}
@@ -559,7 +546,7 @@ func (c *Client) GetVolumeByIdentifier(symID, storageGroupID string, volumeName 
 		log.Warning("Found multiple volumes matching the identifier " + volumeName)
 	}
 	for _, volumeID := range volIDList {
-		vol, err := c.GetVolumeByID(symID, volumeID)
+		vol, err := c.GetVolumeByID(ctx, symID, volumeID)
 		if err == nil {
 			for _, sgID := range vol.StorageGroupIDList {
 				if sgID == storageGroupID && vol.CapacityCYL == sizeInCylinders {
@@ -577,7 +564,7 @@ func (c *Client) GetVolumeByIdentifier(symID, storageGroupID string, volumeName 
 // CreateVolumeInStorageGroupS creates a volume in the specified Storage Group with a given volumeName
 // and the size of the volume in cylinders.
 // This method is run synchronously
-func (c *Client) CreateVolumeInStorageGroupS(symID, storageGroupID string, volumeName string, sizeInCylinders int, opts ...http.Header) (*types.Volume, error) {
+func (c *Client) CreateVolumeInStorageGroupS(ctx context.Context, symID, storageGroupID string, volumeName string, sizeInCylinders int, opts ...http.Header) (*types.Volume, error) {
 	defer c.TimeSpent("CreateVolumeInStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -588,19 +575,19 @@ func (c *Client) CreateVolumeInStorageGroupS(symID, storageGroupID string, volum
 	}
 
 	payload := c.GetCreateVolInSGPayload(sizeInCylinders, volumeName, true, "", "", opts...)
-	err := c.UpdateStorageGroupS(symID, storageGroupID, payload)
+	err := c.UpdateStorageGroupS(ctx, symID, storageGroupID, payload)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't create volume. error - %s", err.Error())
 	}
 
-	volume, err := c.GetVolumeByIdentifier(symID, storageGroupID, volumeName, sizeInCylinders)
+	volume, err := c.GetVolumeByIdentifier(ctx, symID, storageGroupID, volumeName, sizeInCylinders)
 	return volume, err
 }
 
 // CreateVolumeInProtectedStorageGroupS takes simplified input arguments to create a volume of a give name and size in a protected storage group.
 // This will add volume in both Local and Remote Storage group
 // This method is run synchronously
-func (c *Client) CreateVolumeInProtectedStorageGroupS(symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, sizeInCylinders int, opts ...http.Header) (*types.Volume, error) {
+func (c *Client) CreateVolumeInProtectedStorageGroupS(ctx context.Context, symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, sizeInCylinders int, opts ...http.Header) (*types.Volume, error) {
 	defer c.TimeSpent("CreateVolumeInStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -611,17 +598,17 @@ func (c *Client) CreateVolumeInProtectedStorageGroupS(symID, remoteSymID, storag
 	}
 
 	payload := c.GetCreateVolInSGPayload(sizeInCylinders, volumeName, true, remoteSymID, remoteStorageGroupID, opts...)
-	err := c.UpdateStorageGroupS(symID, storageGroupID, payload)
+	err := c.UpdateStorageGroupS(ctx, symID, storageGroupID, payload)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't create volume. error - %s", err.Error())
 	}
 
-	volume, err := c.GetVolumeByIdentifier(symID, storageGroupID, volumeName, sizeInCylinders)
+	volume, err := c.GetVolumeByIdentifier(ctx, symID, storageGroupID, volumeName, sizeInCylinders)
 	return volume, err
 }
 
 // ExpandVolume expands an existing volume to a new (larger) size in CYL
-func (c *Client) ExpandVolume(symID string, volumeID string, newSizeCYL int) (*types.Volume, error) {
+func (c *Client) ExpandVolume(ctx context.Context, symID string, volumeID string, newSizeCYL int) (*types.Volume, error) {
 	payload := &types.EditVolumeParam{
 		EditVolumeActionParam: types.EditVolumeActionParam{
 			ExpandVolumeParam: &types.ExpandVolumeParam{
@@ -635,20 +622,21 @@ func (c *Client) ExpandVolume(symID string, volumeID string, newSizeCYL int) (*t
 
 	payload.ExecutionOption = types.ExecutionOptionSynchronous
 	ifDebugLogPayload(payload)
-
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XVolume + "/" + volumeID
-	err := c.api.Put(context.Background(), URL, c.getDefaultHeaders(), payload, nil)
+	err := c.api.Put(ctx, URL, c.getDefaultHeaders(), payload, nil)
 
 	var vol *types.Volume
 	if err == nil {
-		vol, err = c.GetVolumeByID(symID, volumeID)
+		vol, err = c.GetVolumeByID(ctx, symID, volumeID)
 	}
 
 	return vol, err
 }
 
 // AddVolumesToStorageGroup adds one or more volumes (given by their volumeIDs) to a StorageGroup.
-func (c *Client) AddVolumesToStorageGroup(symID, storageGroupID string, force bool, volumeIDs ...string) error {
+func (c *Client) AddVolumesToStorageGroup(ctx context.Context, symID, storageGroupID string, force bool, volumeIDs ...string) error {
 	defer c.TimeSpent("AddVolumesToStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return err
@@ -658,11 +646,11 @@ func (c *Client) AddVolumesToStorageGroup(symID, storageGroupID string, force bo
 		return fmt.Errorf("At least one volume id has to be specified")
 	}
 	payload := c.GetAddVolumeToSGPayload(false, force, "", "", volumeIDs...)
-	job, err := c.UpdateStorageGroup(symID, storageGroupID, payload)
+	job, err := c.UpdateStorageGroup(ctx, symID, storageGroupID, payload)
 	if err != nil || job == nil {
 		return fmt.Errorf("A job was not returned from UpdateStorageGroup")
 	}
-	job, err = c.WaitOnJobCompletion(symID, job.JobID)
+	job, err = c.WaitOnJobCompletion(ctx, symID, job.JobID)
 	if err != nil {
 		return err
 	}
@@ -675,7 +663,7 @@ func (c *Client) AddVolumesToStorageGroup(symID, storageGroupID string, force bo
 }
 
 // AddVolumesToStorageGroupS adds one or more volumes (given by their volumeIDs) to a StorageGroup.
-func (c *Client) AddVolumesToStorageGroupS(symID, storageGroupID string, force bool, volumeIDs ...string) error {
+func (c *Client) AddVolumesToStorageGroupS(ctx context.Context, symID, storageGroupID string, force bool, volumeIDs ...string) error {
 	defer c.TimeSpent("AddVolumesToStorageGroupS", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return err
@@ -685,7 +673,7 @@ func (c *Client) AddVolumesToStorageGroupS(symID, storageGroupID string, force b
 		return fmt.Errorf("at least one volume id has to be specified")
 	}
 	payload := c.GetAddVolumeToSGPayload(true, force, "", "", volumeIDs...)
-	err := c.UpdateStorageGroupS(symID, storageGroupID, payload)
+	err := c.UpdateStorageGroupS(ctx, symID, storageGroupID, payload)
 	if err != nil {
 		return fmt.Errorf("An error(%s) was returned from UpdateStorageGroup", err.Error())
 	}
@@ -693,7 +681,7 @@ func (c *Client) AddVolumesToStorageGroupS(symID, storageGroupID string, force b
 }
 
 // AddVolumesToProtectedStorageGroup adds one or more volumes (given by their volumeIDs) to a Protected StorageGroup.
-func (c *Client) AddVolumesToProtectedStorageGroup(symID, storageGroupID, remoteSymID, remoteStorageGroupID string, force bool, volumeIDs ...string) error {
+func (c *Client) AddVolumesToProtectedStorageGroup(ctx context.Context, symID, storageGroupID, remoteSymID, remoteStorageGroupID string, force bool, volumeIDs ...string) error {
 	defer c.TimeSpent("AddVolumesToProtectedStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return err
@@ -703,7 +691,7 @@ func (c *Client) AddVolumesToProtectedStorageGroup(symID, storageGroupID, remote
 		return fmt.Errorf("at least one volume id has to be specified")
 	}
 	payload := c.GetAddVolumeToSGPayload(true, force, remoteSymID, remoteStorageGroupID, volumeIDs...)
-	err := c.UpdateStorageGroupS(symID, storageGroupID, payload)
+	err := c.UpdateStorageGroupS(ctx, symID, storageGroupID, payload)
 	if err != nil {
 		return fmt.Errorf("An error(%s) was returned from UpdateStorageGroup", err.Error())
 	}
@@ -711,7 +699,7 @@ func (c *Client) AddVolumesToProtectedStorageGroup(symID, storageGroupID, remote
 }
 
 // RemoveVolumesFromStorageGroup removes one or more volumes (given by their volumeIDs) from a StorageGroup.
-func (c *Client) RemoveVolumesFromStorageGroup(symID string, storageGroupID string, force bool, volumeIDs ...string) (*types.StorageGroup, error) {
+func (c *Client) RemoveVolumesFromStorageGroup(ctx context.Context, symID string, storageGroupID string, force bool, volumeIDs ...string) (*types.StorageGroup, error) {
 	defer c.TimeSpent("RemoveVolumesFromStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -727,7 +715,7 @@ func (c *Client) RemoveVolumesFromStorageGroup(symID string, storageGroupID stri
 	}
 
 	updatedStorageGroup := &types.StorageGroup{}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Put(
 		ctx, URL, c.getDefaultHeaders(), payload, updatedStorageGroup)
@@ -740,7 +728,7 @@ func (c *Client) RemoveVolumesFromStorageGroup(symID string, storageGroupID stri
 }
 
 // RemoveVolumesFromProtectedStorageGroup removes one or more volumes (given by their volumeIDs) from a Protected StorageGroup.
-func (c *Client) RemoveVolumesFromProtectedStorageGroup(symID string, storageGroupID, remoteSymID, remoteStorageGroupID string, force bool, volumeIDs ...string) (*types.StorageGroup, error) {
+func (c *Client) RemoveVolumesFromProtectedStorageGroup(ctx context.Context, symID string, storageGroupID, remoteSymID, remoteStorageGroupID string, force bool, volumeIDs ...string) (*types.StorageGroup, error) {
 	defer c.TimeSpent("RemoveVolumesFromStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -756,7 +744,7 @@ func (c *Client) RemoveVolumesFromProtectedStorageGroup(symID string, storageGro
 	}
 
 	updatedStorageGroup := &types.StorageGroup{}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Put(
 		ctx, URL, c.getDefaultHeaders(), payload, updatedStorageGroup)
@@ -954,14 +942,14 @@ func (c *Client) GetRemoveVolumeFromSGPayload(force bool, remoteSymID, remoteSto
 }
 
 // GetStoragePoolList returns a StoragePoolList object, which contains a list of all the Storage Pool names.
-func (c *Client) GetStoragePoolList(symid string) (*types.StoragePoolList, error) {
+func (c *Client) GetStoragePoolList(ctx context.Context, symid string) (*types.StoragePoolList, error) {
 	defer c.TimeSpent("GetStoragePoolList", time.Now())
 	if _, err := c.IsAllowedArray(symid); err != nil {
 		return nil, err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symid + "/" + StorageResourcePool
 	spList := &types.StoragePoolList{}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), spList)
 	if err != nil {
@@ -972,7 +960,7 @@ func (c *Client) GetStoragePoolList(symid string) (*types.StoragePoolList, error
 }
 
 // RenameVolume renames a volume.
-func (c *Client) RenameVolume(symID string, volumeID string, newName string) (*types.Volume, error) {
+func (c *Client) RenameVolume(ctx context.Context, symID string, volumeID string, newName string) (*types.Volume, error) {
 	defer c.TimeSpent("RenameVolume", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -1000,7 +988,7 @@ func (c *Client) RenameVolume(symID string, volumeID string, newName string) (*t
 		"NewName":      newName,
 	}
 	log.WithFields(fields).Info("Renaming volume")
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Put(
 		ctx, URL, c.getDefaultHeaders(), payload, volume)
@@ -1015,7 +1003,7 @@ func (c *Client) RenameVolume(symID string, volumeID string, newName string) (*t
 // DeleteVolume deletes a volume given the symmetrix ID and volume ID.
 // Any storage tracks for the volume must have been previously deallocated using InitiateDeallocationOfTracksFromVolume,
 // and the volume must not be a member of any Storage Group.
-func (c *Client) DeleteVolume(symID string, volumeID string) error {
+func (c *Client) DeleteVolume(ctx context.Context, symID string, volumeID string) error {
 	defer c.TimeSpent("DeleteVolume", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return err
@@ -1026,7 +1014,7 @@ func (c *Client) DeleteVolume(symID string, volumeID string) error {
 		"VolumeID":     volumeID,
 	}
 	log.WithFields(fields).Info("Deleting volume")
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Delete(ctx, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
@@ -1038,7 +1026,7 @@ func (c *Client) DeleteVolume(symID string, volumeID string) error {
 }
 
 // InitiateDeallocationOfTracksFromVolume is an asynchrnous operation (that returns a job) to remove tracks from a volume.
-func (c *Client) InitiateDeallocationOfTracksFromVolume(symID string, volumeID string) (*types.Job, error) {
+func (c *Client) InitiateDeallocationOfTracksFromVolume(ctx context.Context, symID string, volumeID string) (*types.Job, error) {
 	defer c.TimeSpent("InitiateDeallocationOfTracksFromVolume", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -1061,7 +1049,7 @@ func (c *Client) InitiateDeallocationOfTracksFromVolume(symID string, volumeID s
 		"VolumeID":     volumeID,
 	}
 	log.WithFields(fields).Info("Initiating track deletion...")
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Put(ctx, URL, c.getDefaultHeaders(), payload, job)
 	if err != nil {
@@ -1073,7 +1061,7 @@ func (c *Client) InitiateDeallocationOfTracksFromVolume(symID string, volumeID s
 
 // GetPortGroupList returns a PortGroupList object, which contains a list of the Port Groups
 // which can be optionally filtered based on type
-func (c *Client) GetPortGroupList(symID string, portGroupType string) (*types.PortGroupList, error) {
+func (c *Client) GetPortGroupList(ctx context.Context, symID string, portGroupType string) (*types.PortGroupList, error) {
 	defer c.TimeSpent("GetPortGroupList", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -1090,7 +1078,7 @@ func (c *Client) GetPortGroupList(symID string, portGroupType string) (*types.Po
 	}
 	pgList := &types.PortGroupList{}
 
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), pgList)
 	if err != nil {
@@ -1101,14 +1089,14 @@ func (c *Client) GetPortGroupList(symID string, portGroupType string) (*types.Po
 }
 
 // GetPortGroupByID returns a PortGroup given the Symmetrix ID and Port Group ID.
-func (c *Client) GetPortGroupByID(symID string, portGroupID string) (*types.PortGroup, error) {
+func (c *Client) GetPortGroupByID(ctx context.Context, symID string, portGroupID string) (*types.PortGroup, error) {
 	defer c.TimeSpent("GetPortGroupByID", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XPortGroup + "/" + portGroupID
 	portGroup := &types.PortGroup{}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), portGroup)
 	if err != nil {
@@ -1120,7 +1108,7 @@ func (c *Client) GetPortGroupByID(symID string, portGroupID string) (*types.Port
 
 // GetInitiatorList returns an InitiatorList object, which contains a list of all the Initiators.
 // initiatorHBA, isISCSI, inHost are optional arguments which act as filters for the initiator list
-func (c *Client) GetInitiatorList(symID string, initiatorHBA string, isISCSI bool, inHost bool) (*types.InitiatorList, error) {
+func (c *Client) GetInitiatorList(ctx context.Context, symID string, initiatorHBA string, isISCSI bool, inHost bool) (*types.InitiatorList, error) {
 	defer c.TimeSpent("GetInitiatorList", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -1150,7 +1138,7 @@ func (c *Client) GetInitiatorList(symID string, initiatorHBA string, isISCSI boo
 	}
 	initList := &types.InitiatorList{}
 
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), initList)
 	if err != nil {
@@ -1161,14 +1149,14 @@ func (c *Client) GetInitiatorList(symID string, initiatorHBA string, isISCSI boo
 }
 
 // GetInitiatorByID returns an Initiator given the Symmetrix ID and Initiator ID.
-func (c *Client) GetInitiatorByID(symID string, initID string) (*types.Initiator, error) {
+func (c *Client) GetInitiatorByID(ctx context.Context, symID string, initID string) (*types.Initiator, error) {
 	defer c.TimeSpent("GetInitiatorByID", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XInitiator + "/" + initID
 	initiator := &types.Initiator{}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), initiator)
 	if err != nil {
@@ -1179,14 +1167,14 @@ func (c *Client) GetInitiatorByID(symID string, initID string) (*types.Initiator
 }
 
 // GetHostList returns an HostList object, which contains a list of all the Hosts.
-func (c *Client) GetHostList(symID string) (*types.HostList, error) {
+func (c *Client) GetHostList(ctx context.Context, symID string) (*types.HostList, error) {
 	defer c.TimeSpent("GetHostList", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XHost
 	hostList := &types.HostList{}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), hostList)
 	if err != nil {
@@ -1197,14 +1185,14 @@ func (c *Client) GetHostList(symID string) (*types.HostList, error) {
 }
 
 // GetHostByID returns a Host given the Symmetrix ID and Host ID.
-func (c *Client) GetHostByID(symID string, hostID string) (*types.Host, error) {
+func (c *Client) GetHostByID(ctx context.Context, symID string, hostID string) (*types.Host, error) {
 	defer c.TimeSpent("GetHostByID", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XHost + "/" + hostID
 	host := &types.Host{}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), host)
 	if err != nil {
@@ -1217,7 +1205,7 @@ func (c *Client) GetHostByID(symID string, hostID string) (*types.Host, error) {
 // CreateHost creates a host from a list of InitiatorIDs (and optional HostFlags) return returns a types.Host.
 // Initiator IDs do not contain the storage port designations, just the IQN string or FC WWN.
 // Initiator IDs cannot be a member of more than one host.
-func (c *Client) CreateHost(symID string, hostID string, initiatorIDs []string, hostFlags *types.HostFlags) (*types.Host, error) {
+func (c *Client) CreateHost(ctx context.Context, symID string, hostID string, initiatorIDs []string, hostFlags *types.HostFlags) (*types.Host, error) {
 	defer c.TimeSpent("CreateHost", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -1232,7 +1220,7 @@ func (c *Client) CreateHost(symID string, hostID string, initiatorIDs []string, 
 	Debug = true
 	ifDebugLogPayload(hostParam)
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XHost
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Post(ctx, URL, c.getDefaultHeaders(), hostParam, host)
 	if err != nil {
@@ -1244,7 +1232,7 @@ func (c *Client) CreateHost(symID string, hostID string, initiatorIDs []string, 
 }
 
 // UpdateHostInitiators updates a host from a list of InitiatorIDs and returns a types.Host.
-func (c *Client) UpdateHostInitiators(symID string, host *types.Host, initiatorIDs []string) (*types.Host, error) {
+func (c *Client) UpdateHostInitiators(ctx context.Context, symID string, host *types.Host, initiatorIDs []string) (*types.Host, error) {
 	defer c.TimeSpent("UpdateHostInitiators", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -1271,7 +1259,7 @@ func (c *Client) UpdateHostInitiators(symID string, host *types.Host, initiatorI
 		}
 	}
 
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	// add initiators if needed
 	if len(initAdd) > 0 {
@@ -1308,7 +1296,7 @@ func (c *Client) UpdateHostInitiators(symID string, host *types.Host, initiatorI
 }
 
 // UpdateHostName updates a host with new hostID and returns a types.Host.
-func (c *Client) UpdateHostName(symID, oldHostID, newHostID string) (*types.Host, error) {
+func (c *Client) UpdateHostName(ctx context.Context, symID, oldHostID, newHostID string) (*types.Host, error) {
 	defer c.TimeSpent("UpdateHostName", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -1317,7 +1305,7 @@ func (c *Client) UpdateHostName(symID, oldHostID, newHostID string) (*types.Host
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XHost + "/" + oldHostID
 	updatedHost := &types.Host{}
 
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	// add initiators if needed
 	if newHostID != "" {
@@ -1347,13 +1335,13 @@ func stringInSlice(a string, list []string) bool {
 }
 
 // DeleteHost deletes a host entry.
-func (c *Client) DeleteHost(symID string, hostID string) error {
+func (c *Client) DeleteHost(ctx context.Context, symID string, hostID string) error {
 	defer c.TimeSpent("DeleteHost", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XHost + "/" + hostID
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Delete(ctx, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
@@ -1365,14 +1353,14 @@ func (c *Client) DeleteHost(symID string, hostID string) error {
 }
 
 // GetMaskingViewList  returns a list of the MaskingView names.
-func (c *Client) GetMaskingViewList(symID string) (*types.MaskingViewList, error) {
+func (c *Client) GetMaskingViewList(ctx context.Context, symID string) (*types.MaskingViewList, error) {
 	defer c.TimeSpent("GetMaskingViewList", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XMaskingView
 	mvList := &types.MaskingViewList{}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), mvList)
 	if err != nil {
@@ -1383,14 +1371,14 @@ func (c *Client) GetMaskingViewList(symID string) (*types.MaskingViewList, error
 }
 
 // GetMaskingViewByID returns a masking view given it's identifier (which is the name)
-func (c *Client) GetMaskingViewByID(symID string, maskingViewID string) (*types.MaskingView, error) {
+func (c *Client) GetMaskingViewByID(ctx context.Context, symID string, maskingViewID string) (*types.MaskingView, error) {
 	defer c.TimeSpent("GetMaskingViewByID", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XMaskingView + "/" + maskingViewID
 	mv := &types.MaskingView{}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), mv)
 	if err != nil {
@@ -1402,7 +1390,7 @@ func (c *Client) GetMaskingViewByID(symID string, maskingViewID string) (*types.
 
 // GetMaskingViewConnections returns the connections of a masking view (optionally for a specific volume id.)
 // Here volume id is the 5 digit volume ID.
-func (c *Client) GetMaskingViewConnections(symID string, maskingViewID string, volumeID string) ([]*types.MaskingViewConnection, error) {
+func (c *Client) GetMaskingViewConnections(ctx context.Context, symID string, maskingViewID string, volumeID string) ([]*types.MaskingViewConnection, error) {
 	defer c.TimeSpent("GetMaskingViewConnections", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -1412,7 +1400,7 @@ func (c *Client) GetMaskingViewConnections(symID string, maskingViewID string, v
 		URL = URL + "?volume_id=" + volumeID
 	}
 	cn := &types.MaskingViewConnectionsResult{}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), cn)
 	if err != nil {
@@ -1423,7 +1411,7 @@ func (c *Client) GetMaskingViewConnections(symID string, maskingViewID string, v
 }
 
 // CreatePortGroup - Creates a Port Group
-func (c *Client) CreatePortGroup(symID string, portGroupID string, dirPorts []types.PortKey) (*types.PortGroup, error) {
+func (c *Client) CreatePortGroup(ctx context.Context, symID string, portGroupID string, dirPorts []types.PortKey) (*types.PortGroup, error) {
 	defer c.TimeSpent("CreatePortGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -1436,7 +1424,7 @@ func (c *Client) CreatePortGroup(symID string, portGroupID string, dirPorts []ty
 	}
 	ifDebugLogPayload(createPortGroupParams)
 	portGroup := &types.PortGroup{}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Post(ctx, URL, c.getDefaultHeaders(), createPortGroupParams, portGroup)
 	if err != nil {
@@ -1448,7 +1436,7 @@ func (c *Client) CreatePortGroup(symID string, portGroupID string, dirPorts []ty
 }
 
 // CreateMaskingView creates a masking view and returns the masking view object
-func (c *Client) CreateMaskingView(symID string, maskingViewID string, storageGroupID string, hostOrhostGroupID string, isHost bool, portGroupID string) (*types.MaskingView, error) {
+func (c *Client) CreateMaskingView(ctx context.Context, symID string, maskingViewID string, storageGroupID string, hostOrhostGroupID string, isHost bool, portGroupID string) (*types.MaskingView, error) {
 	defer c.TimeSpent("CreateMaskingView", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -1482,7 +1470,7 @@ func (c *Client) CreateMaskingView(symID string, maskingViewID string, storageGr
 	}
 	ifDebugLogPayload(createMaskingViewParam)
 	maskingView := &types.MaskingView{}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Post(ctx, URL, c.getDefaultHeaders(), createMaskingViewParam, maskingView)
 	if err != nil {
@@ -1494,10 +1482,11 @@ func (c *Client) CreateMaskingView(symID string, maskingViewID string, storageGr
 }
 
 // DeletePortGroup - Deletes a PG
-func (c *Client) DeletePortGroup(symID string, portGroupID string) error {
+func (c *Client) DeletePortGroup(ctx context.Context, symID string, portGroupID string) error {
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XPortGroup + "/" + portGroupID
-
-	err := c.api.Delete(context.Background(), URL, c.getDefaultHeaders(), nil)
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Delete(ctx, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
 		log.Error("DeletePortGroup failed: " + err.Error())
 		return err
@@ -1510,7 +1499,7 @@ func (c *Client) DeletePortGroup(symID string, portGroupID string) error {
 // NB: based on the passed in 'ports' the implementation will determine how to update
 // the PortGroup and make appropriate REST calls sequentially. Take this into
 // consideration when making parallel calls.
-func (c *Client) UpdatePortGroup(symID string, portGroupID string, ports []types.PortKey) (*types.PortGroup, error) {
+func (c *Client) UpdatePortGroup(ctx context.Context, symID string, portGroupID string, ports []types.PortKey) (*types.PortGroup, error) {
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XPortGroup + "/" + portGroupID
 	fmt.Println(URL)
 
@@ -1528,7 +1517,7 @@ func (c *Client) UpdatePortGroup(symID string, portGroupID string, ports []types
 		}
 	}
 
-	pg, err := c.GetPortGroupByID(symID, portGroupID)
+	pg, err := c.GetPortGroupByID(ctx, symID, portGroupID)
 	if err != nil {
 		log.Error("Could not get portGroup: " + err.Error())
 		return nil, err
@@ -1571,6 +1560,9 @@ func (c *Client) UpdatePortGroup(symID string, portGroupID string, ports []types
 		}
 	}
 
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+
 	if len(added) > 0 {
 		log.Info(fmt.Sprintf("Adding ports %v", added))
 		edit := &types.EditPortGroupActionParam{
@@ -1581,7 +1573,7 @@ func (c *Client) UpdatePortGroup(symID string, portGroupID string, ports []types
 		add := types.EditPortGroup{
 			EditPortGroupActionParam: edit,
 		}
-		err := c.api.Put(context.Background(), URL, c.getDefaultHeaders(), add, &pg)
+		err := c.api.Put(ctx, URL, c.getDefaultHeaders(), add, &pg)
 		if err != nil {
 			log.Error("UpdatePortGroup failed when trying to add ports: " + err.Error())
 			return nil, err
@@ -1598,7 +1590,7 @@ func (c *Client) UpdatePortGroup(symID string, portGroupID string, ports []types
 		remove := types.EditPortGroup{
 			EditPortGroupActionParam: edit,
 		}
-		err := c.api.Put(context.Background(), URL, c.getDefaultHeaders(), remove, &pg)
+		err := c.api.Put(ctx, URL, c.getDefaultHeaders(), remove, &pg)
 		if err != nil {
 			log.Error("UpdatePortGroup failed when trying to remove ports: " + err.Error())
 			return nil, err

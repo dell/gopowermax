@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/dell/gopowermax/api"
 	log "github.com/sirupsen/logrus"
@@ -30,11 +31,12 @@ import (
 // Client is the callers handle to the pmax client library.
 // Obtain a client by calling NewClient.
 type Client struct {
-	configConnect *ConfigConnect
-	api           api.Client
-	allowedArrays []string
-	version       string
-	symmetrixID   string
+	configConnect  *ConfigConnect
+	api            api.Client
+	allowedArrays  []string
+	version        string
+	symmetrixID    string
+	contextTimeout time.Duration
 }
 
 var (
@@ -46,10 +48,13 @@ var (
 	conHeader        string
 	applicationType  string
 	logResponseTimes bool
+	// PmaxTimeout is the timeout value for pmax calls.
+	// If Unisphere fails to answer within this period, an error will be returned.
+	defaultPmaxTimeout = 10 * time.Minute
 )
 
 // Authenticate and get API version
-func (c *Client) Authenticate(configConnect *ConfigConnect) error {
+func (c *Client) Authenticate(ctx context.Context, configConnect *ConfigConnect) error {
 	if debug {
 		log.Printf("PowerMax debug: %v\n", debug)
 		log.SetLevel(log.DebugLevel)
@@ -69,8 +74,9 @@ func (c *Client) Authenticate(configConnect *ConfigConnect) error {
 		path = "univmax/restapi/" + "version"
 	}
 
-	resp, err := c.api.DoAndGetResponseBody(
-		context.Background(), http.MethodGet, path, headers, nil)
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, path, headers, nil)
 	if err != nil {
 		doLog(log.WithError(err).Error, "")
 		return err
@@ -86,6 +92,13 @@ func (c *Client) Authenticate(configConnect *ConfigConnect) error {
 	}
 	doLog(log.Infoln, "authentication successful")
 	return nil
+}
+
+// GetTimeoutContext sets up a timeout of time PmaxTimeout for the returned context.
+// The user caller should call the cancel function that is returned.
+func (c *Client) GetTimeoutContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(ctx, c.contextTimeout)
+	return ctx, cancel
 }
 
 // Generate the base 64 Authorization string from username / password
@@ -130,6 +143,15 @@ func NewClientWithArgs(
 	useCerts bool) (client Pmax, err error) {
 
 	logResponseTimes, _ = strconv.ParseBool(os.Getenv("X_CSI_POWERMAX_RESPONSE_TIMES"))
+
+	contextTimeout := defaultPmaxTimeout
+	if timeoutStr := os.Getenv("X_CSI_UNISPHERE_TIMEOUT"); timeoutStr != "" {
+		if timeout, err := time.ParseDuration(timeoutStr); err == nil {
+			doLog(log.WithError(err).Error, "Unable to parse Unisphere timout")
+			contextTimeout = timeout
+		}
+	}
+
 	if version == "" {
 		version = DefaultAPIVersion
 	}
@@ -162,7 +184,7 @@ func NewClientWithArgs(
 	}
 	applicationType = applicationName
 
-	ac, err := api.New(context.Background(), endpoint, opts, debug)
+	ac, err := api.New(endpoint, opts, debug)
 	if err != nil {
 		doLog(log.WithError(err).Error, "Unable to create HTTP client")
 		return nil, err
@@ -173,8 +195,9 @@ func NewClientWithArgs(
 		configConnect: &ConfigConnect{
 			Version: version,
 		},
-		allowedArrays: []string{},
-		version:       version,
+		allowedArrays:  []string{},
+		version:        version,
+		contextTimeout: contextTimeout,
 	}
 
 	accHeader = api.HeaderValContentTypeJSON
@@ -193,6 +216,12 @@ func (c *Client) WithSymmetrixID(symmetrixID string) Pmax {
 	return &client
 }
 
+// SetContextTimeout sets the context timeout value for the API requests
+func (c *Client) SetContextTimeout(timeout time.Duration) Pmax {
+	c.contextTimeout = timeout
+	return c
+}
+
 func (c *Client) getDefaultHeaders() map[string]string {
 	headers := make(map[string]string)
 	headers["Accept"] = accHeader
@@ -206,4 +235,8 @@ func (c *Client) getDefaultHeaders() map[string]string {
 		headers["symid"] = c.symmetrixID
 	}
 	return headers
+}
+
+func (c *Client) GetHTTPClient() *http.Client {
+	return c.api.GetHTTPClient()
 }

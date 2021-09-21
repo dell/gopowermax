@@ -15,6 +15,7 @@
 package pmax
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -59,9 +60,9 @@ func (c *Client) checkResponse(resp *http.Response) error {
 }
 
 // GetSymmetrixIDList returns a list of all the symmetrix systems known to the connected Unisphere instance.
-func (c *Client) GetSymmetrixIDList() (*types.SymmetrixIDList, error) {
+func (c *Client) GetSymmetrixIDList(ctx context.Context) (*types.SymmetrixIDList, error) {
 
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodGet, c.getSymmetrixIDListURL(), c.getDefaultHeaders(), nil)
@@ -79,7 +80,7 @@ func (c *Client) GetSymmetrixIDList() (*types.SymmetrixIDList, error) {
 	if err = decoder.Decode(symIDList); err != nil {
 		return nil, err
 	}
-	// we have the list of all arrays, filter out those not in the whitelist
+	// we have the list of all arrays, filter out those not in the allowed arrays
 	if len(c.GetAllowedArrays()) != 0 {
 		allowed := make([]string, 0)
 		for _, array := range symIDList.SymmetrixIDs {
@@ -93,12 +94,12 @@ func (c *Client) GetSymmetrixIDList() (*types.SymmetrixIDList, error) {
 }
 
 // GetSymmetrixByID  returns the Symmetrix summary structure given a symmetrix id.
-func (c *Client) GetSymmetrixByID(id string) (*types.Symmetrix, error) {
+func (c *Client) GetSymmetrixByID(ctx context.Context, id string) (*types.Symmetrix, error) {
 	if _, err := c.IsAllowedArray(id); err != nil {
 		return nil, err
 	}
 	url := c.getSymmetrixIDListURL() + "/" + id
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodGet, url, c.getDefaultHeaders(), nil)
@@ -121,7 +122,7 @@ func (c *Client) GetSymmetrixByID(id string) (*types.Symmetrix, error) {
 
 // GetJobIDList returns a list of all the jobs in the symmetrix system.
 // If optional statusQuery is something like JobStatusRunning it will search for running jobs.
-func (c *Client) GetJobIDList(symID string, statusQuery string) ([]string, error) {
+func (c *Client) GetJobIDList(ctx context.Context, symID string, statusQuery string) ([]string, error) {
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
@@ -130,7 +131,7 @@ func (c *Client) GetJobIDList(symID string, statusQuery string) ([]string, error
 		url = url + "?status=" + statusQuery
 	}
 	jobIDList := &types.JobIDList{}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Get(ctx, url, c.getDefaultHeaders(), jobIDList)
 	if err != nil {
@@ -141,11 +142,11 @@ func (c *Client) GetJobIDList(symID string, statusQuery string) ([]string, error
 }
 
 // GetJobByID returns a job given the job ID.
-func (c *Client) GetJobByID(symID string, jobID string) (*types.Job, error) {
+func (c *Client) GetJobByID(ctx context.Context, symID string, jobID string) (*types.Job, error) {
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	maxRetry := 6
 	for i := 0; i < maxRetry; i++ {
@@ -168,12 +169,12 @@ func (c *Client) GetJobByID(symID string, jobID string) (*types.Job, error) {
 
 // WaitOnJobCompletion waits until a Job reaches a terminal state.
 // The state may be JobStatusSucceeded or JobStatusFailed (it is the caller's responsibility to check.)
-func (c *Client) WaitOnJobCompletion(symID string, jobID string) (*types.Job, error) {
+func (c *Client) WaitOnJobCompletion(ctx context.Context, symID string, jobID string) (*types.Job, error) {
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	for i := 0; i < MAXJobRetryCount; i++ {
-		job, err := c.GetJobByID(symID, jobID)
+		job, err := c.GetJobByID(ctx, symID, jobID)
 		if err != nil {
 			return nil, err
 		}
@@ -206,13 +207,13 @@ func (c *Client) JobToString(job *types.Job) string {
 }
 
 // GetDirectorIDList returns a list of all the directors on a given array.
-func (c *Client) GetDirectorIDList(symID string) (*types.DirectorIDList, error) {
+func (c *Client) GetDirectorIDList(ctx context.Context, symID string) (*types.DirectorIDList, error) {
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	directorList := &types.DirectorIDList{}
 	URL := c.getSymmetrixIDListURL() + "/" + symID + "/director"
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), directorList)
 	if err != nil {
@@ -224,7 +225,7 @@ func (c *Client) GetDirectorIDList(symID string) (*types.DirectorIDList, error) 
 }
 
 // GetPortList returns a list of all the ports on a specified director/array.
-func (c *Client) GetPortList(symID string, directorID string, query string) (*types.PortList, error) {
+func (c *Client) GetPortList(ctx context.Context, symID string, directorID string, query string) (*types.PortList, error) {
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
@@ -233,7 +234,7 @@ func (c *Client) GetPortList(symID string, directorID string, query string) (*ty
 	if query != "" {
 		URL = URL + "?" + query
 	}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), portList)
 	if err != nil {
@@ -245,13 +246,13 @@ func (c *Client) GetPortList(symID string, directorID string, query string) (*ty
 }
 
 // GetPort returns port details.
-func (c *Client) GetPort(symID string, directorID string, portID string) (*types.Port, error) {
+func (c *Client) GetPort(ctx context.Context, symID string, directorID string, portID string) (*types.Port, error) {
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	port := &types.Port{}
 	URL := c.getSymmetrixIDListURL() + "/" + symID + "/director/" + directorID + "/port/" + portID
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), port)
 	if err != nil {
@@ -263,13 +264,13 @@ func (c *Client) GetPort(symID string, directorID string, portID string) (*types
 }
 
 // GetListOfTargetAddresses returns list of target addresses
-func (c *Client) GetListOfTargetAddresses(symID string) ([]string, error) {
+func (c *Client) GetListOfTargetAddresses(ctx context.Context, symID string) ([]string, error) {
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	ipAddr := []string{}
 	// Get list of all directors
-	directors, err := c.GetDirectorIDList(symID)
+	directors, err := c.GetDirectorIDList(ctx, symID)
 	if err != nil {
 		return []string{}, err
 	}
@@ -277,7 +278,7 @@ func (c *Client) GetListOfTargetAddresses(symID string) ([]string, error) {
 	// for each director, get list of ports with iscsi_target=true
 	for _, d := range directors.DirectorIDs {
 
-		ports, err := c.GetPortList(symID, d, "type=Gige")
+		ports, err := c.GetPortList(ctx, symID, d, "type=Gige")
 		if err != nil {
 			// Ignore the error and continue
 			continue
@@ -285,7 +286,7 @@ func (c *Client) GetListOfTargetAddresses(symID string) ([]string, error) {
 
 		// for each port, get the details
 		for _, p := range ports.SymmetrixPortKey {
-			port, err := c.GetPort(symID, d, p.PortID)
+			port, err := c.GetPort(ctx, symID, d, p.PortID)
 			if err != nil {
 				// Ignore the error and continue
 				continue
@@ -301,13 +302,13 @@ func (c *Client) GetListOfTargetAddresses(symID string) ([]string, error) {
 }
 
 // GetISCSITargets returns list of target addresses
-func (c *Client) GetISCSITargets(symID string) ([]ISCSITarget, error) {
+func (c *Client) GetISCSITargets(ctx context.Context, symID string) ([]ISCSITarget, error) {
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	targets := make([]ISCSITarget, 0)
 	// Get list of all directors
-	directors, err := c.GetDirectorIDList(symID)
+	directors, err := c.GetDirectorIDList(ctx, symID)
 	if err != nil {
 		return []ISCSITarget{}, err
 	}
@@ -315,7 +316,7 @@ func (c *Client) GetISCSITargets(symID string) ([]ISCSITarget, error) {
 	for _, d := range directors.DirectorIDs {
 		// Check if director is ISCSI
 		// To do this, check if any ports have ports with GigE enabled
-		ports, err := c.GetPortList(symID, d, "type=Gige")
+		ports, err := c.GetPortList(ctx, symID, d, "type=Gige")
 		if err != nil {
 			// Ignore the error and continue
 			log.Errorf("Failed to get ports of type GigE for director: %s. Error: %s",
@@ -325,14 +326,14 @@ func (c *Client) GetISCSITargets(symID string) ([]ISCSITarget, error) {
 		if len(ports.SymmetrixPortKey) > 0 {
 			// This is a director with ISCSI port(s)
 			// Query for iscsi_targets
-			virtualPorts, err := c.GetPortList(symID, d, "iscsi_target=true")
+			virtualPorts, err := c.GetPortList(ctx, symID, d, "iscsi_target=true")
 			if err != nil {
 				return []ISCSITarget{}, err
 			}
 			// we have a list of virtual director ports which have ISCSI targets
 			// and portal IPs associated with it
 			for _, vp := range virtualPorts.SymmetrixPortKey {
-				port, err := c.GetPort(symID, vp.DirectorID, vp.PortID)
+				port, err := c.GetPort(ctx, symID, vp.DirectorID, vp.PortID)
 				if err != nil {
 					// Ignore the error and continue
 					log.Errorf("Failed to fetch port details for %s:%s. Error: %s",
@@ -378,5 +379,5 @@ func (c *Client) IsAllowedArray(array string) (bool, error) {
 		}
 	}
 	// we did not find the array
-	return false, fmt.Errorf("The requested array (%s) is ignored via a whitelist", array)
+	return false, fmt.Errorf("the requested array (%s) is ignored as it is not managed", array)
 }

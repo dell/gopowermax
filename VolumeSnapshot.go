@@ -41,7 +41,7 @@ func (c *Client) privURLPrefix() string {
 }
 
 // GetSnapVolumeList returns a list of all snapshot volumes on the array.
-func (c *Client) GetSnapVolumeList(symID string, queryParams types.QueryParams) (*types.SymVolumeList, error) {
+func (c *Client) GetSnapVolumeList(ctx context.Context, symID string, queryParams types.QueryParams) (*types.SymVolumeList, error) {
 	defer c.TimeSpent("GetSnapVolumeList", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -60,8 +60,9 @@ func (c *Client) GetSnapVolumeList(symID string, queryParams types.QueryParams) 
 		}
 		URL = URL[:len(URL)-1]
 	}
-	resp, err := c.api.DoAndGetResponseBody(
-		context.Background(), http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
 		log.Error("GetSnapVolumeList failed: " + err.Error())
 		return nil, err
@@ -80,14 +81,15 @@ func (c *Client) GetSnapVolumeList(symID string, queryParams types.QueryParams) 
 }
 
 // GetVolumeSnapInfo returns snapVx information associated with a volume.
-func (c *Client) GetVolumeSnapInfo(symID string, volumeID string) (*types.SnapshotVolumeGeneration, error) {
+func (c *Client) GetVolumeSnapInfo(ctx context.Context, symID string, volumeID string) (*types.SnapshotVolumeGeneration, error) {
 	defer c.TimeSpent("GetVolumeSnapInfo", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	URL := c.privURLPrefix() + ReplicationX + SymmetrixX + symID + XVolume + "/" + volumeID + XSnapshot
-	resp, err := c.api.DoAndGetResponseBody(
-		context.Background(), http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
 		log.Error("GetVolumeSnapInfo failed: " + err.Error())
 		return nil, err
@@ -106,13 +108,15 @@ func (c *Client) GetVolumeSnapInfo(symID string, volumeID string) (*types.Snapsh
 }
 
 // GetSnapshotInfo returns snapVx information of the specified snapshot
-func (c *Client) GetSnapshotInfo(symID, volumeID, snapID string) (*types.VolumeSnapshot, error) {
+func (c *Client) GetSnapshotInfo(ctx context.Context, symID, volumeID, snapID string) (*types.VolumeSnapshot, error) {
 	defer c.TimeSpent("GetSnapshotInfo", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	URL := c.privURLPrefix() + ReplicationX + SymmetrixX + symID + XVolume + "/" + volumeID + XSnapshot + "/" + snapID
-	resp, err := c.api.DoAndGetResponseBody(context.Background(), http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
 		log.Error("GetSnapshotInfo failed: " + err.Error())
 		return nil, err
@@ -134,7 +138,7 @@ func (c *Client) GetSnapshotInfo(symID, volumeID, snapID string) (*types.VolumeS
 // Star flag is used if the source device is participating in SRDF star mode
 // Use the Force flag to automate some scenarios to succeed
 // TimeToLive value ins hour is set on the snapshot to automatically delete the snapshot after target is unlinked
-func (c *Client) CreateSnapshot(symID string, snapID string, sourceVolumeList []types.VolumeList, ttl int64) error {
+func (c *Client) CreateSnapshot(ctx context.Context, symID string, snapID string, sourceVolumeList []types.VolumeList, ttl int64) error {
 	defer c.TimeSpent("CreateSnapshot", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return err
@@ -149,7 +153,9 @@ func (c *Client) CreateSnapshot(symID string, snapID string, sourceVolumeList []
 	}
 	ifDebugLogPayload(snapParam)
 	URL := c.privURLPrefix() + ReplicationX + SymmetrixX + symID + XSnapshot + "/" + snapID
-	err := c.api.Post(context.Background(), URL, c.getDefaultHeaders(), snapParam, nil)
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Post(ctx, URL, c.getDefaultHeaders(), snapParam, nil)
 	if err != nil {
 		log.Error("CreateSnapshot failed: " + err.Error())
 	}
@@ -164,7 +170,7 @@ func (c *Client) CreateSnapshot(symID string, snapID string, sourceVolumeList []
 // Restore, when set to true will terminate the Restore and the Snapshot as well
 // Generation is used to tell which generation of snapshot needs to be deleted and is passed as int64
 // ExecutionOption tells the Unisphere to perform the operation either in Synchronous mode or Asynchronous mode
-func (c *Client) DeleteSnapshot(symID, snapID string, sourceVolumes []types.VolumeList, generation int64) error {
+func (c *Client) DeleteSnapshot(ctx context.Context, symID, snapID string, sourceVolumes []types.VolumeList, generation int64) error {
 	defer c.TimeSpent("DeleteSnapshot", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return err
@@ -182,11 +188,13 @@ func (c *Client) DeleteSnapshot(symID, snapID string, sourceVolumes []types.Volu
 	ifDebugLogPayload(deleteSnapshot)
 	URL := c.privURLPrefix() + ReplicationX + SymmetrixX + symID + XSnapshot + "/" + snapID
 	URL = strings.Replace(URL, "/90/", "/91/", 1)
-	err := c.api.DoWithHeaders(context.Background(), http.MethodDelete, URL, c.getDefaultHeaders(), deleteSnapshot, job)
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.DoWithHeaders(ctx, http.MethodDelete, URL, c.getDefaultHeaders(), deleteSnapshot, job)
 	if err != nil {
 		return err
 	}
-	job, err = c.WaitOnJobCompletion(symID, job.JobID)
+	job, err = c.WaitOnJobCompletion(ctx, symID, job.JobID)
 	if err != nil {
 		return err
 	}
@@ -198,7 +206,7 @@ func (c *Client) DeleteSnapshot(symID, snapID string, sourceVolumes []types.Volu
 }
 
 // DeleteSnapshotS - Deletes a snapshot synchronously
-func (c *Client) DeleteSnapshotS(symID, snapID string, sourceVolumes []types.VolumeList, generation int64) error {
+func (c *Client) DeleteSnapshotS(ctx context.Context, symID, snapID string, sourceVolumes []types.VolumeList, generation int64) error {
 	defer c.TimeSpent("DeleteSnapshotS", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return err
@@ -218,7 +226,7 @@ func (c *Client) DeleteSnapshotS(symID, snapID string, sourceVolumes []types.Vol
 		http.MethodPut: URL,
 	}
 	ifDebugLogPayload(deleteSnapshot)
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.DoWithHeaders(ctx, http.MethodDelete, URL, c.getDefaultHeaders(), deleteSnapshot, nil)
 	if err != nil {
@@ -243,7 +251,7 @@ func (c *Client) DeleteSnapshotS(symID, snapID string, sourceVolumes []types.Vol
 // NewSnapshotName specifies the new snapshot name to which the old snapshot will be renamed
 // ExecutionOption tells the Unisphere to perform the operation either in Synchronous mode or Asynchronous mode
 // Action defined the operation which will be performed on the given snapshot
-func (c *Client) ModifySnapshot(symID string, sourceVol []types.VolumeList,
+func (c *Client) ModifySnapshot(ctx context.Context, symID string, sourceVol []types.VolumeList,
 	targetVol []types.VolumeList, snapID string, action string,
 	newSnapID string, generation int64) error {
 	defer c.TimeSpent("ModifySnapshot", time.Now())
@@ -285,14 +293,15 @@ func (c *Client) ModifySnapshot(symID string, sourceVol []types.VolumeList,
 	fields := map[string]interface{}{
 		http.MethodPut: URL,
 	}
-
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
 	err := c.api.Put(
-		context.Background(), URL, c.getDefaultHeaders(), snapParam, job)
+		ctx, URL, c.getDefaultHeaders(), snapParam, job)
 	if err != nil {
 		log.WithFields(fields).Error("Error in ModifySnapshot: " + err.Error())
 		return err
 	}
-	job, err = c.WaitOnJobCompletion(symID, job.JobID)
+	job, err = c.WaitOnJobCompletion(ctx, symID, job.JobID)
 	if err != nil {
 		return err
 	}
@@ -304,7 +313,7 @@ func (c *Client) ModifySnapshot(symID string, sourceVol []types.VolumeList,
 }
 
 // ModifySnapshotS executes actions on snapshots synchronously
-func (c *Client) ModifySnapshotS(symID string, sourceVol []types.VolumeList,
+func (c *Client) ModifySnapshotS(ctx context.Context, symID string, sourceVol []types.VolumeList,
 	targetVol []types.VolumeList, snapID string, action string,
 	newSnapID string, generation int64) error {
 	defer c.TimeSpent("ModifySnapshotS", time.Now())
@@ -345,7 +354,7 @@ func (c *Client) ModifySnapshotS(symID string, sourceVol []types.VolumeList,
 	fields := map[string]interface{}{
 		http.MethodPut: URL,
 	}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Put(ctx, URL, c.getDefaultHeaders(), snapParam, nil)
 	if err != nil {
@@ -357,12 +366,12 @@ func (c *Client) ModifySnapshotS(symID string, sourceVol []types.VolumeList,
 }
 
 // GetPrivVolumeByID returns a Volume structure given the symmetrix and volume ID
-func (c *Client) GetPrivVolumeByID(symID string, volumeID string) (*types.VolumeResultPrivate, error) {
+func (c *Client) GetPrivVolumeByID(ctx context.Context, symID string, volumeID string) (*types.VolumeResultPrivate, error) {
 	defer c.TimeSpent("GetPrivVolumeByID", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
-	vol, err := c.GetVolumeByID(symID, volumeID)
+	vol, err := c.GetVolumeByID(ctx, symID, volumeID)
 	if err != nil {
 		log.Error("GetVolumeByID failed: " + err.Error())
 		return nil, err
@@ -373,7 +382,7 @@ func (c *Client) GetPrivVolumeByID(symID string, volumeID string) (*types.Volume
 	URL = fmt.Sprintf("%s?wwn=%s", URL, wwn)
 	//URL = URL + query
 
-	ctx, cancel := context.WithTimeout(context.Background(), 360*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 360*time.Second)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
@@ -396,14 +405,16 @@ func (c *Client) GetPrivVolumeByID(symID string, volumeID string) (*types.Volume
 }
 
 // GetSnapshotGenerations returns a list of all the snapshot generation on a specific snapshot
-func (c *Client) GetSnapshotGenerations(symID, volumeID, snapID string) (*types.VolumeSnapshotGenerations, error) {
+func (c *Client) GetSnapshotGenerations(ctx context.Context, symID, volumeID, snapID string) (*types.VolumeSnapshotGenerations, error) {
 	defer c.TimeSpent("GetSnapshotGenerations", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	URL := c.privURLPrefix() + ReplicationX + SymmetrixX + symID + XVolume + "/" + volumeID + XSnapshot + "/" + snapID + XGenereation
 	volumeSnapshotGenerations := new(types.VolumeSnapshotGenerations)
-	err := c.api.Get(context.Background(), URL, c.getDefaultHeaders(), volumeSnapshotGenerations)
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), volumeSnapshotGenerations)
 	if err != nil {
 		return nil, err
 	}
@@ -411,14 +422,16 @@ func (c *Client) GetSnapshotGenerations(symID, volumeID, snapID string) (*types.
 }
 
 // GetSnapshotGenerationInfo returns the specific generation info related to a snapshot
-func (c *Client) GetSnapshotGenerationInfo(symID, volumeID, snapID string, generation int64) (*types.VolumeSnapshotGeneration, error) {
+func (c *Client) GetSnapshotGenerationInfo(ctx context.Context, symID, volumeID, snapID string, generation int64) (*types.VolumeSnapshotGeneration, error) {
 	defer c.TimeSpent("GetSnapshotGenerationInfo", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	URL := c.privURLPrefix() + ReplicationX + SymmetrixX + symID + XVolume + "/" + volumeID + XSnapshot + "/" + snapID + XGenereation + "/" + strconv.FormatInt(generation, 10)
 	volumeSnapshotGeneration := new(types.VolumeSnapshotGeneration)
-	err := c.api.Get(context.Background(), URL, c.getDefaultHeaders(), volumeSnapshotGeneration)
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), volumeSnapshotGeneration)
 	if err != nil {
 		return nil, err
 	}
@@ -427,11 +440,13 @@ func (c *Client) GetSnapshotGenerationInfo(symID, volumeID, snapID string, gener
 
 // GetReplicationCapabilities returns details about SnapVX and SRDF
 // execution capabilities on the Symmetrix array
-func (c *Client) GetReplicationCapabilities() (*types.SymReplicationCapabilities, error) {
+func (c *Client) GetReplicationCapabilities(ctx context.Context) (*types.SymReplicationCapabilities, error) {
 	defer c.TimeSpent("GetReplicationCapabilities", time.Now())
 	URL := c.urlPrefix() + ReplicationX + "capabilities/symmetrix"
 	symReplicationCapabilities := new(types.SymReplicationCapabilities)
-	err := c.api.Get(context.Background(), URL, c.getDefaultHeaders(), symReplicationCapabilities)
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), symReplicationCapabilities)
 	if err != nil {
 		return nil, err
 	}

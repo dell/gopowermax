@@ -15,6 +15,7 @@
 package inttest
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -194,7 +195,7 @@ func createRDFSetup() error {
 
 	//Creating source volume
 
-	localVol, err = client.CreateVolumeInStorageGroup(symmetrixID, defaultProtectedStorageGroup, volumeName, 50)
+	localVol, err = client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultProtectedStorageGroup, volumeName, 50)
 	if err != nil {
 		return fmt.Errorf("failed to create volume : (%s)", err.Error())
 	}
@@ -202,7 +203,7 @@ func createRDFSetup() error {
 
 	//Creating SG Replica
 
-	SGRDFInfo, err := client.CreateSGReplica(symmetrixID, remoteSymmetrixID, defaultRepMode, localRDFGrpNo, defaultProtectedStorageGroup, defaultProtectedStorageGroup, defaultServiceLevel)
+	SGRDFInfo, err := client.CreateSGReplica(context.TODO(), symmetrixID, remoteSymmetrixID, defaultRepMode, localRDFGrpNo, defaultProtectedStorageGroup, defaultProtectedStorageGroup, defaultServiceLevel, false)
 	fmt.Printf("SG info :\n%#v\n", SGRDFInfo)
 	if err != nil {
 		return fmt.Errorf("Error Creating SGReplica: %s", err.Error())
@@ -210,12 +211,12 @@ func createRDFSetup() error {
 
 	//Retrieving remote volume information for cleanup
 
-	rdfPair, err := client.GetRDFDevicePairInfo(symmetrixID, localRDFGrpNo, localVol.VolumeID)
+	rdfPair, err := client.GetRDFDevicePairInfo(context.TODO(), symmetrixID, localRDFGrpNo, localVol.VolumeID)
 	if err != nil {
 		return fmt.Errorf("Error retrieving RDF device pair information: %s", err.Error())
 	}
 	tgtVolID := rdfPair.RemoteVolumeName
-	remoteVol, err = client.GetVolumeByID(remoteSymmetrixID, tgtVolID)
+	remoteVol, err = client.GetVolumeByID(context.TODO(), remoteSymmetrixID, tgtVolID)
 	if err != nil {
 		return fmt.Errorf("Error retrieving volume information: %s", err.Error())
 	}
@@ -251,29 +252,29 @@ func cleanupRDFSetup(t *testing.T) {
 
 	//Terminating the Pair and removing the volumes from local SG and remote SG
 
-	_, err := client.RemoveVolumesFromProtectedStorageGroup(symmetrixID, defaultProtectedStorageGroup, remoteSymmetrixID, defaultProtectedStorageGroup, true, localVol.VolumeID)
+	_, err := client.RemoveVolumesFromProtectedStorageGroup(context.TODO(), symmetrixID, defaultProtectedStorageGroup, remoteSymmetrixID, defaultProtectedStorageGroup, true, localVol.VolumeID)
 	if err != nil {
 		t.Errorf("failed to remove volumes from default Protected SG (%s) : (%s)", defaultProtectedStorageGroup, err.Error())
 	}
 	//Deleting local volume
-	err = client.DeleteVolume(symmetrixID, localVol.VolumeID)
+	err = client.DeleteVolume(context.TODO(), symmetrixID, localVol.VolumeID)
 	if err != nil {
 		t.Error("DeleteVolume failed: " + err.Error())
 	}
 	// Test deletion of the volume again... should return an error
-	err = client.DeleteVolume(symmetrixID, localVol.VolumeID)
+	err = client.DeleteVolume(context.TODO(), symmetrixID, localVol.VolumeID)
 	if err == nil {
 		t.Error("Expected an error saying volume was not found, but no error")
 	}
 	fmt.Printf("Received expected error: %s\n", err.Error())
 
 	//Deleting remote volume
-	err = client.DeleteVolume(remoteSymmetrixID, remoteVol.VolumeID)
+	err = client.DeleteVolume(context.TODO(), remoteSymmetrixID, remoteVol.VolumeID)
 	if err != nil {
 		t.Error("DeleteVolume failed: " + err.Error())
 	}
 	// Test deletion of the volume again... should return an error
-	err = client.DeleteVolume(remoteSymmetrixID, remoteVol.VolumeID)
+	err = client.DeleteVolume(context.TODO(), remoteSymmetrixID, remoteVol.VolumeID)
 	if err == nil {
 		t.Error("Expected an error saying volume was not found, but no error")
 	}
@@ -299,7 +300,7 @@ func getClient() error {
 	if err != nil {
 		return err
 	}
-	err = client.Authenticate(&pmax.ConfigConnect{
+	err = client.Authenticate(context.TODO(), &pmax.ConfigConnect{
 		Endpoint: endpoint,
 		Username: username,
 		Password: password})
@@ -321,7 +322,7 @@ func TestGetSymmetrixIDs(t *testing.T) {
 			return
 		}
 	}
-	symIDList, err := client.GetSymmetrixIDList()
+	symIDList, err := client.GetSymmetrixIDList(context.TODO())
 	if err != nil || symIDList == nil {
 		t.Error("cannot get SymmetrixIDList: ", err.Error())
 		return
@@ -343,7 +344,7 @@ func TestGetSymmetrix(t *testing.T) {
 			return
 		}
 	}
-	symmetrix, err := client.GetSymmetrixByID(symmetrixID)
+	symmetrix, err := client.GetSymmetrixByID(context.TODO(), symmetrixID)
 	if err != nil || symmetrix == nil {
 		t.Error("cannot get Symmetrix id "+symmetrixID, err.Error())
 		return
@@ -359,7 +360,7 @@ func TestGetVolumeIDs(t *testing.T) {
 			return
 		}
 	}
-	volumeIDList, err := client.GetVolumeIDList(symmetrixID, "", false)
+	volumeIDList, err := client.GetVolumeIDList(context.TODO(), symmetrixID, "", false)
 	if err != nil || volumeIDList == nil {
 		t.Error("cannot get volumeIDList: ", err.Error())
 		return
@@ -378,7 +379,7 @@ func TestGetVolumeIDs(t *testing.T) {
 		dupMap[id] = true
 	}
 
-	volumeIDList, err = client.GetVolumeIDList(symmetrixID, "csi", true)
+	volumeIDList, err = client.GetVolumeIDList(context.TODO(), symmetrixID, "csi", true)
 	if err != nil || volumeIDList == nil {
 		t.Error("cannot get volumeIDList: ", err.Error())
 		return
@@ -388,7 +389,7 @@ func TestGetVolumeIDs(t *testing.T) {
 		fmt.Printf("CSI volume: %s\n", id)
 	}
 
-	volumeIDList, err = client.GetVolumeIDList(symmetrixID, "ce9072c0", true)
+	volumeIDList, err = client.GetVolumeIDList(context.TODO(), symmetrixID, "ce9072c0", true)
 	if err != nil || volumeIDList == nil {
 		t.Error("cannot get volumeIDList: ", err.Error())
 		return
@@ -405,7 +406,7 @@ func TestGetVolume(t *testing.T) {
 		}
 	}
 	// Get some CSI volumes
-	volumeIDList, err := client.GetVolumeIDList(symmetrixID, "csi", true)
+	volumeIDList, err := client.GetVolumeIDList(context.TODO(), symmetrixID, "csi", true)
 	if err != nil || volumeIDList == nil {
 		t.Error("cannot get CSI volumeIDList: ", err.Error())
 		return
@@ -418,7 +419,7 @@ func TestGetVolume(t *testing.T) {
 		if i >= 3 {
 			break
 		}
-		volume, err := client.GetVolumeByID(symmetrixID, id)
+		volume, err := client.GetVolumeByID(context.TODO(), symmetrixID, id)
 		if err != nil {
 			t.Error("cannot retrieve Volume: " + err.Error())
 		} else {
@@ -429,7 +430,7 @@ func TestGetVolume(t *testing.T) {
 }
 
 func TestGetNonExistentVolume(t *testing.T) {
-	volume, err := client.GetVolumeByID(symmetrixID, "88888")
+	volume, err := client.GetVolumeByID(context.TODO(), symmetrixID, "88888")
 	if err != nil {
 		fmt.Printf("TestGetNonExistentVolume: %s\n", err.Error())
 	} else {
@@ -446,7 +447,7 @@ func TestGetStorageGroupIDs(t *testing.T) {
 			return
 		}
 	}
-	sgIDList, err := client.GetStorageGroupIDList(symmetrixID)
+	sgIDList, err := client.GetStorageGroupIDList(context.TODO(), symmetrixID)
 	if err != nil || sgIDList == nil {
 		t.Error("cannot get StorageGroupIDList: ", err.Error())
 		return
@@ -468,7 +469,7 @@ func TestGetStorageGroup(t *testing.T) {
 			return
 		}
 	}
-	storageGroup, err := client.GetStorageGroup(symmetrixID, defaultStorageGroup)
+	storageGroup, err := client.GetStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup)
 	if err != nil || storageGroup == nil {
 		t.Error("Expected to find " + defaultStorageGroup + " but didn't")
 		return
@@ -484,7 +485,7 @@ func TestGetStoragePool(t *testing.T) {
 			return
 		}
 	}
-	storagePool, err := client.GetStoragePool(symmetrixID, defaultSRP)
+	storagePool, err := client.GetStoragePool(context.TODO(), symmetrixID, defaultSRP)
 	if err != nil || storagePool == nil {
 		t.Error("Expected to find " + defaultSRP + " but didn't")
 		return
@@ -500,18 +501,18 @@ func createStorageGroup(symmetrixID, storageGroupID, srp, serviceLevel string, i
 		}
 	}
 	// Check if the SG exists on array
-	storageGroup, err := client.GetStorageGroup(symmetrixID, storageGroupID)
+	storageGroup, err := client.GetStorageGroup(context.TODO(), symmetrixID, storageGroupID)
 	// Storage Group already exist, returning old one
 	if storageGroup != nil && err == nil {
 		return storageGroup, err
 	}
 	// Create a new storege group
 	fmt.Println("Creating a new storage group...")
-	return client.CreateStorageGroup(symmetrixID, storageGroupID, srp, serviceLevel, isThick)
+	return client.CreateStorageGroup(context.TODO(), symmetrixID, storageGroupID, srp, serviceLevel, isThick)
 }
 
 func deleteStorageGroup(symmetrixID, storageGroupID string) error {
-	return client.DeleteStorageGroup(symmetrixID, storageGroupID)
+	return client.DeleteStorageGroup(context.TODO(), symmetrixID, storageGroupID)
 }
 
 func TestCreateStorageGroup(t *testing.T) {
@@ -532,7 +533,7 @@ func TestCreateStorageGroup(t *testing.T) {
 	}
 	fmt.Println("Fetching the newly create storage group from array")
 	//Check if the SG exists on array
-	storageGroup, err = client.GetStorageGroup(symmetrixID, storageGroupID)
+	storageGroup, err = client.GetStorageGroup(context.TODO(), symmetrixID, storageGroupID)
 	if err != nil || storageGroup == nil {
 		t.Error("Expected to find " + storageGroupID + " but didn't")
 		return
@@ -545,7 +546,7 @@ func TestCreateStorageGroup(t *testing.T) {
 		return
 	}
 	//Check if the SG exists on array
-	storageGroup, err = client.GetStorageGroup(symmetrixID, storageGroupID)
+	storageGroup, err = client.GetStorageGroup(context.TODO(), symmetrixID, storageGroupID)
 	if err == nil || storageGroup != nil {
 		t.Error("Expected a failure in fetching " + storageGroupID + " but didn't")
 		return
@@ -574,13 +575,13 @@ func TestCreateStorageGroupNonFASTManaged(t *testing.T) {
 		t.Error("Expected no SRP but received: " + storageGroup.SRP)
 	}
 	fmt.Println("Cleaning up the storage group: " + storageGroupID)
-	err = client.DeleteStorageGroup(symmetrixID, storageGroupID)
+	err = client.DeleteStorageGroup(context.TODO(), symmetrixID, storageGroupID)
 	if err != nil {
 		t.Error("Failed to delete " + storageGroupID)
 		return
 	}
 	//Check if the SG exists on array
-	storageGroup, err = client.GetStorageGroup(symmetrixID, storageGroupID)
+	storageGroup, err = client.GetStorageGroup(context.TODO(), symmetrixID, storageGroupID)
 	if err == nil || storageGroup != nil {
 		t.Error("Expected a failure in fetching " + storageGroupID + " but didn't")
 		return
@@ -596,7 +597,7 @@ func TestGetJobs(t *testing.T) {
 			return
 		}
 	}
-	jobIDList, err := client.GetJobIDList(symmetrixID, "")
+	jobIDList, err := client.GetJobIDList(context.TODO(), symmetrixID, "")
 	if err != nil {
 		t.Error("failed to get Job ID LIst")
 		return
@@ -605,7 +606,7 @@ func TestGetJobs(t *testing.T) {
 		if i >= 10 {
 			break
 		}
-		job, err := client.GetJobByID(symmetrixID, id)
+		job, err := client.GetJobByID(context.TODO(), symmetrixID, id)
 		if err != nil {
 			t.Error("failed to get job: " + id)
 			return
@@ -613,7 +614,7 @@ func TestGetJobs(t *testing.T) {
 		fmt.Printf("%s\n", client.JobToString(job))
 	}
 
-	jobIDList, err = client.GetJobIDList(symmetrixID, types.JobStatusRunning)
+	jobIDList, err = client.GetJobIDList(context.TODO(), symmetrixID, types.JobStatusRunning)
 	if err != nil {
 		t.Error("failed to get Job ID LIst")
 		return
@@ -622,7 +623,7 @@ func TestGetJobs(t *testing.T) {
 		if i >= 10 {
 			break
 		}
-		job, err := client.GetJobByID(symmetrixID, id)
+		job, err := client.GetJobByID(context.TODO(), symmetrixID, id)
 		if err != nil {
 			t.Error("failed to get job: " + id)
 			return
@@ -642,7 +643,7 @@ func TestGetStoragePoolList(t *testing.T) {
 			return
 		}
 	}
-	spList, err := client.GetStoragePoolList(symmetrixID)
+	spList, err := client.GetStoragePoolList(context.TODO(), symmetrixID)
 	if err != nil {
 		t.Error("Failed to get StoragePoolList: " + err.Error())
 		return
@@ -660,20 +661,20 @@ func TestGetMaskingViews(t *testing.T) {
 			return
 		}
 	}
-	mvList, err := client.GetMaskingViewList(symmetrixID)
+	mvList, err := client.GetMaskingViewList(context.TODO(), symmetrixID)
 	if err != nil {
 		t.Error("Failed to get MaskingViewList: " + err.Error())
 		return
 	}
 	for _, mvID := range mvList.MaskingViewIDs {
 		fmt.Printf("Masking View: %s\n", mvID)
-		mv, err := client.GetMaskingViewByID(symmetrixID, mvID)
+		mv, err := client.GetMaskingViewByID(context.TODO(), symmetrixID, mvID)
 		if err != nil {
 			t.Error("Failed to GetMaskingViewByID: ", err.Error())
 			return
 		}
 		fmt.Printf("%#v\n", mv)
-		conns, err := client.GetMaskingViewConnections(symmetrixID, mvID, "")
+		conns, err := client.GetMaskingViewConnections(context.TODO(), symmetrixID, mvID, "")
 		if err != nil {
 			t.Error("Failed to GetMaskingViewConnections: ", err.Error())
 			return
@@ -704,15 +705,15 @@ func TestCreateVolumeInStorageGroup1(t *testing.T) {
 	}
 	fmt.Printf("payload: %s\n", string(payloadBytes))
 
-	job, err := client.UpdateStorageGroup(symmetrixID, defaultStorageGroup, payload)
+	job, err := client.UpdateStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, payload)
 	if err != nil {
 		t.Error("Error returned from UpdateStorageGroup")
 		return
 	}
 	jobID := job.JobID
-	job, err = client.WaitOnJobCompletion(symmetrixID, jobID)
+	job, err = client.WaitOnJobCompletion(context.TODO(), symmetrixID, jobID)
 	if err == nil {
-		idlist, err := client.GetVolumeIDList(symmetrixID, volumeName, false)
+		idlist, err := client.GetVolumeIDList(context.TODO(), symmetrixID, volumeName, false)
 		if err != nil {
 			t.Error("Error getting volume IDs: " + err.Error())
 		}
@@ -733,7 +734,7 @@ func TestCreateVolumeInStorageGroup2(t *testing.T) {
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroup(symmetrixID, defaultStorageGroup, volumeName, 1)
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
 	if err != nil {
 		t.Error(err)
 		return
@@ -753,25 +754,25 @@ func TestAddVolumesInStorageGroup(t *testing.T) {
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroup(symmetrixID, defaultStorageGroup, volumeName, 1)
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	fmt.Printf("volume:\n%#v\n", vol)
-	err = client.AddVolumesToStorageGroup(symmetrixID, nonFASTManagedSG, true, vol.VolumeID)
+	err = client.AddVolumesToStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG, true, vol.VolumeID)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	sg, err := client.GetStorageGroup(symmetrixID, nonFASTManagedSG)
+	sg, err := client.GetStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	fmt.Printf("SG after adding volume: %#v\n", sg)
 	//Remove the volume from SG as part of cleanup
-	sg, err = client.RemoveVolumesFromStorageGroup(symmetrixID, nonFASTManagedSG, true, vol.VolumeID)
+	sg, err = client.RemoveVolumesFromStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG, true, vol.VolumeID)
 	if err != nil {
 		t.Error(err)
 		return
@@ -782,26 +783,26 @@ func TestAddVolumesInStorageGroup(t *testing.T) {
 
 func cleanupVolume(volumeID string, volumeName string, storageGroup string, t *testing.T) {
 	if volumeName != "" {
-		vol, err := client.RenameVolume(symmetrixID, volumeID, "_DEL"+volumeName)
+		vol, err := client.RenameVolume(context.TODO(), symmetrixID, volumeID, "_DEL"+volumeName)
 		if err != nil {
 			t.Error(err)
 			return
 		}
 		fmt.Printf("volume Renamed: %s\n", vol.VolumeIdentifier)
 	}
-	sg, err := client.RemoveVolumesFromStorageGroup(symmetrixID, storageGroup, true, volumeID)
+	sg, err := client.RemoveVolumesFromStorageGroup(context.TODO(), symmetrixID, storageGroup, true, volumeID)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	fmt.Printf("SG after removing volume: %#v\n", sg)
 	pmax.Debug = true
-	err = client.DeleteVolume(symmetrixID, volumeID)
+	err = client.DeleteVolume(context.TODO(), symmetrixID, volumeID)
 	if err != nil {
 		t.Error("DeleteVolume failed: " + err.Error())
 	}
 	// Test deletion of the volume again... should return an error
-	err = client.DeleteVolume(symmetrixID, volumeID)
+	err = client.DeleteVolume(context.TODO(), symmetrixID, volumeID)
 	if err == nil {
 		t.Error("Expected an error saying volume was not found, but no error")
 	}
@@ -838,7 +839,7 @@ func CreateVolumesInParallel(nVols int, t *testing.T) {
 		name := fmt.Sprintf("pmax-Int%d-Scale%d", now.Nanosecond(), i)
 		go func(volumeName string, idchan chan string, errchan chan error) {
 			var err error
-			resp, err := client.CreateVolumeInStorageGroup(symmetrixID, storageGroupName, volumeName, 1)
+			resp, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, storageGroupName, volumeName, 1)
 			if resp != nil {
 				fmt.Printf("ID %s Name %s\n%#v\n", resp.VolumeID, volumeName, resp)
 				idchan <- resp.VolumeID
@@ -873,7 +874,7 @@ func CreateVolumesInParallel(nVols int, t *testing.T) {
 		cleanupVolume(id, "", storageGroupName, t)
 	}
 	// remove the temporary storage group
-	err = client.DeleteStorageGroup(symmetrixID, storageGroupName)
+	err = client.DeleteStorageGroup(context.TODO(), symmetrixID, storageGroupName)
 	if err != nil {
 		t.Errorf("Unable to delete temporary Storage Group: %s", storageGroupName)
 	}
@@ -889,7 +890,7 @@ func TestGetPorts(t *testing.T) {
 	}
 	dirName := "FA-1D"
 	portName := "4"
-	port, err := client.GetPort(symmetrixID, dirName, portName)
+	port, err := client.GetPort(context.TODO(), symmetrixID, dirName, portName)
 	if err != nil {
 		t.Errorf("Unable to read FC storage port %s %s: %s", dirName, portName, err)
 		return
@@ -897,7 +898,7 @@ func TestGetPorts(t *testing.T) {
 	fmt.Printf("port %s:%s %#v\n", dirName, portName, port)
 	dirName = "SE-1E"
 	portName = "0"
-	port, err = client.GetPort(symmetrixID, dirName, portName)
+	port, err = client.GetPort(context.TODO(), symmetrixID, dirName, portName)
 	if err != nil {
 		t.Errorf("Unable to read iSCSI storage port %s %s: %s", dirName, portName, err)
 		return
@@ -914,7 +915,7 @@ func TestGetPortGroupIDs(t *testing.T) {
 			return
 		}
 	}
-	pgList, err := client.GetPortGroupList(symmetrixID, "")
+	pgList, err := client.GetPortGroupList(context.TODO(), symmetrixID, "")
 	if err != nil || pgList == nil {
 		t.Error("cannot get PortGroupList: ", err.Error())
 		return
@@ -923,7 +924,7 @@ func TestGetPortGroupIDs(t *testing.T) {
 		t.Error("expected at least one PortGroup ID in list")
 		return
 	}
-	pgList, err = client.GetPortGroupList(symmetrixID, "fibre")
+	pgList, err = client.GetPortGroupList(context.TODO(), symmetrixID, "fibre")
 	if err != nil || pgList == nil {
 		t.Error("cannot get FC PortGroupList: ", err.Error())
 		return
@@ -932,7 +933,7 @@ func TestGetPortGroupIDs(t *testing.T) {
 		t.Error("expected at least one FC PortGroup ID in list")
 		return
 	}
-	pgList, err = client.GetPortGroupList(symmetrixID, "iscsi")
+	pgList, err = client.GetPortGroupList(context.TODO(), symmetrixID, "iscsi")
 	if err != nil || pgList == nil {
 		t.Error("cannot get iSCSI PortGroupList: ", err.Error())
 		return
@@ -951,7 +952,7 @@ func TestGetPortGroupByFCID(t *testing.T) {
 			return
 		}
 	}
-	portGroup, err := client.GetPortGroupByID(symmetrixID, defaultFCPortGroup)
+	portGroup, err := client.GetPortGroupByID(context.TODO(), symmetrixID, defaultFCPortGroup)
 	if err != nil || portGroup == nil {
 		t.Error("Expected to find " + defaultFCPortGroup + " but didn't")
 		return
@@ -965,7 +966,7 @@ func TestGetPortGroupByiSCSIID(t *testing.T) {
 			return
 		}
 	}
-	portGroup, err := client.GetPortGroupByID(symmetrixID, defaultiSCSIPortGroup)
+	portGroup, err := client.GetPortGroupByID(context.TODO(), symmetrixID, defaultiSCSIPortGroup)
 	if err != nil || portGroup == nil {
 		t.Error("Expected to find " + defaultiSCSIPortGroup + " but didn't")
 		return
@@ -981,7 +982,7 @@ func TestGetInitiatorIDs(t *testing.T) {
 			return
 		}
 	}
-	initList, err := client.GetInitiatorList(symmetrixID, "", true, false)
+	initList, err := client.GetInitiatorList(context.TODO(), symmetrixID, "", true, false)
 	if err != nil || initList == nil {
 		t.Error("cannot get Initiator List: ", err.Error())
 		return
@@ -991,7 +992,7 @@ func TestGetInitiatorIDs(t *testing.T) {
 		return
 	}
 	// Get the FC initiator list for the default initiator HBA
-	initList, err = client.GetInitiatorList(symmetrixID, defaultFCInitiatorID, false, true)
+	initList, err = client.GetInitiatorList(context.TODO(), symmetrixID, defaultFCInitiatorID, false, true)
 	if err != nil {
 		t.Error("Receieved error : ", err.Error())
 	}
@@ -1002,7 +1003,7 @@ func TestGetInitiatorIDs(t *testing.T) {
 		t.Error("Expected to find atleast one FC initiator")
 	}
 	// Get the iSCSI initiator list for the default IQN
-	initList, err = client.GetInitiatorList(symmetrixID, defaultiSCSIInitiatorID, true, true)
+	initList, err = client.GetInitiatorList(context.TODO(), symmetrixID, defaultiSCSIInitiatorID, true, true)
 	if err != nil {
 		t.Error("Receieved error : ", err.Error())
 	}
@@ -1014,7 +1015,7 @@ func TestGetInitiatorIDs(t *testing.T) {
 	}
 
 	// Get the initiator list for an IQN not on the array
-	initList, err = client.GetInitiatorList(symmetrixID, "iqn.1993-08.org.desian:01:5ae293b352a2", true, true)
+	initList, err = client.GetInitiatorList(context.TODO(), symmetrixID, "iqn.1993-08.org.desian:01:5ae293b352a2", true, true)
 	if err != nil {
 		t.Error("Received error : ", err.Error())
 	}
@@ -1032,7 +1033,7 @@ func TestGetInitiatorByFCID(t *testing.T) {
 			return
 		}
 	}
-	initiator, err := client.GetInitiatorByID(symmetrixID, defaultFCInitiator)
+	initiator, err := client.GetInitiatorByID(context.TODO(), symmetrixID, defaultFCInitiator)
 	if err != nil || initiator == nil {
 		t.Error("Expected to find " + defaultFCInitiator + " but didn't")
 		return
@@ -1048,7 +1049,7 @@ func TestGetInitiatorByiSCSIID(t *testing.T) {
 			return
 		}
 	}
-	initiator, err := client.GetInitiatorByID(symmetrixID, defaultiSCSIInitiator)
+	initiator, err := client.GetInitiatorByID(context.TODO(), symmetrixID, defaultiSCSIInitiator)
 	if err != nil || initiator == nil {
 		t.Error("Expected to find " + defaultiSCSIInitiator + " but didn't")
 		return
@@ -1058,7 +1059,7 @@ func TestGetInitiatorByiSCSIID(t *testing.T) {
 
 func TestFCGetInitiators(t *testing.T) {
 	// Get all the initiators and print the FC ones
-	initList, err := client.GetInitiatorList(symmetrixID, "", false, false)
+	initList, err := client.GetInitiatorList(context.TODO(), symmetrixID, "", false, false)
 	if err != nil || initList == nil {
 		t.Error("cannot get Initiator List: ", err.Error())
 		return
@@ -1094,7 +1095,7 @@ func TestFCGetInitiators(t *testing.T) {
 
 	// Print the matching initiator structures from the Symmetrix
 	for _, fcInit := range fcInitiators {
-		initiator, err := client.GetInitiatorByID(symmetrixID, fcInit)
+		initiator, err := client.GetInitiatorByID(context.TODO(), symmetrixID, fcInit)
 		if err != nil || initiator == nil {
 			t.Errorf("Unable to read FC initiator: %s", err)
 			return
@@ -1111,7 +1112,7 @@ func TestGetHostIDs(t *testing.T) {
 			return
 		}
 	}
-	hostList, err := client.GetHostList(symmetrixID)
+	hostList, err := client.GetHostList(context.TODO(), symmetrixID)
 	for _, id := range hostList.HostIDs {
 		fmt.Printf("Host ID: %s\n", id)
 	}
@@ -1132,7 +1133,7 @@ func TestGetHostByFCID(t *testing.T) {
 			return
 		}
 	}
-	host, err := client.GetHostByID(symmetrixID, defaultFCHost)
+	host, err := client.GetHostByID(context.TODO(), symmetrixID, defaultFCHost)
 	if err != nil || host == nil {
 		t.Error("Expected to find FC Host" + defaultFCHost + " but didn't")
 		return
@@ -1148,7 +1149,7 @@ func TestGetHostByiSCSIID(t *testing.T) {
 			return
 		}
 	}
-	host, err := client.GetHostByID(symmetrixID, defaultiSCSIHost)
+	host, err := client.GetHostByID(context.TODO(), symmetrixID, defaultiSCSIHost)
 	if err != nil || host == nil {
 		t.Error("Expected to find " + defaultiSCSIHost + " but didn't")
 		return
@@ -1164,17 +1165,17 @@ func createHost(symmetrixID, hostID string, initiatorKeys []string, hostFlag *ty
 		}
 	}
 	// Check and return if the host exist on the array
-	host, err := client.GetHostByID(symmetrixID, hostID)
+	host, err := client.GetHostByID(context.TODO(), symmetrixID, hostID)
 	if host != nil && err == nil {
 		return host, nil
 	}
 	// host not found, create the host
 	fmt.Println("Creating a new host...")
-	return client.CreateHost(symmetrixID, hostID, initiatorKeys, hostFlag)
+	return client.CreateHost(context.TODO(), symmetrixID, hostID, initiatorKeys, hostFlag)
 }
 
 func deleteHost(symmetrixID, hostID string) error {
-	return client.DeleteHost(symmetrixID, hostID)
+	return client.DeleteHost(context.TODO(), symmetrixID, hostID)
 }
 
 func TestCreateFCHost(t *testing.T) {
@@ -1232,7 +1233,7 @@ func TestCreateFCMaskingView(t *testing.T) {
 	}
 	hostID := "IntTestFCMV-Host"
 	// In case a prior test left the Host in the system...
-	client.DeleteHost(symmetrixID, hostID)
+	client.DeleteHost(context.TODO(), symmetrixID, hostID)
 
 	// create a Host with some initiators
 	initiatorKeys := make([]string, 0)
@@ -1247,14 +1248,14 @@ func TestCreateFCMaskingView(t *testing.T) {
 	// add a volume in defaultStorageGroup
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, time.Now().Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroup(symmetrixID, defaultStorageGroup, volumeName, 1)
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
 	if err != nil {
 		t.Error("Expected to create a volume but didn't" + err.Error())
 		return
 	}
 	fmt.Printf("volume:\n%#v\n", vol)
 	maskingViewID := "IntTestFCMV"
-	maskingView, err := client.CreateMaskingView(symmetrixID, maskingViewID, defaultStorageGroup,
+	maskingView, err := client.CreateMaskingView(context.TODO(), symmetrixID, maskingViewID, defaultStorageGroup,
 		hostID, true, defaultFCPortGroup)
 	if err != nil {
 		t.Error("Expected to create MV with FC initiator and port but didn't: " + err.Error())
@@ -1263,7 +1264,7 @@ func TestCreateFCMaskingView(t *testing.T) {
 	}
 	fmt.Println("Fetching the newly created masking view from array")
 	//Check if the MV exists on array
-	maskingView, err = client.GetMaskingViewByID(symmetrixID, maskingViewID)
+	maskingView, err = client.GetMaskingViewByID(context.TODO(), symmetrixID, maskingViewID)
 	if err != nil || maskingView == nil {
 		t.Error("Expected to find " + maskingViewID + " but didn't")
 		cleanupHost(symmetrixID, hostID, t)
@@ -1271,7 +1272,7 @@ func TestCreateFCMaskingView(t *testing.T) {
 	}
 	fmt.Printf("%#v\n", maskingView)
 	fmt.Println("Cleaning up the masking view")
-	err = client.DeleteMaskingView(symmetrixID, maskingViewID)
+	err = client.DeleteMaskingView(context.TODO(), symmetrixID, maskingViewID)
 	if err != nil {
 		t.Error("Failed to delete " + maskingViewID)
 		return
@@ -1279,7 +1280,7 @@ func TestCreateFCMaskingView(t *testing.T) {
 	fmt.Println("Sleeping for 20 seconds")
 	time.Sleep(20 * time.Second)
 	// Confirm if the masking view got deleted
-	maskingView, err = client.GetMaskingViewByID(symmetrixID, maskingViewID)
+	maskingView, err = client.GetMaskingViewByID(context.TODO(), symmetrixID, maskingViewID)
 	if err == nil {
 		t.Error("Expected a failure in fetching MV: " + maskingViewID + "but didn't")
 		fmt.Printf("%#v\n", maskingView)
@@ -1306,7 +1307,7 @@ func TestCreatePortGroup(t *testing.T) {
 		PortID:     "4",
 	}
 	portKeys = append(portKeys, portKey)
-	portGroup, err := client.CreatePortGroup(symmetrixID, portGroupID, portKeys)
+	portGroup, err := client.CreatePortGroup(context.TODO(), symmetrixID, portGroupID, portKeys)
 	if err != nil {
 		t.Error("Couldn't create port group")
 		return
@@ -1327,7 +1328,7 @@ func TestCreateiSCSIMaskingView(t *testing.T) {
 	}
 	hostID := "IntTestiSCSIMV-Host"
 	// In case a prior test left the Host in the system...
-	client.DeleteHost(symmetrixID, hostID)
+	client.DeleteHost(context.TODO(), symmetrixID, hostID)
 
 	// create a Host with some initiators
 	initiatorKeys := make([]string, 0)
@@ -1342,7 +1343,7 @@ func TestCreateiSCSIMaskingView(t *testing.T) {
 	// add a volume in defaultStorageGroup
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, time.Now().Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroup(symmetrixID, defaultStorageGroup, volumeName, 1)
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
 	if err != nil {
 		t.Error("Expected to create a volume but didn't" + err.Error())
 		return
@@ -1350,7 +1351,7 @@ func TestCreateiSCSIMaskingView(t *testing.T) {
 	fmt.Printf("volume:\n%#v\n", vol)
 	// create the masking view
 	maskingViewID := "IntTestiSCSIMV"
-	maskingView, err := client.CreateMaskingView(symmetrixID, maskingViewID, defaultStorageGroup,
+	maskingView, err := client.CreateMaskingView(context.TODO(), symmetrixID, maskingViewID, defaultStorageGroup,
 		hostID, true, defaultiSCSIPortGroup)
 	if err != nil {
 		t.Error("Expected to create MV with iscsi initiator host and port but didn't: " + err.Error())
@@ -1359,7 +1360,7 @@ func TestCreateiSCSIMaskingView(t *testing.T) {
 	}
 	fmt.Println("Fetching the newly created masking view from array")
 	//Check if the MV exists on array
-	maskingView, err = client.GetMaskingViewByID(symmetrixID, maskingViewID)
+	maskingView, err = client.GetMaskingViewByID(context.TODO(), symmetrixID, maskingViewID)
 	if err != nil || maskingView == nil {
 		t.Error("Expected to find " + maskingViewID + " but didn't")
 		cleanupHost(symmetrixID, hostID, t)
@@ -1367,7 +1368,7 @@ func TestCreateiSCSIMaskingView(t *testing.T) {
 	}
 	fmt.Printf("%#v\n", maskingView)
 	fmt.Println("Cleaning up the masking view")
-	err = client.DeleteMaskingView(symmetrixID, maskingViewID)
+	err = client.DeleteMaskingView(context.TODO(), symmetrixID, maskingViewID)
 	if err != nil {
 		t.Error("Failed to delete " + maskingViewID)
 		return
@@ -1375,7 +1376,7 @@ func TestCreateiSCSIMaskingView(t *testing.T) {
 	fmt.Println("Sleeping for 20 seconds")
 	time.Sleep(20 * time.Second)
 	// Confirm if the masking view got deleted
-	maskingView, err = client.GetMaskingViewByID(symmetrixID, maskingViewID)
+	maskingView, err = client.GetMaskingViewByID(context.TODO(), symmetrixID, maskingViewID)
 	if err == nil {
 		t.Error("Expected a failure in fetching MV: " + maskingViewID + "but didn't")
 		fmt.Printf("%#v\n", maskingView)
@@ -1388,7 +1389,7 @@ func TestCreateiSCSIMaskingView(t *testing.T) {
 
 func cleanupHost(symmetrixID string, hostID string, t *testing.T) {
 	fmt.Println("Cleaning up the host")
-	err := client.DeleteHost(symmetrixID, hostID)
+	err := client.DeleteHost(context.TODO(), symmetrixID, hostID)
 	if err != nil {
 		t.Error("Failed to delete " + hostID)
 	}
@@ -1405,12 +1406,12 @@ func TestUpdateHostInitiators(t *testing.T) {
 	}
 
 	// In case a prior test left the Host in the system...
-	client.DeleteHost(symmetrixID, "IntTestHost")
+	client.DeleteHost(context.TODO(), symmetrixID, "IntTestHost")
 
 	// create a Host with some initiators
 	initiatorKeys := make([]string, 0)
 	initiatorKeys = append(initiatorKeys, iscsiInitiator1)
-	host, err := client.CreateHost(symmetrixID, "IntTestHost", initiatorKeys, nil)
+	host, err := client.CreateHost(context.TODO(), symmetrixID, "IntTestHost", initiatorKeys, nil)
 	if err != nil || host == nil {
 		t.Error("Expected to create host but didn't: " + err.Error())
 		return
@@ -1420,7 +1421,7 @@ func TestUpdateHostInitiators(t *testing.T) {
 	// change the list of initiators and update the host
 	updatedInitiators := make([]string, 0)
 	updatedInitiators = append(updatedInitiators, iscsiInitiator1, iscsiInitiator2)
-	host, err = client.UpdateHostInitiators(symmetrixID, host, updatedInitiators)
+	host, err = client.UpdateHostInitiators(context.TODO(), symmetrixID, host, updatedInitiators)
 	if err != nil || host == nil {
 		t.Error("Expected to update host but didn't: " + err.Error())
 		return
@@ -1435,7 +1436,7 @@ func TestUpdateHostInitiators(t *testing.T) {
 	}
 
 	// delete the host
-	err = client.DeleteHost(symmetrixID, "IntTestHost")
+	err = client.DeleteHost(context.TODO(), symmetrixID, "IntTestHost")
 	if err != nil {
 		t.Error("Could not delete Host: " + err.Error())
 	}
@@ -1449,7 +1450,7 @@ func TestGetTargetAddresses(t *testing.T) {
 			return
 		}
 	}
-	addresses, err := client.GetListOfTargetAddresses(symmetrixID)
+	addresses, err := client.GetListOfTargetAddresses(context.TODO(), symmetrixID)
 	if err != nil {
 		t.Error("Error calling GetListOfTargetAddresses " + err.Error())
 		return
@@ -1465,7 +1466,7 @@ func TestGetISCSITargets(t *testing.T) {
 			return
 		}
 	}
-	targets, err := client.GetISCSITargets(symmetrixID)
+	targets, err := client.GetISCSITargets(context.TODO(), symmetrixID)
 	if err != nil {
 		t.Error("Error calling GetISCSITargets " + err.Error())
 		return
@@ -1485,7 +1486,7 @@ func TestExpandVolume(t *testing.T) {
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroup(symmetrixID, defaultStorageGroup, volumeName, 26)
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 26)
 	if err != nil {
 		t.Error(err)
 		return
@@ -1494,7 +1495,7 @@ func TestExpandVolume(t *testing.T) {
 	//expand Volume
 	expandedSize := 30
 	fmt.Println("Doing VolumeExpansion")
-	expandedVol, err := client.ExpandVolume(symmetrixID, vol.VolumeID, expandedSize)
+	expandedVol, err := client.ExpandVolume(context.TODO(), symmetrixID, vol.VolumeID, expandedSize)
 	if err != nil {
 		t.Error("Error in Volume Expansion: " + err.Error())
 		return
