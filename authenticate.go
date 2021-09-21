@@ -237,6 +237,7 @@ func (c *Client) getDefaultHeaders() map[string]string {
 	return headers
 }
 
+// GetHTTPClient will return an underlying http client
 func (c *Client) GetHTTPClient() *http.Client {
 	return c.api.GetHTTPClient()
 }
