@@ -14,6 +14,7 @@
 package pmax
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -350,7 +351,7 @@ func (c *unitContext) iCallAuthenticateWithEndpointCredentials(endpoint, credent
 	if credentials == "bad" {
 		password = "xxx"
 	}
-	err = client.Authenticate(&ConfigConnect{
+	err = client.Authenticate(context.TODO(), &ConfigConnect{
 		Endpoint: endpoint,
 		Username: defaultUsername,
 		Password: password,
@@ -384,7 +385,7 @@ func (c *unitContext) theErrorMessageContains(expected string) error {
 }
 
 func (c *unitContext) iCallGetSymmetrixIDList() error {
-	c.symIDList, c.err = c.client.GetSymmetrixIDList()
+	c.symIDList, c.err = c.client.GetSymmetrixIDList(context.TODO())
 	return nil
 }
 
@@ -401,7 +402,7 @@ func (c *unitContext) iGetAValidSymmetrixIDListIfNoError() error {
 }
 
 func (c *unitContext) iCallGetSymmetrixByID(id string) error {
-	c.sym, c.err = c.client.GetSymmetrixByID(id)
+	c.sym, c.err = c.client.GetSymmetrixByID(context.TODO(), id)
 	return nil
 }
 
@@ -432,7 +433,7 @@ func (c *unitContext) iHaveVolumes(number int) error {
 }
 
 func (c *unitContext) iCallGetVolumeByID(volID string) error {
-	c.vol, c.err = c.client.GetVolumeByID(symID, volID)
+	c.vol, c.err = c.client.GetVolumeByID(context.TODO(), symID, volID)
 	return nil
 }
 
@@ -452,7 +453,7 @@ func (c *unitContext) iCallGetVolumeIDList(volumeIdentifier string) error {
 		volumeIdentifier = strings.TrimPrefix(volumeIdentifier, "<like>")
 		like = true
 	}
-	c.volList, c.err = c.client.GetVolumeIDList(symID, volumeIdentifier, like)
+	c.volList, c.err = c.client.GetVolumeIDList(context.TODO(), symID, volumeIdentifier, like)
 	return nil
 }
 
@@ -472,7 +473,7 @@ func (c *unitContext) iExpandVolumeToSize(volumeID string, sizeStr string) error
 	}
 
 	if size, err := strconv.Atoi(sizeStr); err == nil {
-		c.vol, c.err = c.client.ExpandVolume(symID, volumeID, size)
+		c.vol, c.err = c.client.ExpandVolume(context.TODO(), symID, volumeID, size)
 	} else {
 		return err
 	}
@@ -485,7 +486,7 @@ func (c *unitContext) iValidateVolumeSize(volumeID string, sizeStr string) error
 		return nil
 	}
 
-	c.vol, c.err = c.client.GetVolumeByID(symID, volumeID)
+	c.vol, c.err = c.client.GetVolumeByID(context.TODO(), symID, volumeID)
 	size, err := strconv.Atoi(sizeStr)
 	if err == nil && float64(size) != c.vol.CapacityGB {
 		return fmt.Errorf("Expected volume %s to be size %s, but was %d", volumeID, sizeStr, size)
@@ -496,7 +497,7 @@ func (c *unitContext) iValidateVolumeSize(volumeID string, sizeStr string) error
 }
 
 func (c *unitContext) iCallGetStorageGroupIDList() error {
-	c.storageGroupIDList, c.err = c.client.GetStorageGroupIDList(symID)
+	c.storageGroupIDList, c.err = c.client.GetStorageGroupIDList(context.TODO(), symID)
 	return nil
 }
 
@@ -514,7 +515,7 @@ func (c *unitContext) iGetAValidStorageGroupIDListIfNoErrors() error {
 }
 
 func (c *unitContext) iCallGetStorageGroup(sgID string) error {
-	c.storageGroup, c.err = c.client.GetStorageGroup(symID, sgID)
+	c.storageGroup, c.err = c.client.GetStorageGroup(context.TODO(), symID, sgID)
 	return nil
 }
 
@@ -529,7 +530,7 @@ func (c *unitContext) iGetAValidStorageGroupIfNoErrors() error {
 }
 
 func (c *unitContext) iCallGetStoragePool(srpID string) error {
-	c.storagePool, c.err = c.client.GetStoragePool(symID, srpID)
+	c.storagePool, c.err = c.client.GetStoragePool(context.TODO(), symID, srpID)
 	return nil
 }
 
@@ -552,7 +553,7 @@ func (c *unitContext) iHaveJobs(numberOfJobs int) error {
 }
 
 func (c *unitContext) iCallGetJobIDListWith(statusQuery string) error {
-	c.jobIDList, c.err = c.client.GetJobIDList(symID, statusQuery)
+	c.jobIDList, c.err = c.client.GetJobIDList(context.TODO(), symID, statusQuery)
 	return nil
 }
 
@@ -572,7 +573,7 @@ func (c *unitContext) iCreateAJobWithInitialStateAndFinalState(initialState, fin
 }
 
 func (c *unitContext) iCallGetJobByID() error {
-	c.job, c.err = c.client.GetJobByID(symID, "myjob")
+	c.job, c.err = c.client.GetJobByID(context.TODO(), symID, "myjob")
 	return nil
 }
 
@@ -587,24 +588,24 @@ func (c *unitContext) iGetAValidJobWithStateIfNoError(expectedState string) erro
 }
 
 func (c *unitContext) iCallWaitOnJobCompletion() error {
-	c.job, c.err = c.client.WaitOnJobCompletion(symID, "myjob")
+	c.job, c.err = c.client.WaitOnJobCompletion(context.TODO(), symID, "myjob")
 	return nil
 }
 
 func (c *unitContext) iCallCreateVolumeInStorageGroupWithNameAndSize(volumeName string, sizeInCylinders int) error {
 	if !c.flag91 {
-		c.vol, c.err = c.client.CreateVolumeInStorageGroup(symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+		c.vol, c.err = c.client.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
 	} else {
-		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
 	}
 	return nil
 }
 
 func (c *unitContext) iCallCreateVolumeInStorageGroupSWithNameAndSize(volumeName string, sizeInCylinders int) error {
 	if !c.flag91 {
-		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
 	} else {
-		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
 	}
 	return nil
 }
@@ -615,9 +616,9 @@ func (c *unitContext) iCallCreateVolumeInStorageGroupSWithNameAndSizeWithMetaDat
 	metadata.Set("x-csi-pv-claimname", "testPVClaimName")
 	metadata.Set("x-csi-pv-namespace", "testPVNamespace")
 	if !c.flag91 {
-		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, metadata)
+		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, metadata)
 	} else {
-		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, metadata)
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, metadata)
 	}
 	return nil
 }
@@ -634,9 +635,9 @@ func (c *unitContext) iGetAValidVolumeWithNameIfNoError(volumeName string) error
 
 func (c *unitContext) iCallCreateStorageGroupWithNameAndSrpAndSl(sgName, srp, serviceLevel string) error {
 	if !c.flag91 {
-		c.storageGroup, c.err = c.client.CreateStorageGroup(symID, sgName, srp, serviceLevel, false)
+		c.storageGroup, c.err = c.client.CreateStorageGroup(context.TODO(), symID, sgName, srp, serviceLevel, false)
 	} else {
-		c.storageGroup, c.err = c.client91.CreateStorageGroup(symID, sgName, srp, serviceLevel, false)
+		c.storageGroup, c.err = c.client91.CreateStorageGroup(context.TODO(), symID, sgName, srp, serviceLevel, false)
 	}
 	return nil
 }
@@ -652,12 +653,12 @@ func (c *unitContext) iGetAValidStorageGroupWithNameIfNoError(sgName string) err
 }
 
 func (c *unitContext) iCallDeleteStorageGroup(sgID string) error {
-	c.err = c.client.DeleteStorageGroup(symID, sgID)
+	c.err = c.client.DeleteStorageGroup(context.TODO(), symID, sgID)
 	return nil
 }
 
 func (c *unitContext) iCallGetStoragePoolList() error {
-	c.storagePoolList, c.err = c.client.GetStoragePoolList(symID)
+	c.storagePoolList, c.err = c.client.GetStoragePoolList(context.TODO(), symID)
 	return nil
 }
 
@@ -673,9 +674,9 @@ func (c *unitContext) iGetAValidStoragePoolListIfNoError() error {
 
 func (c *unitContext) iCallRemoveVolumeFromStorageGroup() error {
 	if !c.flag91 {
-		c.storageGroup, c.err = c.client.RemoveVolumesFromStorageGroup(symID, mock.DefaultStorageGroup, true, c.vol.VolumeID)
+		c.storageGroup, c.err = c.client.RemoveVolumesFromStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, true, c.vol.VolumeID)
 	} else {
-		c.storageGroup, c.err = c.client91.RemoveVolumesFromStorageGroup(symID, mock.DefaultStorageGroup, true, c.vol.VolumeID)
+		c.storageGroup, c.err = c.client91.RemoveVolumesFromStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, true, c.vol.VolumeID)
 	}
 	return nil
 }
@@ -697,17 +698,17 @@ func (c *unitContext) theVolumeIsNoLongerAMemberOfTheStorageGroupIfNoError() err
 }
 
 func (c *unitContext) iCallRenameVolumeWith(newName string) error {
-	c.vol, c.err = c.client.RenameVolume(symID, c.vol.VolumeID, newName)
+	c.vol, c.err = c.client.RenameVolume(context.TODO(), symID, c.vol.VolumeID, newName)
 	return nil
 }
 
 func (c *unitContext) iCallInitiateDeallocationOfTracksFromVolume() error {
-	c.job, c.err = c.client.InitiateDeallocationOfTracksFromVolume(symID, c.vol.VolumeID)
+	c.job, c.err = c.client.InitiateDeallocationOfTracksFromVolume(context.TODO(), symID, c.vol.VolumeID)
 	return nil
 }
 
 func (c *unitContext) iCallDeleteVolume() error {
-	c.err = c.client.DeleteVolume(symID, c.vol.VolumeID)
+	c.err = c.client.DeleteVolume(context.TODO(), symID, c.vol.VolumeID)
 	return nil
 }
 
@@ -732,7 +733,7 @@ func (c *unitContext) iHaveAMaskingView(maskingViewID string) error {
 }
 
 func (c *unitContext) iCallGetMaskingViewList() error {
-	c.maskingViewList, c.err = c.client.GetMaskingViewList(symID)
+	c.maskingViewList, c.err = c.client.GetMaskingViewList(context.TODO(), symID)
 	return nil
 }
 
@@ -757,7 +758,7 @@ func (c *unitContext) iGetAValidMaskingViewListIfNoError() error {
 }
 
 func (c *unitContext) iCallGetMaskingViewByID(mvID string) error {
-	c.maskingView, c.err = c.client.GetMaskingViewByID(symID, mvID)
+	c.maskingView, c.err = c.client.GetMaskingViewByID(context.TODO(), symID, mvID)
 	return nil
 }
 
@@ -787,7 +788,7 @@ func (c *unitContext) iGetAValidMaskingViewIfNoError() error {
 }
 
 func (c *unitContext) iCallDeleteMaskingView() error {
-	c.err = c.client.DeleteMaskingView(symID, c.uMaskingView.maskingViewID)
+	c.err = c.client.DeleteMaskingView(context.TODO(), symID, c.uMaskingView.maskingViewID)
 	return nil
 }
 
@@ -797,7 +798,7 @@ func (c *unitContext) iHaveAPortGroup() error {
 }
 
 func (c *unitContext) iCallGetPortGroupList() error {
-	c.portGroupList, c.err = c.client.GetPortGroupList(symID, "")
+	c.portGroupList, c.err = c.client.GetPortGroupList(context.TODO(), symID, "")
 	return nil
 }
 
@@ -812,7 +813,7 @@ func (c *unitContext) iGetAValidPortGroupListIfNoError() error {
 }
 
 func (c *unitContext) iCallGetPortGroupByID() error {
-	c.portGroup, c.err = c.client.GetPortGroupByID(symID, testPortGroup)
+	c.portGroup, c.err = c.client.GetPortGroupByID(context.TODO(), symID, testPortGroup)
 	return nil
 }
 
@@ -822,7 +823,7 @@ func (c *unitContext) iCallCreatePortGroup(groupName string, strSliceOfPorts str
 	}
 
 	initialPorts := convertStringSliceOfPortsToPortKeys(strSliceOfPorts)
-	c.portGroup, c.err = c.client.CreatePortGroup(symID, groupName, initialPorts)
+	c.portGroup, c.err = c.client.CreatePortGroup(context.TODO(), symID, groupName, initialPorts)
 	return nil
 }
 
@@ -832,7 +833,7 @@ func (c *unitContext) iCallUpdatePortGroup(groupName string, strUpdatePorts stri
 	}
 
 	updatedPorts := convertStringSliceOfPortsToPortKeys(strUpdatePorts)
-	c.portGroup, c.err = c.client.UpdatePortGroup(symID, groupName, updatedPorts)
+	c.portGroup, c.err = c.client.UpdatePortGroup(context.TODO(), symID, groupName, updatedPorts)
 	return nil
 }
 
@@ -877,7 +878,7 @@ func (c *unitContext) iCallDeletePortGroup(groupName string) error {
 		return nil
 	}
 
-	c.err = c.client.DeletePortGroup(symID, groupName)
+	c.err = c.client.DeletePortGroup(context.TODO(), symID, groupName)
 
 	return nil
 }
@@ -887,7 +888,7 @@ func (c *unitContext) thePortGroupShouldNotExist(groupName string) error {
 		return nil
 	}
 
-	c.portGroupList, c.err = c.client.GetPortGroupList(symID, "")
+	c.portGroupList, c.err = c.client.GetPortGroupList(context.TODO(), symID, "")
 	for _, id := range c.portGroupList.PortGroupIDs {
 		if id == groupName {
 			return fmt.Errorf("PortGroup %s was not expected, but is in PortGroup list", groupName)
@@ -937,7 +938,7 @@ func (c *unitContext) iHaveAFCHost(hostName string) error {
 }
 
 func (c *unitContext) iCallGetHostList() error {
-	c.hostList, c.err = c.client.GetHostList(symID)
+	c.hostList, c.err = c.client.GetHostList(context.TODO(), symID)
 	return nil
 }
 
@@ -953,7 +954,7 @@ func (c *unitContext) iGetAValidHostListIfNoError() error {
 }
 
 func (c *unitContext) iCallGetHostByID(hostID string) error {
-	c.host, c.err = c.client.GetHostByID(symID, hostID)
+	c.host, c.err = c.client.GetHostByID(context.TODO(), symID, hostID)
 	return nil
 }
 
@@ -973,7 +974,7 @@ func (c *unitContext) iCallCreateHost(hostName string) error {
 	c.hostID = hostName
 	initiatorList[0] = testInitiatorIQN
 	mock.AddInitiator(testInitiator, testInitiatorIQN, "GigE", []string{"SE-1E:000"}, "")
-	c.host, c.err = c.client.CreateHost(symID, hostName, initiatorList, nil)
+	c.host, c.err = c.client.CreateHost(context.TODO(), symID, hostName, initiatorList, nil)
 	return nil
 }
 
@@ -981,12 +982,12 @@ func (c *unitContext) iCallUpdateHost() error {
 	initiatorList := make([]string, 1)
 	initiatorList[0] = testUpdateInitiatorIQN
 	mock.AddInitiator(testUpdateInitiator, testUpdateInitiatorIQN, "GigE", []string{"SE-1E:000"}, "")
-	c.host, c.err = c.client.UpdateHostInitiators(symID, c.host, initiatorList)
+	c.host, c.err = c.client.UpdateHostInitiators(context.TODO(), symID, c.host, initiatorList)
 	return nil
 }
 
 func (c *unitContext) iCallDeleteHost(hostName string) error {
-	c.err = c.client.DeleteHost(symID, hostName)
+	c.err = c.client.DeleteHost(context.TODO(), symID, hostName)
 	return nil
 }
 
@@ -995,12 +996,12 @@ func (c *unitContext) iHaveAInitiator() error {
 }
 
 func (c *unitContext) iCallGetInitiatorList() error {
-	c.initiatorList, c.err = c.client.GetInitiatorList(symID, "", false, false)
+	c.initiatorList, c.err = c.client.GetInitiatorList(context.TODO(), symID, "", false, false)
 	return nil
 }
 
 func (c *unitContext) iCallGetInitiatorListWithFilters() error {
-	c.initiatorList, c.err = c.client.GetInitiatorList(symID, testInitiatorIQN, true, true)
+	c.initiatorList, c.err = c.client.GetInitiatorList(context.TODO(), symID, testInitiatorIQN, true, true)
 	return nil
 }
 
@@ -1016,7 +1017,7 @@ func (c *unitContext) iGetAValidInitiatorListIfNoError() error {
 
 func (c *unitContext) iCallGetInitiatorByID() error {
 	mock.AddInitiator(testInitiator, testInitiatorIQN, "GigE", []string{"SE-1E:000"}, "")
-	c.initiator, c.err = c.client.GetInitiatorByID(symID, testInitiator)
+	c.initiator, c.err = c.client.GetInitiatorByID(context.TODO(), symID, testInitiator)
 	return nil
 }
 
@@ -1047,7 +1048,7 @@ func (c *unitContext) iCallCreateMaskingViewWithHost(mvID string) error {
 		portGroupID:    testPortGroup,
 	}
 	c.uMaskingView = localMaskingView
-	c.maskingView, c.err = c.client.CreateMaskingView(symID, mvID, c.sgID, c.hostID, true, testPortGroup)
+	c.maskingView, c.err = c.client.CreateMaskingView(context.TODO(), symID, mvID, c.sgID, c.hostID, true, testPortGroup)
 	return nil
 }
 
@@ -1060,7 +1061,7 @@ func (c *unitContext) iCallCreateMaskingViewWithHostGroup(mvID string) error {
 		portGroupID:    testPortGroup,
 	}
 	c.uMaskingView = localMaskingView
-	c.maskingView, c.err = c.client.CreateMaskingView(symID, mvID, c.sgID, c.hostGroupID, false, testPortGroup)
+	c.maskingView, c.err = c.client.CreateMaskingView(context.TODO(), symID, mvID, c.sgID, c.hostGroupID, false, testPortGroup)
 	return nil
 }
 
@@ -1075,18 +1076,18 @@ func (c *unitContext) iHaveAHostGroup(hostGroupID string) error {
 
 func (c *unitContext) iCallAddVolumesToStorageGroup(sgID string) error {
 	if !c.flag91 {
-		c.err = c.client.AddVolumesToStorageGroup(symID, sgID, true, c.volIDList...)
+		c.err = c.client.AddVolumesToStorageGroup(context.TODO(), symID, sgID, true, c.volIDList...)
 	} else {
-		c.err = c.client91.AddVolumesToStorageGroup(symID, sgID, true, c.volIDList...)
+		c.err = c.client91.AddVolumesToStorageGroup(context.TODO(), symID, sgID, true, c.volIDList...)
 	}
 	return nil
 }
 
 func (c *unitContext) iCallAddVolumesToStorageGroupS(sgID string) error {
 	if !c.flag91 {
-		c.err = c.client.AddVolumesToStorageGroupS(symID, sgID, true, c.volIDList...)
+		c.err = c.client.AddVolumesToStorageGroupS(context.TODO(), symID, sgID, true, c.volIDList...)
 	} else {
-		c.err = c.client91.AddVolumesToStorageGroupS(symID, sgID, true, c.volIDList...)
+		c.err = c.client91.AddVolumesToStorageGroupS(context.TODO(), symID, sgID, true, c.volIDList...)
 	}
 	return nil
 }
@@ -1116,7 +1117,7 @@ func (c *unitContext) thenTheVolumesArePartOfStorageGroupIfNoError() error {
 }
 
 func (c *unitContext) iCallGetListOfTargetAddresses() error {
-	c.addressList, c.err = c.client.GetListOfTargetAddresses(symID)
+	c.addressList, c.err = c.client.GetListOfTargetAddresses(context.TODO(), symID)
 	return nil
 }
 
@@ -1127,11 +1128,11 @@ func (c *unitContext) iRecieveIPAddresses(count int) error {
 	return nil
 }
 
-func (c *unitContext) iHaveAWhitelistOf(whitelist string) error {
-	// turn the whitelist string into a slice
-	results := convertStringToSlice(whitelist)
+func (c *unitContext) iHaveAnAllowedListOf(listOfAllowedArrays string) error {
+	// turn the string into a slice
+	results := convertStringToSlice(listOfAllowedArrays)
 
-	// set the whitelist
+	// set the list of allowed arrays
 	if !c.flag91 {
 		c.client.SetAllowedArrays(results)
 	} else {
@@ -1143,7 +1144,7 @@ func (c *unitContext) iHaveAWhitelistOf(whitelist string) error {
 func (c *unitContext) itContainsArrays(count int) error {
 	allowed := c.client.GetAllowedArrays()
 	if len(allowed) != count {
-		return fmt.Errorf("Received the wrong number of arrays in the whitelist. Expected %d but have a whitelist of %v", count, allowed)
+		return fmt.Errorf("Received the wrong number of arrays in the allowed list. Expected %d but have a allowed list of %v", count, allowed)
 	}
 	return nil
 }
@@ -1152,10 +1153,10 @@ func (c *unitContext) shouldInclude(include string) error {
 	// turn the list of specified arrays into a slice
 	results := convertStringToSlice(include)
 
-	// make sure each one is in the whitelist
+	// make sure each one is in the allowed list of arrays
 	for _, a := range results {
 		if ok, _ := c.client.IsAllowedArray(a); ok == false {
-			return fmt.Errorf("Expected array (%s) to be in the whitelist but it was not found", a)
+			return fmt.Errorf("Expected array (%s) to be in the allowed list but it was not found", a)
 		}
 	}
 	return nil
@@ -1165,10 +1166,10 @@ func (c *unitContext) shouldNotInclude(exclude string) error {
 	// turn the list of specified arrays into a slice
 	results := convertStringToSlice(exclude)
 
-	// make sure each one is not in the whitelist
+	// make sure each one is not in the allowed list of arrays
 	for _, a := range results {
 		if ok, _ := c.client.IsAllowedArray(a); ok == true {
-			return fmt.Errorf("Expected array (%s) to not be in the whitelist but it was", a)
+			return fmt.Errorf("Expected array (%s) to not be in the allowd list but it was", a)
 		}
 	}
 	return nil
@@ -1219,18 +1220,18 @@ func convertStringToSlice(input string) []string {
 }
 
 func (c *unitContext) iExcuteTheCapabilitiesOnTheSymmetrixArray() error {
-	c.symRepCapibilities, c.err = c.client.GetReplicationCapabilities()
+	c.symRepCapibilities, c.err = c.client.GetReplicationCapabilities(context.TODO())
 	return nil
 }
 
 func (c *unitContext) iCallGetSnapVolumeListWithAnd(queryKey, queryValue string) error {
 	if queryKey != "" {
 		if queryValue == "true" {
-			c.symVolumeList, c.err = c.client.GetSnapVolumeList(symID, types.QueryParams{
+			c.symVolumeList, c.err = c.client.GetSnapVolumeList(context.TODO(), symID, types.QueryParams{
 				queryKey: true})
 		}
 	} else {
-		c.symVolumeList, c.err = c.client.GetSnapVolumeList(symID, nil)
+		c.symVolumeList, c.err = c.client.GetSnapVolumeList(context.TODO(), symID, nil)
 	}
 	return nil
 }
@@ -1246,7 +1247,7 @@ func (c *unitContext) iShouldGetListOfVolumesHavingSnapshots() error {
 }
 
 func (c *unitContext) iCallGetVolumeSnapInfoWithVolume(volID string) error {
-	c.volSnapList, c.err = c.client.GetVolumeSnapInfo(symID, volID)
+	c.volSnapList, c.err = c.client.GetVolumeSnapInfo(context.TODO(), symID, volID)
 	return nil
 }
 
@@ -1262,7 +1263,7 @@ func (c *unitContext) iShouldGetAListOfSnapshotsIfNoError() error {
 
 func (c *unitContext) iCallCreateSnapshotWithAndSnapshotOnIt(volIds, snapID string) error {
 	c.sourceVolumeList = c.createVolumeList(volIds)
-	c.err = c.client.CreateSnapshot(symID, snapID, c.sourceVolumeList, 0)
+	c.err = c.client.CreateSnapshot(context.TODO(), symID, snapID, c.sourceVolumeList, 0)
 	return nil
 }
 
@@ -1280,7 +1281,7 @@ func (c *unitContext) iGetAValidSnapshotObjectIfNoError() error {
 }
 
 func (c *unitContext) iCallGetSnapshotInfoWithAndSnapshotNameOnIt(volID, SnapID string) error {
-	c.volumeSnapshot, c.err = c.client.GetSnapshotInfo(symID, volID, SnapID)
+	c.volumeSnapshot, c.err = c.client.GetSnapshotInfo(context.TODO(), symID, volID, SnapID)
 	return nil
 }
 
@@ -1295,7 +1296,7 @@ func (c *unitContext) iShouldGetTheSnapshotDetailsIfNoError() error {
 }
 
 func (c *unitContext) iCallGetSnapshotGenerationsWithAndSnapshotOnIt(volID, SnapID string) error {
-	c.volSnapGenerationList, c.err = c.client.GetSnapshotGenerations(symID, volID, SnapID)
+	c.volSnapGenerationList, c.err = c.client.GetSnapshotGenerations(context.TODO(), symID, volID, SnapID)
 	return nil
 }
 
@@ -1310,7 +1311,7 @@ func (c *unitContext) iShouldGetTheGenerationListIfNoError() error {
 }
 
 func (c *unitContext) iCallGetSnapshotGenerationWithSnapshotAndOnIt(volID string, snapID string, genID int64) error {
-	c.volSnapGenerationInfo, c.err = c.client.GetSnapshotGenerationInfo(symID, volID, snapID, genID)
+	c.volSnapGenerationInfo, c.err = c.client.GetSnapshotGenerationInfo(context.TODO(), symID, volID, snapID, genID)
 	return nil
 }
 
@@ -1327,7 +1328,7 @@ func (c *unitContext) iShouldGetAGenerationInfoIfNoError() error {
 func (c *unitContext) iCallModifySnapshotWithAnd(sourceVols, targetVols, SnapID, newSnapID string, genID int64, action string) error {
 	sourceVolumeList := c.createVolumeList(sourceVols)
 	targetVolumeList := c.createVolumeList(targetVols)
-	c.err = c.client.ModifySnapshot(symID, sourceVolumeList, targetVolumeList, SnapID, action, newSnapID, genID)
+	c.err = c.client.ModifySnapshot(context.TODO(), symID, sourceVolumeList, targetVolumeList, SnapID, action, newSnapID, genID)
 
 	return nil
 }
@@ -1335,25 +1336,25 @@ func (c *unitContext) iCallModifySnapshotWithAnd(sourceVols, targetVols, SnapID,
 func (c *unitContext) iCallModifySnapshotSWithAnd(sourceVols, targetVols, SnapID, newSnapID string, genID int64, action string) error {
 	sourceVolumeList := c.createVolumeList(sourceVols)
 	targetVolumeList := c.createVolumeList(targetVols)
-	c.err = c.client.ModifySnapshotS(symID, sourceVolumeList, targetVolumeList, SnapID, action, newSnapID, genID)
+	c.err = c.client.ModifySnapshotS(context.TODO(), symID, sourceVolumeList, targetVolumeList, SnapID, action, newSnapID, genID)
 
 	return nil
 }
 
 func (c *unitContext) iCallDeleteSnapshotWithSnapshotAndOnIt(sourceVols, SnapID string, genID int64) error {
 	sourceVolumeList := c.createVolumeList(sourceVols)
-	c.err = c.client.DeleteSnapshot(symID, SnapID, sourceVolumeList, genID)
+	c.err = c.client.DeleteSnapshot(context.TODO(), symID, SnapID, sourceVolumeList, genID)
 	return nil
 }
 
 func (c *unitContext) iCallDeleteSnapshotSWithSnapshotAndOnIt(sourceVols, SnapID string, genID int64) error {
 	sourceVolumeList := c.createVolumeList(sourceVols)
-	c.err = c.client.DeleteSnapshotS(symID, SnapID, sourceVolumeList, genID)
+	c.err = c.client.DeleteSnapshotS(context.TODO(), symID, SnapID, sourceVolumeList, genID)
 	return nil
 }
 
 func (c *unitContext) iCallGetPrivVolumeByIDWith(volID string) error {
-	c.volResultPrivate, c.err = c.client.GetPrivVolumeByID(symID, volID)
+	c.volResultPrivate, c.err = c.client.GetPrivVolumeByID(context.TODO(), symID, volID)
 	return nil
 }
 
@@ -1404,7 +1405,7 @@ func convertStringSliceOfPortsToPortKeys(strListOfPorts string) []types.PortKey 
 }
 
 func (c *unitContext) iCallGetISCSITargets() error {
-	c.targetList, c.err = c.client.GetISCSITargets(symID)
+	c.targetList, c.err = c.client.GetISCSITargets(context.TODO(), symID)
 	return nil
 }
 
@@ -1416,7 +1417,7 @@ func (c *unitContext) iRecieveTargets(count int) error {
 }
 
 func (c *unitContext) iCallUpdateHostName(newName string) error {
-	c.host, c.err = c.client.UpdateHostName(symID, c.hostID, newName)
+	c.host, c.err = c.client.UpdateHostName(context.TODO(), symID, c.hostID, newName)
 	return nil
 }
 
@@ -1424,7 +1425,7 @@ func (c *unitContext) iCallCreateSGReplica() error {
 	localSG, remoteSG := mock.DefaultStorageGroup, mock.DefaultStorageGroup // Using same names for local and remote storage groups
 	remoteServiceLevel := mock.DefaultServiceLevel                          // Using the same service level as local
 	rdfgNumber := fmt.Sprintf("%d", mock.DefaultRDFGNo)
-	_, c.err = c.client.CreateSGReplica(symID, mock.DefaultRemoteSymID, srdfMode, rdfgNumber, localSG, remoteSG, remoteServiceLevel)
+	_, c.err = c.client.CreateSGReplica(context.TODO(), symID, mock.DefaultRemoteSymID, srdfMode, rdfgNumber, localSG, remoteSG, remoteServiceLevel, false)
 	return nil
 }
 
@@ -1462,7 +1463,7 @@ func (c *unitContext) theVolumesShouldBeReplicated(compliment string) error {
 
 func (c *unitContext) iCallGetStorageGroupRDFInfo() error {
 	var sgrdf *types.StorageGroupRDFG
-	sgrdf, c.err = c.client.GetStorageGroupRDFInfo(symID, mock.DefaultStorageGroup, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo))
+	sgrdf, c.err = c.client.GetStorageGroupRDFInfo(context.TODO(), symID, mock.DefaultStorageGroup, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo))
 	if c.err == nil {
 		if sgrdf.SymmetrixID != symID ||
 			sgrdf.StorageGroupName != mock.DefaultStorageGroup ||
@@ -1480,7 +1481,7 @@ func (c *unitContext) iCallGetRDFDevicePairInfo() error {
 		remoteVolID    string = c.volIDList[0]
 	)
 
-	devicePairInfo, c.err = c.client.GetRDFDevicePairInfo(symID, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo), localVolID)
+	devicePairInfo, c.err = c.client.GetRDFDevicePairInfo(context.TODO(), symID, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo), localVolID)
 	if c.err == nil {
 		if devicePairInfo.LocalSymmID != symID || devicePairInfo.RemoteSymmID != mock.DefaultRemoteSymID ||
 			devicePairInfo.LocalVolumeName != localVolID || devicePairInfo.RemoteVolumeName != remoteVolID {
@@ -1492,7 +1493,7 @@ func (c *unitContext) iCallGetRDFDevicePairInfo() error {
 
 func (c *unitContext) iCallGetProtectedStorageGroup() error {
 	var protectedSG *types.RDFStorageGroup
-	protectedSG, c.err = c.client.GetProtectedStorageGroup(symID, mock.DefaultStorageGroup)
+	protectedSG, c.err = c.client.GetProtectedStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup)
 	if c.err == nil {
 		if protectedSG.SymmetrixID != symID || protectedSG.Name != mock.DefaultStorageGroup {
 			c.err = fmt.Errorf("protected sg with incorrect details returned")
@@ -1506,7 +1507,7 @@ func (c *unitContext) iCallGetProtectedStorageGroup() error {
 
 func (c *unitContext) iCallGetRDFGroup() error {
 	var rdfGroup *types.RDFGroup
-	rdfGroup, c.err = c.client.GetRDFGroup(symID, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo))
+	rdfGroup, c.err = c.client.GetRDFGroup(context.TODO(), symID, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo))
 	if c.err == nil {
 		if !rdfGroup.Async || rdfGroup.RemoteSymmetrix != mock.DefaultRemoteSymID || rdfGroup.RdfgNumber != mock.DefaultRemoteRDFGNo {
 			c.err = fmt.Errorf("rdf group with incorrect details returned")
@@ -1516,22 +1517,22 @@ func (c *unitContext) iCallGetRDFGroup() error {
 }
 
 func (c *unitContext) iCallAddVolumesToProtectedStorageGroup() error {
-	c.err = c.client.AddVolumesToProtectedStorageGroup(symID, mock.DefaultProtectedStorageGroup, mock.DefaultRemoteSymID, mock.DefaultProtectedStorageGroup, false, c.volIDList...)
+	c.err = c.client.AddVolumesToProtectedStorageGroup(context.TODO(), symID, mock.DefaultProtectedStorageGroup, mock.DefaultRemoteSymID, mock.DefaultProtectedStorageGroup, false, c.volIDList...)
 	return nil
 }
 
 func (c *unitContext) iCallRemoveVolumesFromProtectedStorageGroup() error {
-	_, c.err = c.client.RemoveVolumesFromProtectedStorageGroup(symID, mock.DefaultStorageGroup, mock.DefaultRemoteSymID, mock.DefaultStorageGroup, false, c.volIDList...)
+	_, c.err = c.client.RemoveVolumesFromProtectedStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, mock.DefaultRemoteSymID, mock.DefaultStorageGroup, false, c.volIDList...)
 	return nil
 }
 
 func (c *unitContext) iCallCreateRDFPair() error {
-	_, c.err = c.client.CreateRDFPair(symID, fmt.Sprintf("%d", mock.DefaultRDFGNo), c.volIDList[0], ASYNC, "", false, false)
+	_, c.err = c.client.CreateRDFPair(context.TODO(), symID, fmt.Sprintf("%d", mock.DefaultRDFGNo), c.volIDList[0], ASYNC, "", false, false)
 	return nil
 }
 
 func (c *unitContext) iCallExecuteAction(action string) error {
-	c.err = c.client.ExecuteReplicationActionOnSG(symID, action, mock.DefaultStorageGroup, fmt.Sprintf("%d", mock.DefaultRDFGNo), false, false)
+	c.err = c.client.ExecuteReplicationActionOnSG(context.TODO(), symID, action, mock.DefaultStorageGroup, fmt.Sprintf("%d", mock.DefaultRDFGNo), false, false, false)
 	return nil
 }
 
@@ -1628,8 +1629,8 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I recieve (\d+) IP addresses$`, c.iRecieveIPAddresses)
 	s.Step(`^I call GetStoragePool "([^"]*)"$`, c.iCallGetStoragePool)
 	s.Step(`^I get a valid GetStoragePool if no errors$`, c.iGetAValidGetStoragePoolIfNoErrors)
-	// Whitelists
-	s.Step(`^I have a whitelist of "([^"]*)"$`, c.iHaveAWhitelistOf)
+	// Allowed List of arrays
+	s.Step(`^I have an allowed list of "([^"]*)"$`, c.iHaveAnAllowedListOf)
 	s.Step(`^it contains (\d+) arrays$`, c.itContainsArrays)
 	s.Step(`^should include "([^"]*)"$`, c.shouldInclude)
 	s.Step(`^should not include "([^"]*)"$`, c.shouldNotInclude)

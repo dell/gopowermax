@@ -21,7 +21,7 @@ Feature: PMAX replication test
 
   Scenario Outline: List all volumes with snapshots
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have 2 volumes
     And I induce error <induced>
     And I call CreateSnapshot with "00001,00002" and snapshot "snapshot1" on it
@@ -30,16 +30,16 @@ Feature: PMAX replication test
     And I should get a list of volumes having snapshots if no error
   
     Examples:
-      | queryKey         | queryValue |  errormsg                    |  induced            | whitelist |
-      | ""               |  ""        |  "none"                      | "none"              |   ""      |
-      | "includeDetails" | "true"     |  "none"                      | "none"              |   ""      | 
-      | ""               |  ""        |  "induced error"             | "GetSymVolumeError" |   ""      |
-      | ""               |  ""        |  "ignored via a whitelist"   | "none"              | "ignored" |
+      | queryKey         | queryValue |  errormsg                         |  induced            | arrays    |
+      | ""               |  ""        |  "none"                           | "none"              |   ""      |
+      | "includeDetails" | "true"     |  "none"                           | "none"              |   ""      |
+      | ""               |  ""        |  "induced error"                  | "GetSymVolumeError" |   ""      |
+      | ""               |  ""        |  "ignored as it is not managed"   | "none"              | "ignored" |
 
 
   Scenario Outline: List all Snapshot for a volume
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have 3 volumes
     And I induce error <induced>
     And I call CreateSnapshot with <volIDs> and snapshot <snapID> on it
@@ -48,17 +48,17 @@ Feature: PMAX replication test
     And I should get a list of snapshots if no error
 
     Examples:
-      | volIDs                 |  snapID                 |   volID        | errormsg                  | whitelist | induced            |
-      | "00001,00001"          | "snapshot1"             |  "00001"       | "none"                    |   ""      | "none"             |
-      | "00001,00002,00003"    | "snapshot1"             |  "00002"       | "none"                    |   ""      | "none"             |
-      | "00001"                | "snapshot1"             |  "00002"       | "none"                    |   ""      | "none"             |
-      | "00001"                | "snapshot1"             |  "00004"       | "cannot be found"         |   ""      | "none"             |
-      | "00001"                | "snapshot1"             |  "00002"       | "ignored via a whitelist" | "ignored" | "none"             |
-      | "00001"                | "snapshot1"             |  "00002"       | "induced error"           |   ""      | "GetVolSnapsError" |
+      | volIDs                 |  snapID                 |   volID        | errormsg                       | arrays     | induced            |
+      | "00001,00001"          | "snapshot1"             |  "00001"       | "none"                         |   ""      | "none"             |
+      | "00001,00002,00003"    | "snapshot1"             |  "00002"       | "none"                         |   ""      | "none"             |
+      | "00001"                | "snapshot1"             |  "00002"       | "none"                         |   ""      | "none"             |
+      | "00001"                | "snapshot1"             |  "00004"       | "cannot be found"              |   ""      | "none"             |
+      | "00001"                | "snapshot1"             |  "00002"       | "ignored as it is not managed" | "ignored" | "none"             |
+      | "00001"                | "snapshot1"             |  "00002"       | "induced error"                |   ""      | "GetVolSnapsError" |
 
   Scenario Outline: Get the Snapshot for linked or Unlinked volumes
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have 5 volumes
     And I induce error <induced>
     And I call CreateSnapshot with "00001,00002" and snapshot <snapID> on it
@@ -68,19 +68,19 @@ Feature: PMAX replication test
     And I should get the snapshot details if no error
 
     Examples:
-      | volID         |    snapID   |  errormsg                  | whitelist | induced            |
-      | "00001"       | "snapshot1" |  "none"                    |    ""     | "none"             |
-      | "00004"       | "snapshot1" |  "none"                    |    ""     | "none"             |
-      | "00002"       | "snapshot1" |  "none"                    |    ""     | "none"             |
-      | "00005"       | "snapshot1" |  "none"                    |    ""     | "none"             |
-      | "00003"       | "snapshot1" |  "none"                    |    ""     | "none"             |
-      | "00007"       | "snapshot1" |  "cannot be found"         |    ""     | "none"             |
-      | "00007"       | "snapshot1" |  "ignored via a whitelist" | "ignored" | "none"             |
-      | "00007"       | "snapshot1" |  "induced error"           |    ""     | "GetVolSnapsError" |
+      | volID         |    snapID   |  errormsg                       | arrays    | induced            |
+      | "00001"       | "snapshot1" |  "none"                         |    ""     | "none"             |
+      | "00004"       | "snapshot1" |  "none"                         |    ""     | "none"             |
+      | "00002"       | "snapshot1" |  "none"                         |    ""     | "none"             |
+      | "00005"       | "snapshot1" |  "none"                         |    ""     | "none"             |
+      | "00003"       | "snapshot1" |  "none"                         |    ""     | "none"             |
+      | "00007"       | "snapshot1" |  "cannot be found"              |    ""     | "none"             |
+      | "00007"       | "snapshot1" |  "ignored as it is not managed" | "ignored" | "none"             |
+      | "00007"       | "snapshot1" |  "induced error"                |    ""     | "GetVolSnapsError" |
 
   Scenario Outline: Get a list Generation for given Snapshot
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have 3 volumes
     And I call CreateSnapshot with <volIDs> and snapshot <snapID> on it
     When I call GetSnapshotGenerations with <volID> and snapshot <snapID> on it
@@ -88,15 +88,15 @@ Feature: PMAX replication test
     And I should get the generation list if no error
 
     Examples:
-      | volIDs                 |  snapID                 | volID          | errormsg                    | whitelist |
-      | "00001,00001"          | "snapshot1"             |  "00001"       | "none"                      |    ""     |
-      | "00001"                | "snapshot1"             |  "00002"       | "none"                      |    ""     |
-      | "00001"                | "snapshot1"             |  "00007"       | "cannot be found"           |    ""     |
-      | "00001"                | "snapshot1"             |  "00007"       | "ignored via a whitelist"   | "ignored" |
+      | volIDs                 |  snapID                 | volID          | errormsg                         | arrays    |
+      | "00001,00001"          | "snapshot1"             |  "00001"       | "none"                           |    ""     |
+      | "00001"                | "snapshot1"             |  "00002"       | "none"                           |    ""     |
+      | "00001"                | "snapshot1"             |  "00007"       | "cannot be found"                |    ""     |
+      | "00001"                | "snapshot1"             |  "00007"       | "ignored as it is not managed"   | "ignored" |
 
   Scenario Outline: Get a Generation Info for given Snapshot
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have 3 volumes
     And I call CreateSnapshot with <volIDs> and snapshot <snapID> on it
     And I call GetSnapshotGeneration with <volID>, snapshot <snapID> and <genID> on it
@@ -104,11 +104,11 @@ Feature: PMAX replication test
     And I should get a generation Info if no error
 
     Examples:
-      | volIDs                 |  snapID                 | volID          | genID  | errormsg                    | whitelist |
-      | "00001,00001"          | "snapshot1"             |  "00001"       |   1    | "none"                      |    ""     |
-      | "00001"                | "snapshot1"             |  "00002"       |   0    | "none"                      |    ""     |
-      | "00001"                | "snapshot1"             |  "00007"       |   0    | "cannot be found"           |    ""     |
-      | "00001"                | "snapshot1"             |  "00007"       |   0    | "ignored via a whitelist"   | "ignored" |
+      | volIDs                 |  snapID                 | volID          | genID  | errormsg                         | arrays    |
+      | "00001,00001"          | "snapshot1"             |  "00001"       |   1    | "none"                           |    ""     |
+      | "00001"                | "snapshot1"             |  "00002"       |   0    | "none"                           |    ""     |
+      | "00001"                | "snapshot1"             |  "00007"       |   0    | "cannot be found"                |    ""     |
+      | "00001"                | "snapshot1"             |  "00007"       |   0    | "ignored as it is not managed"   | "ignored" |
 
   Scenario Outline: Renaming a snapshot
     Given a valid connection
@@ -141,7 +141,7 @@ Feature: PMAX replication test
 
   Scenario Outline: Linking a snapshot
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have 4 volumes
     And I call CreateSnapshot with <volIDs> and snapshot <snapID> on it
     When I call ModifySnapshot with <source>, <target>, <snapID>, "", 0 and <action>
@@ -149,24 +149,24 @@ Feature: PMAX replication test
     And I should get a valid response if no error
 
       Examples:
-    |   volIDs         |    source         |   target        |   snapID    |  action  |  errormsg                  | whitelist |
-    |   "00001"        |    "00001"        |   "00002"       | "snapshot1" |  "Link"  |  "none"                    |    ""     |
-    |   "00001,00002"  |    "00001"        |   "00002"       | "snapshot1" |  "Link"  |  "none"                    |    ""     |
-    |   "00001,00002"  |    "00001,00002"  |   "00003,00004" | "snapshot1" |  "Link"  |  "none"                    |    ""     |
-    |   "00001,00002"  |    "00001,00001"  |   "00003,00004" | "snapshot1" |  "Link"  |  "none"                    |    ""     |
-    |   "00001,00002"  |    "00001,00001"  |   "00003,00004" | "snapshot1" |  "Link"  |  "ignored via a whitelist" | "ignored" |
-    |   "00001,00002"  |    "00001,00001"  |   "00002,00002" | "snapshot1" |  "Link"  |  "already in desired state"|    ""     |
-    |   "00001,00002"  |    "00001,00002"  |   "00002"       | "snapshot1" |  "Link"  |  "cannot link snapshot"    |    ""     |
-    |   "00001"        |    "00002"        |   "00004"       | "snapshot1" |  "Link"  |  "no snapshot information" |    ""     |
-    |   "00001"        |    "00005"        |   "00004"       | "snapshot1" |  "Link"  |  "devices not available"   |    ""     |
-    |   "00001"        |    "00004"        |   "00005"       | "snapshot1" |  "Link"  |  "devices not available"   |    ""     |
-    |   "00001"        |      ""           |   "00002"       | "snapshot1" |  "Link"  |  "no source volume"        |    ""     |
-    |   "00001"        |    "00001"        |     ""          | "snapshot1" |  "Link"  |  "no link volume"          |    ""     |
-    |   "00001"        |    "00001"        |   "00002"       | "snapshot1" |    ""    |  "not a supported action"  |    ""     |
+    |   volIDs         |    source         |   target        |   snapID    |  action  |  errormsg                       | arrays    |
+    |   "00001"        |    "00001"        |   "00002"       | "snapshot1" |  "Link"  |  "none"                         |    ""     |
+    |   "00001,00002"  |    "00001"        |   "00002"       | "snapshot1" |  "Link"  |  "none"                         |    ""     |
+    |   "00001,00002"  |    "00001,00002"  |   "00003,00004" | "snapshot1" |  "Link"  |  "none"                         |    ""     |
+    |   "00001,00002"  |    "00001,00001"  |   "00003,00004" | "snapshot1" |  "Link"  |  "none"                         |    ""     |
+    |   "00001,00002"  |    "00001,00001"  |   "00003,00004" | "snapshot1" |  "Link"  |  "ignored as it is not managed" | "ignored" |
+    |   "00001,00002"  |    "00001,00001"  |   "00002,00002" | "snapshot1" |  "Link"  |  "already in desired state"     |    ""     |
+    |   "00001,00002"  |    "00001,00002"  |   "00002"       | "snapshot1" |  "Link"  |  "cannot link snapshot"         |    ""     |
+    |   "00001"        |    "00002"        |   "00004"       | "snapshot1" |  "Link"  |  "no snapshot information"      |    ""     |
+    |   "00001"        |    "00005"        |   "00004"       | "snapshot1" |  "Link"  |  "devices not available"        |    ""     |
+    |   "00001"        |    "00004"        |   "00005"       | "snapshot1" |  "Link"  |  "devices not available"        |    ""     |
+    |   "00001"        |      ""           |   "00002"       | "snapshot1" |  "Link"  |  "no source volume"             |    ""     |
+    |   "00001"        |    "00001"        |     ""          | "snapshot1" |  "Link"  |  "no link volume"               |    ""     |
+    |   "00001"        |    "00001"        |   "00002"       | "snapshot1" |    ""    |  "not a supported action"       |    ""     |
 
   Scenario Outline: Linking a snapshot using synchronous modify call 
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I have 4 volumes
     And I call CreateSnapshot with <volIDs> and snapshot <snapID> on it
     When I call ModifySnapshotS with <source>, <target>, <snapID>, "", 0 and <action>
@@ -174,20 +174,20 @@ Feature: PMAX replication test
     And I should get a valid response if no error
 
       Examples:
-    |   volIDs         |    source         |   target        |   snapID    |  action  |  errormsg                  | whitelist |
-    |   "00001"        |    "00001"        |   "00002"       | "snapshot1" |  "Link"  |  "none"                    |    ""     |
-    |   "00001,00002"  |    "00001"        |   "00002"       | "snapshot1" |  "Link"  |  "none"                    |    ""     |
-    |   "00001,00002"  |    "00001,00002"  |   "00003,00004" | "snapshot1" |  "Link"  |  "none"                    |    ""     |
-    |   "00001,00002"  |    "00001,00001"  |   "00003,00004" | "snapshot1" |  "Link"  |  "none"                    |    ""     |
-    |   "00001,00002"  |    "00001,00001"  |   "00003,00004" | "snapshot1" |  "Link"  |  "ignored via a whitelist" | "ignored" |
-    |   "00001,00002"  |    "00001,00001"  |   "00002,00002" | "snapshot1" |  "Link"  |  "already in desired state"|    ""     |
-    |   "00001,00002"  |    "00001,00002"  |   "00002"       | "snapshot1" |  "Link"  |  "cannot link snapshot"    |    ""     |
-    |   "00001"        |    "00002"        |   "00004"       | "snapshot1" |  "Link"  |  "no snapshot information" |    ""     |
-    |   "00001"        |    "00005"        |   "00004"       | "snapshot1" |  "Link"  |  "devices not available"   |    ""     |
-    |   "00001"        |    "00004"        |   "00005"       | "snapshot1" |  "Link"  |  "devices not available"   |    ""     |
-    |   "00001"        |      ""           |   "00002"       | "snapshot1" |  "Link"  |  "no source volume"        |    ""     |
-    |   "00001"        |    "00001"        |     ""          | "snapshot1" |  "Link"  |  "no link volume"          |    ""     |
-    |   "00001"        |    "00001"        |   "00002"       | "snapshot1" |    ""    |  "not a supported action"  |    ""     |
+    |   volIDs         |    source         |   target        |   snapID    |  action  |  errormsg                       | arrays    |
+    |   "00001"        |    "00001"        |   "00002"       | "snapshot1" |  "Link"  |  "none"                         |    ""     |
+    |   "00001,00002"  |    "00001"        |   "00002"       | "snapshot1" |  "Link"  |  "none"                         |    ""     |
+    |   "00001,00002"  |    "00001,00002"  |   "00003,00004" | "snapshot1" |  "Link"  |  "none"                         |    ""     |
+    |   "00001,00002"  |    "00001,00001"  |   "00003,00004" | "snapshot1" |  "Link"  |  "none"                         |    ""     |
+    |   "00001,00002"  |    "00001,00001"  |   "00003,00004" | "snapshot1" |  "Link"  |  "ignored as it is not managed" | "ignored" |
+    |   "00001,00002"  |    "00001,00001"  |   "00002,00002" | "snapshot1" |  "Link"  |  "already in desired state"     |    ""     |
+    |   "00001,00002"  |    "00001,00002"  |   "00002"       | "snapshot1" |  "Link"  |  "cannot link snapshot"         |    ""     |
+    |   "00001"        |    "00002"        |   "00004"       | "snapshot1" |  "Link"  |  "no snapshot information"      |    ""     |
+    |   "00001"        |    "00005"        |   "00004"       | "snapshot1" |  "Link"  |  "devices not available"        |    ""     |
+    |   "00001"        |    "00004"        |   "00005"       | "snapshot1" |  "Link"  |  "devices not available"        |    ""     |
+    |   "00001"        |      ""           |   "00002"       | "snapshot1" |  "Link"  |  "no source volume"             |    ""     |
+    |   "00001"        |    "00001"        |     ""          | "snapshot1" |  "Link"  |  "no link volume"               |    ""     |
+    |   "00001"        |    "00001"        |   "00002"       | "snapshot1" |    ""    |  "not a supported action"       |    ""     |
   
   Scenario Outline: Unlinking a snapshot
     Given a valid connection
@@ -216,7 +216,7 @@ Feature: PMAX replication test
  
   Scenario Outline: Delete a snapshot
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     And I have 4 volumes
     And I call CreateSnapshot with "00001,00002,00003" and snapshot <snapID> on it
@@ -227,20 +227,20 @@ Feature: PMAX replication test
     And I should get a valid response if no error
 
     Examples:
-      | volID         |    snapID   |  errormsg                    | whitelist | induced          |
-      | "00001"       | "snapshot1" |  "none"                      |    ""     | "none"           |
-      | "00001,00003" | "snapshot1" |  "none"                      |    ""     | "none"           |
-      | "00002"       | "snapshot1" |  "snapshot has a link"       |    ""     | "none"           |
-      | "00007"       | "snapshot1" |  "devices not available"     |    ""     | "none"           |
-      | "00004"       | "snapshot1" |  "no snapshot information"   |    ""     | "none"           |
-      |  ""           | "snapshot1" |  "no source volume"          |    ""     | "none"           |
-      |  "00001"      | "snapshot1" |  "ignored via a whitelist"   | "ignored" | "none"           |
-      |  "00001"      | "snapshot1" |  "Job status not successful" |    ""     | "JobFailedError" |
-      |  "00001"      | "snapshot1" |  "induced error"             |    ""     | "GetJobError"    |
+      | volID         |    snapID   |  errormsg                         | arrays    | induced          |
+      | "00001"       | "snapshot1" |  "none"                           |    ""     | "none"           |
+      | "00001,00003" | "snapshot1" |  "none"                           |    ""     | "none"           |
+      | "00002"       | "snapshot1" |  "snapshot has a link"            |    ""     | "none"           |
+      | "00007"       | "snapshot1" |  "devices not available"          |    ""     | "none"           |
+      | "00004"       | "snapshot1" |  "no snapshot information"        |    ""     | "none"           |
+      |  ""           | "snapshot1" |  "no source volume"               |    ""     | "none"           |
+      |  "00001"      | "snapshot1" |  "ignored as it is not managed"   | "ignored" | "none"           |
+      |  "00001"      | "snapshot1" |  "Job status not successful"      |    ""     | "JobFailedError" |
+      |  "00001"      | "snapshot1" |  "induced error"                  |    ""     | "GetJobError"    |
   
   Scenario Outline: Delete a snapshot with Synchronous modify call
     Given a valid connection
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     And I have 4 volumes
     And I call CreateSnapshot with "00001,00002,00003" and snapshot <snapID> on it
@@ -251,19 +251,19 @@ Feature: PMAX replication test
     And I should get a valid response if no error
 
     Examples:
-      | volID         |    snapID   |  errormsg                  | whitelist | induced          |
-      | "00001"       | "snapshot1" |  "none"                    |    ""     | "none"           |
-      | "00001,00003" | "snapshot1" |  "none"                    |    ""     | "none"           |
-      | "00002"       | "snapshot1" |  "snapshot has a link"     |    ""     | "none"           |
-      | "00007"       | "snapshot1" |  "devices not available"   |    ""     | "none"           |
-      | "00004"       | "snapshot1" |  "no snapshot information" |    ""     | "none"           |
-      |  ""           | "snapshot1" |  "no source volume"        |    ""     | "none"           |
-      |  "00001"      | "snapshot1" |  "ignored via a whitelist" | "ignored" | "none"           |
+      | volID         |    snapID   |  errormsg                       | arrays    | induced          |
+      | "00001"       | "snapshot1" |  "none"                         |    ""     | "none"           |
+      | "00001,00003" | "snapshot1" |  "none"                         |    ""     | "none"           |
+      | "00002"       | "snapshot1" |  "snapshot has a link"          |    ""     | "none"           |
+      | "00007"       | "snapshot1" |  "devices not available"        |    ""     | "none"           |
+      | "00004"       | "snapshot1" |  "no snapshot information"      |    ""     | "none"           |
+      |  ""           | "snapshot1" |  "no source volume"             |    ""     | "none"           |
+      |  "00001"      | "snapshot1" |  "ignored as it is not managed" | "ignored" | "none"           |
  
   Scenario Outline: Testing GetPrivVolumeByID
     Given a valid connection
     And I have 4 volumes
-    And I have a whitelist of <whitelist>
+    And I have an allowed list of <arrays>
     And I induce error <induced>
     And I call CreateSnapshot with "00001,00002" and snapshot "snapshot1" on it
     And I call CreateSnapshot with "00001" and snapshot "snapshot2" on it
@@ -273,11 +273,11 @@ Feature: PMAX replication test
     And I should get a private volume information if no error
 
     Examples:
-    | volID   | errormsg                  | whitelist | induced                  |
-    | "00001" | "none"                    |   ""      | "none"                   |
-    | "00002" | "none"                    |   ""      | "none"                   |
-    | "00003" | "none"                    |   ""      | "none"                   |
-    | "00004" | "none"                    |   ""      | "none"                   |
-    | "00007" | "cannot be found"         |   ""      | "none"                   |
-    | "00001" | "ignored via a whitelist" | "ignored" | "none"                   |
-    | "00001" | "induced error"           |   ""      | "GetPrivVolumeByIDError" |
+    | volID   | errormsg                       | arrays    | induced                  |
+    | "00001" | "none"                         |   ""      | "none"                   |
+    | "00002" | "none"                         |   ""      | "none"                   |
+    | "00003" | "none"                         |   ""      | "none"                   |
+    | "00004" | "none"                         |   ""      | "none"                   |
+    | "00007" | "cannot be found"              |   ""      | "none"                   |
+    | "00001" | "ignored as it is not managed" | "ignored" | "none"                   |
+    | "00001" | "induced error"                |   ""      | "GetPrivVolumeByIDError" |

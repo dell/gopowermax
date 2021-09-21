@@ -15,6 +15,7 @@
 package inttest
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -50,12 +51,12 @@ func getOrCreateVolumes(client pmax.Pmax, target bool) (*types.Volume, *types.Vo
 		go func(i int) {
 			volumeName := fmt.Sprintf("csi%s-Int%d%d", volumePrefix, time.Now().Nanosecond(), i)
 			var vol Vol
-			vol.Volume, vol.Err = client.CreateVolumeInStorageGroup(symmetrixID, defaultStorageGroup, volumeName, 1)
+			vol.Volume, vol.Err = client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
 			if vol.Err != nil && strings.Contains(vol.Err.Error(), "Failed to find newly created volume with name") {
 				time.Sleep(2 * time.Second)
-				ids, err := client.GetVolumeIDList(symmetrixID, volumeName, false)
+				ids, err := client.GetVolumeIDList(context.TODO(), symmetrixID, volumeName, false)
 				if err == nil && len(ids) > 0 {
-					vol.Volume, vol.Err = client.GetVolumeByID(symmetrixID, ids[0])
+					vol.Volume, vol.Err = client.GetVolumeByID(context.TODO(), symmetrixID, ids[0])
 				}
 			}
 			volChan <- vol
@@ -78,7 +79,7 @@ func getOrCreateVolumes(client pmax.Pmax, target bool) (*types.Volume, *types.Vo
 
 func createSnapshot(sourceVolumeList []types.VolumeList) (string, error) {
 	snapshotName := fmt.Sprintf("csi%s-int%d", snapshotPrefix, time.Now().Nanosecond())
-	err := client.CreateSnapshot(symmetrixID, snapshotName, sourceVolumeList, 0)
+	err := client.CreateSnapshot(context.TODO(), symmetrixID, snapshotName, sourceVolumeList, 0)
 	if err != nil {
 		return "", err
 	}
@@ -102,7 +103,7 @@ func TestGetSnapVolumeList(t *testing.T) {
 			return
 		}
 	}
-	snapVolumes, err := client.GetSnapVolumeList(symmetrixID, nil)
+	snapVolumes, err := client.GetSnapVolumeList(context.TODO(), symmetrixID, nil)
 	if err != nil {
 		t.Error("Error getting the list of volumes with snapshots: " + err.Error())
 		return
@@ -125,12 +126,12 @@ func TestCreateSnapshot(t *testing.T) {
 	}
 	sourceVolumeList := []types.VolumeList{{Name: srcVolume.VolumeID}}
 	snapID = fmt.Sprintf("csi%s-int%d", snapshotPrefix, time.Now().Nanosecond())
-	err = client.CreateSnapshot(symmetrixID, snapID, sourceVolumeList, 0)
+	err = client.CreateSnapshot(context.TODO(), symmetrixID, snapID, sourceVolumeList, 0)
 	if err != nil {
 		t.Errorf("Error creating a snapshot(%s) on a volumes %v\n", snapID, sourceVolumeList)
 		return
 	}
-	volumeSnapshot, err := client.GetSnapshotInfo(symmetrixID, srcVolume.VolumeID, snapID)
+	volumeSnapshot, err := client.GetSnapshotInfo(context.TODO(), symmetrixID, srcVolume.VolumeID, snapID)
 	if err != nil {
 		t.Errorf("Error fetching created snapshot(%s) on a volumes %v\n", snapID, sourceVolumeList)
 		return
@@ -153,14 +154,14 @@ func TestGetVolumeSnapInfo(t *testing.T) {
 	}
 	sourceVolumeList := []types.VolumeList{{Name: volume.VolumeID}}
 	snapshotName, err := createSnapshot(sourceVolumeList)
-	snapshotVolumeGeneration, err := client.GetVolumeSnapInfo(symmetrixID, volume.VolumeID)
+	snapshotVolumeGeneration, err := client.GetVolumeSnapInfo(context.TODO(), symmetrixID, volume.VolumeID)
 	if err != nil {
 		t.Errorf("Error getting the snapshot on volume %s: %s", volume.VolumeIdentifier, err.Error())
 		return
 	}
 	fmt.Printf("Snapshots on volume (%s): %v\n", volume.VolumeIdentifier, snapshotVolumeGeneration)
 	if snapshotName != "" {
-		err := client.DeleteSnapshot(symmetrixID, snapshotName, sourceVolumeList, int64(0))
+		err := client.DeleteSnapshot(context.TODO(), symmetrixID, snapshotName, sourceVolumeList, int64(0))
 		if err != nil {
 			t.Error(err)
 		}
@@ -185,7 +186,7 @@ func TestGetSnapshotInfo(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	volumeSnapshot, err := client.GetSnapshotInfo(symmetrixID, volume.VolumeID, snapshotName)
+	volumeSnapshot, err := client.GetSnapshotInfo(context.TODO(), symmetrixID, volume.VolumeID, snapshotName)
 	if err != nil {
 		t.Errorf("Error getting snapshot(%s) details: %s", snapshotName, err.Error())
 		return
@@ -211,7 +212,7 @@ func TestGetSnapshotGenerations(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	volumeSnapshotGenerations, err := client.GetSnapshotGenerations(symmetrixID, volume.VolumeID, snapshotName)
+	volumeSnapshotGenerations, err := client.GetSnapshotGenerations(context.TODO(), symmetrixID, volume.VolumeID, snapshotName)
 	if err != nil {
 		t.Errorf("Error fetching generations on the snapshot(%s): %s\n", snapshotName, err.Error())
 	}
@@ -237,7 +238,7 @@ func TestGetSnapshotGenerationInfo(t *testing.T) {
 		return
 	}
 	var generation int64
-	volumeSnapshotGeneration, err := client.GetSnapshotGenerationInfo(symmetrixID, volume.VolumeID, snapshotName, generation)
+	volumeSnapshotGeneration, err := client.GetSnapshotGenerationInfo(context.TODO(), symmetrixID, volume.VolumeID, snapshotName, generation)
 	if err != nil {
 		t.Errorf("Error fetching generation(%d) info on the snapshot(%s): %s\n", generation, snapshotName, err.Error())
 	}
@@ -284,7 +285,7 @@ func TestSnapshotLinkage(t *testing.T) {
 }
 
 func modifySnapshotLink(sourceVolumeList, targetVolumeList []types.VolumeList, operation, snapshotName string, t *testing.T) error {
-	err := client.ModifySnapshot(symmetrixID, sourceVolumeList, targetVolumeList, snapshotName, operation, "", 0)
+	err := client.ModifySnapshot(context.TODO(), symmetrixID, sourceVolumeList, targetVolumeList, snapshotName, operation, "", 0)
 	if err != nil {
 		return fmt.Errorf("Error %sing snapshot(%s)", strings.ToLower(operation), snapshotName)
 	}
@@ -319,7 +320,7 @@ func TestSnapshotRenaming(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	volumeSnapshot, err := client.GetSnapshotInfo(symmetrixID, srcVolume.VolumeID, newSnapID)
+	volumeSnapshot, err := client.GetSnapshotInfo(context.TODO(), symmetrixID, srcVolume.VolumeID, newSnapID)
 	if err != nil {
 		t.Errorf("Error fetching renamed snapshot(%s) on a volumes %v\n", snapID, sourceVolumeList)
 		return
@@ -336,7 +337,7 @@ func TestSnapshotRenaming(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	volumeSnapshot, err = client.GetSnapshotInfo(symmetrixID, srcVolume.VolumeID, snapshotName)
+	volumeSnapshot, err = client.GetSnapshotInfo(context.TODO(), symmetrixID, srcVolume.VolumeID, snapshotName)
 	if err != nil {
 		t.Errorf("Error fetching renamed snapshot(%s) on a volumes %v\n", snapID, sourceVolumeList)
 		return
@@ -349,7 +350,7 @@ func TestSnapshotRenaming(t *testing.T) {
 }
 
 func renameSnapshot(symmetrixID, snapshotName, newSnapID string, generation int, sourceVolumeList, targetVolumeList []types.VolumeList) error {
-	err := client.ModifySnapshot(symmetrixID, sourceVolumeList, targetVolumeList, snapshotName, "Rename", newSnapID, 0)
+	err := client.ModifySnapshot(context.TODO(), symmetrixID, sourceVolumeList, targetVolumeList, snapshotName, "Rename", newSnapID, 0)
 	if err != nil {
 		return fmt.Errorf("Error renaming snapshot: %s", err.Error())
 	}
@@ -424,7 +425,7 @@ func TestGetPrivVolumeByID(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	privateVolume, err := client.GetPrivVolumeByID(symmetrixID, volume.VolumeID)
+	privateVolume, err := client.GetPrivVolumeByID(context.TODO(), symmetrixID, volume.VolumeID)
 	if err != nil {
 		t.Errorf("Error fetching a private volume: %s", err.Error())
 		return
@@ -441,7 +442,7 @@ func TestGetRDFGroup(t *testing.T) {
 		}
 	}
 
-	rdfGrpInfo, err := client.GetRDFGroup(symmetrixID, localRDFGrpNo)
+	rdfGrpInfo, err := client.GetRDFGroup(context.TODO(), symmetrixID, localRDFGrpNo)
 	if err != nil {
 		t.Errorf("Error fetching RDF Group Information : %s", err.Error())
 		return
@@ -459,7 +460,7 @@ func TestGetProtectedStorageGroup(t *testing.T) {
 		}
 	}
 
-	rdfSgInfo, err := client.GetProtectedStorageGroup(symmetrixID, defaultProtectedStorageGroup)
+	rdfSgInfo, err := client.GetProtectedStorageGroup(context.TODO(), symmetrixID, defaultProtectedStorageGroup)
 	if err != nil {
 		t.Errorf("Error fetching Protected Storage Group Information : %s", err.Error())
 		return
@@ -476,7 +477,7 @@ func TestGetStorageGroupRDFInfo(t *testing.T) {
 		}
 	}
 
-	rdfSgInfo, err := client.GetStorageGroupRDFInfo(symmetrixID, defaultProtectedStorageGroup, localRDFGrpNo)
+	rdfSgInfo, err := client.GetStorageGroupRDFInfo(context.TODO(), symmetrixID, defaultProtectedStorageGroup, localRDFGrpNo)
 	if err != nil {
 		t.Errorf("Error fetching RDF Information for storage group: %s", err.Error())
 		return
@@ -491,7 +492,7 @@ func TestGetRDFDevicePairInfo(t *testing.T) {
 			return
 		}
 	}
-	rdfPair, err := client.GetRDFDevicePairInfo(symmetrixID, localRDFGrpNo, localVol.VolumeID)
+	rdfPair, err := client.GetRDFDevicePairInfo(context.TODO(), symmetrixID, localRDFGrpNo, localVol.VolumeID)
 	if err != nil {
 		t.Errorf("Error retrieving RDF device pair information: %s", err.Error())
 		return
@@ -510,7 +511,7 @@ func TestCreateVolumeInProtectedStorageGroupS(t *testing.T) {
 	}
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
-	vol, err := client.CreateVolumeInProtectedStorageGroupS(symmetrixID, remoteSymmetrixID, defaultProtectedStorageGroup, defaultProtectedStorageGroup, volumeName, 30)
+	vol, err := client.CreateVolumeInProtectedStorageGroupS(context.TODO(), symmetrixID, remoteSymmetrixID, defaultProtectedStorageGroup, defaultProtectedStorageGroup, volumeName, 30)
 	if err != nil {
 		t.Errorf("Error Creating Volume in Protected Storage Group: %s", err.Error())
 		return
@@ -528,17 +529,17 @@ func TestAddVolumesToProtectedStorageGroup(t *testing.T) {
 	}
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
-	vol, err := client.CreateVolumeInStorageGroup(symmetrixID, nonFASTManagedSG, volumeName, 50)
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG, volumeName, 50)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = client.AddVolumesToProtectedStorageGroup(symmetrixID, defaultProtectedStorageGroup, remoteSymmetrixID, defaultProtectedStorageGroup, true, vol.VolumeID)
+	err = client.AddVolumesToProtectedStorageGroup(context.TODO(), symmetrixID, defaultProtectedStorageGroup, remoteSymmetrixID, defaultProtectedStorageGroup, true, vol.VolumeID)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	sg, err := client.RemoveVolumesFromStorageGroup(symmetrixID, nonFASTManagedSG, true, vol.VolumeID)
+	sg, err := client.RemoveVolumesFromStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG, true, vol.VolumeID)
 	if err != nil {
 		t.Error(err)
 		return
@@ -557,20 +558,20 @@ func TestExecuteReplicationActionOnSG(t *testing.T) {
 	}
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
-	vol, err := client.CreateVolumeInProtectedStorageGroupS(symmetrixID, remoteSymmetrixID, defaultProtectedStorageGroup, defaultProtectedStorageGroup, volumeName, 30)
+	vol, err := client.CreateVolumeInProtectedStorageGroupS(context.TODO(), symmetrixID, remoteSymmetrixID, defaultProtectedStorageGroup, defaultProtectedStorageGroup, volumeName, 30)
 	if err != nil {
 		t.Errorf("Error Creating Volume in Protected Storage Group: %s", err.Error())
 		return
 	}
 	fmt.Printf("Volume in Protected Storage Group created successfully: %v\n", vol)
 
-	err = client.ExecuteReplicationActionOnSG(symmetrixID, "Suspend", defaultProtectedStorageGroup, localRDFGrpNo, true, true)
+	err = client.ExecuteReplicationActionOnSG(context.TODO(), symmetrixID, "Suspend", defaultProtectedStorageGroup, localRDFGrpNo, true, true, false)
 	if err != nil {
 		t.Errorf("Error in suspending the RDF relation in Protected Storage Group: %s", err.Error())
 		return
 	}
 
-	err = client.ExecuteReplicationActionOnSG(symmetrixID, "Resume", defaultProtectedStorageGroup, localRDFGrpNo, true, true)
+	err = client.ExecuteReplicationActionOnSG(context.TODO(), symmetrixID, "Resume", defaultProtectedStorageGroup, localRDFGrpNo, true, true, false)
 	if err != nil {
 		t.Errorf("Error in resuming the RDF relation in Protected Storage Group: %s", err.Error())
 		return
@@ -629,7 +630,7 @@ func TestDeleteSnapshot(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	err = client.DeleteSnapshot(symmetrixID, snapshotName, sourceVolumeList, int64(0))
+	err = client.DeleteSnapshot(context.TODO(), symmetrixID, snapshotName, sourceVolumeList, int64(0))
 	if err != nil {
 		t.Errorf("Failed to get snapshot (%s) deletion status: %s", snapshotName, err.Error())
 		return
@@ -646,7 +647,7 @@ func TestGetReplicationCapabilities(t *testing.T) {
 			return
 		}
 	}
-	symReplicationCapabilities, err := client.GetReplicationCapabilities()
+	symReplicationCapabilities, err := client.GetReplicationCapabilities(context.TODO())
 	if err != nil {
 		t.Errorf("Failed to fetch replication capabilities: %s", err.Error())
 		return
@@ -685,26 +686,26 @@ func afterRun(tests []testing.InternalTest) {
 func volumeCleanup(volumeID string, volumeName string, storageGroup string) func(*testing.T) {
 	return func(t *testing.T) {
 		if volumeName != "" {
-			vol, err := client.RenameVolume(symmetrixID, volumeID, "_DEL"+volumeName)
+			vol, err := client.RenameVolume(context.TODO(), symmetrixID, volumeID, "_DEL"+volumeName)
 			if err != nil {
 				t.Error(err)
 				return
 			}
 			fmt.Printf("volume Renamed: %s\n", vol.VolumeIdentifier)
 		}
-		sg, err := client.RemoveVolumesFromStorageGroup(symmetrixID, storageGroup, true, volumeID)
+		sg, err := client.RemoveVolumesFromStorageGroup(context.TODO(), symmetrixID, storageGroup, true, volumeID)
 		if err != nil {
 			t.Error(err)
 			return
 		}
 		fmt.Printf("SG after removing volume: %#v\n", sg)
 		pmax.Debug = true
-		err = client.DeleteVolume(symmetrixID, volumeID)
+		err = client.DeleteVolume(context.TODO(), symmetrixID, volumeID)
 		if err != nil {
 			t.Error("DeleteVolume failed: " + err.Error())
 		}
 		// Test deletion of the volume again... should return an error
-		err = client.DeleteVolume(symmetrixID, volumeID)
+		err = client.DeleteVolume(context.TODO(), symmetrixID, volumeID)
 		if err == nil {
 			t.Error("Expected an error saying volume was not found, but no error")
 		}
@@ -716,7 +717,7 @@ func cleanupRDFPair(volumeID string, volumeName string, storageGroup string, t *
 
 	//Retrieving remote volume information
 
-	rdfPair, err := client.GetRDFDevicePairInfo(symmetrixID, localRDFGrpNo, volumeID)
+	rdfPair, err := client.GetRDFDevicePairInfo(context.TODO(), symmetrixID, localRDFGrpNo, volumeID)
 	if err != nil {
 		t.Errorf("Error retrieving RDF device pair information: %s", err.Error())
 		return
@@ -724,20 +725,20 @@ func cleanupRDFPair(volumeID string, volumeName string, storageGroup string, t *
 
 	//Terminating the Pair and removing the volumes from local SG and remote SG
 
-	_, err = client.RemoveVolumesFromProtectedStorageGroup(symmetrixID, defaultProtectedStorageGroup, remoteSymmetrixID, defaultProtectedStorageGroup, true, volumeID)
+	_, err = client.RemoveVolumesFromProtectedStorageGroup(context.TODO(), symmetrixID, defaultProtectedStorageGroup, remoteSymmetrixID, defaultProtectedStorageGroup, true, volumeID)
 	if err != nil {
 		t.Errorf("failed to remove volumes from default Protected SG (%s) : (%s)", defaultProtectedStorageGroup, err.Error())
 	}
 
 	//Deleting local volume
 
-	err = client.DeleteVolume(symmetrixID, volumeID)
+	err = client.DeleteVolume(context.TODO(), symmetrixID, volumeID)
 	if err != nil {
 		t.Error("DeleteVolume failed: " + err.Error())
 	}
 
 	// Test deletion of the volume again... should return an error
-	err = client.DeleteVolume(symmetrixID, volumeID)
+	err = client.DeleteVolume(context.TODO(), symmetrixID, volumeID)
 	if err == nil {
 		t.Error("Expected an error saying volume was not found, but no error")
 	}
@@ -745,12 +746,12 @@ func cleanupRDFPair(volumeID string, volumeName string, storageGroup string, t *
 
 	//Deleting remote volume
 
-	err = client.DeleteVolume(remoteSymmetrixID, rdfPair.RemoteVolumeName)
+	err = client.DeleteVolume(context.TODO(), remoteSymmetrixID, rdfPair.RemoteVolumeName)
 	if err != nil {
 		t.Error("DeleteVolume failed: " + err.Error())
 	}
 	// Test deletion of the volume again... should return an error
-	err = client.DeleteVolume(remoteSymmetrixID, rdfPair.RemoteVolumeName)
+	err = client.DeleteVolume(context.TODO(), remoteSymmetrixID, rdfPair.RemoteVolumeName)
 	if err == nil {
 		t.Error("Expected an error saying volume was not found, but no error")
 	}

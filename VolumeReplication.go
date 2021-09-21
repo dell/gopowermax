@@ -31,16 +31,19 @@ const (
 	XRDFGroup = "/rdf_group"
 	ASYNC     = "ASYNC"
 	METRO     = "METRO"
+	SYNC      = "SYNC"
 )
 
 // GetRDFGroup returns RDF group information given the RDF group number
-func (c *Client) GetRDFGroup(symID, rdfGroupNo string) (*types.RDFGroup, error) {
+func (c *Client) GetRDFGroup(ctx context.Context, symID, rdfGroupNo string) (*types.RDFGroup, error) {
 	defer c.TimeSpent("GetRdfGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
 	URL := c.urlPrefix() + ReplicationX + SymmetrixX + symID + XRDFGroup + "/" + rdfGroupNo
-	resp, err := c.api.DoAndGetResponseBody(context.Background(), http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
 		log.Error("GetRdfGroup failed: " + err.Error())
 		return nil, err
@@ -58,13 +61,15 @@ func (c *Client) GetRDFGroup(symID, rdfGroupNo string) (*types.RDFGroup, error) 
 }
 
 // GetProtectedStorageGroup returns protected storage group given the storage group ID
-func (c *Client) GetProtectedStorageGroup(symID, storageGroup string) (*types.RDFStorageGroup, error) {
+func (c *Client) GetProtectedStorageGroup(ctx context.Context, symID, storageGroup string) (*types.RDFStorageGroup, error) {
 	defer c.TimeSpent("GetProtectedStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
 	URL := c.urlPrefix() + ReplicationX + SymmetrixX + symID + XStorageGroup + "/" + storageGroup
-	resp, err := c.api.DoAndGetResponseBody(context.Background(), http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
 		log.Error("GetProtectedStorageGroup failed: " + err.Error())
 		return nil, err
@@ -82,7 +87,7 @@ func (c *Client) GetProtectedStorageGroup(symID, storageGroup string) (*types.RD
 }
 
 // ExecuteReplicationActionOnSG executes supported replication based actions on the protected SG
-func (c *Client) ExecuteReplicationActionOnSG(symID, action, storageGroup, rdfGroup string, force, exemptConsistency bool) error {
+func (c *Client) ExecuteReplicationActionOnSG(ctx context.Context, symID, action, storageGroup, rdfGroup string, force, exemptConsistency, bias bool) error {
 	defer c.TimeSpent("ExecuteReplicationActionOnSG", time.Now())
 
 	if _, err := c.IsAllowedArray(symID); err != nil {
@@ -92,6 +97,21 @@ func (c *Client) ExecuteReplicationActionOnSG(symID, action, storageGroup, rdfGr
 	modifyParam := &types.ModifySGRDFGroup{}
 
 	switch action {
+	case "Establish":
+		actionParam := &types.Establish{
+			Force:    force,
+			SymForce: false,
+			Star:     false,
+			Hop2:     false,
+		}
+		if bias {
+			actionParam.MetroBias = true
+		}
+		modifyParam = &types.ModifySGRDFGroup{
+			Establish:       actionParam,
+			Action:          action,
+			ExecutionOption: types.ExecutionOptionSynchronous,
+		}
 	case "Suspend":
 		actionParam := &types.Suspend{
 			Force:      force,
@@ -137,20 +157,34 @@ func (c *Client) ExecuteReplicationActionOnSG(symID, action, storageGroup, rdfGr
 		}
 	case "Failover":
 		actionParam := &types.Failover{
-			Force:      force,
-			SymForce:   false,
-			Star:       false,
-			Hop2:       false,
-			Bypass:     false,
-			Remote:     false,
-			Immediate:  false,
-			ConsExempt: exemptConsistency,
-			MetroBias:  false,
-			Establish:  false,
-			Restore:    false,
+			Force:     force,
+			SymForce:  false,
+			Star:      false,
+			Hop2:      false,
+			Bypass:    false,
+			Remote:    false,
+			Immediate: false,
+			Establish: false,
+			Restore:   false,
 		}
 		modifyParam = &types.ModifySGRDFGroup{
 			Failover:        actionParam,
+			Action:          action,
+			ExecutionOption: types.ExecutionOptionSynchronous,
+		}
+	case "Swap":
+		actionParam := &types.Swap{
+			Force:     force,
+			SymForce:  false,
+			Star:      false,
+			Hop2:      false,
+			Bypass:    false,
+			HalfSwap:  false,
+			RefreshR1: false,
+			RefreshR2: false,
+		}
+		modifyParam = &types.ModifySGRDFGroup{
+			Swap:            actionParam,
 			Action:          action,
 			ExecutionOption: types.ExecutionOptionSynchronous,
 		}
@@ -161,7 +195,7 @@ func (c *Client) ExecuteReplicationActionOnSG(symID, action, storageGroup, rdfGr
 	fields := map[string]interface{}{
 		http.MethodPut: URL,
 	}
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Put(
 		ctx, URL, c.getDefaultHeaders(), modifyParam, nil)
@@ -174,13 +208,23 @@ func (c *Client) ExecuteReplicationActionOnSG(symID, action, storageGroup, rdfGr
 }
 
 // GetCreateSGReplicaPayload returns a payload to create a storage group on remote array from local array and protect it with rdfgNo
-func (c *Client) GetCreateSGReplicaPayload(remoteSymID string, rdfMode string, rdfgNo int, remoteSGName string, remoteServiceLevel string, establish bool) *types.CreateSGSRDF {
+func (c *Client) GetCreateSGReplicaPayload(remoteSymID string, rdfMode string, rdfgNo int, remoteSGName string, remoteServiceLevel string, establish, bias bool) *types.CreateSGSRDF {
 
 	var payload *types.CreateSGSRDF
 	switch rdfMode {
 	case ASYNC:
 		payload = &types.CreateSGSRDF{
 			ReplicationMode:        "Asynchronous",
+			RemoteSLO:              remoteServiceLevel,
+			RemoteSymmID:           remoteSymID,
+			RdfgNumber:             rdfgNo,
+			RemoteStorageGroupName: remoteSGName,
+			Establish:              establish,
+			ExecutionOption:        types.ExecutionOptionSynchronous,
+		}
+	case SYNC:
+		payload = &types.CreateSGSRDF{
+			ReplicationMode:        "Synchronous",
 			RemoteSLO:              remoteServiceLevel,
 			RemoteSymmID:           remoteSymID,
 			RdfgNumber:             rdfgNo,
@@ -196,7 +240,7 @@ func (c *Client) GetCreateSGReplicaPayload(remoteSymID string, rdfMode string, r
 			RdfgNumber:             rdfgNo,
 			RemoteStorageGroupName: remoteSGName,
 			Establish:              establish,
-			MetroBias:              true,
+			MetroBias:              bias,
 			ExecutionOption:        types.ExecutionOptionSynchronous,
 		}
 	}
@@ -204,18 +248,18 @@ func (c *Client) GetCreateSGReplicaPayload(remoteSymID string, rdfMode string, r
 }
 
 // CreateSGReplica creates a storage group on remote array and protect them with given RDF Mode and a given source storage group
-func (c *Client) CreateSGReplica(symID, remoteSymID, rdfMode, rdfGroupNo, sourceSG, remoteSGName, remoteServiceLevel string) (*types.SGRDFInfo, error) {
+func (c *Client) CreateSGReplica(ctx context.Context, symID, remoteSymID, rdfMode, rdfGroupNo, sourceSG, remoteSGName, remoteServiceLevel string, bias bool) (*types.SGRDFInfo, error) {
 	defer c.TimeSpent("CreateSGReplica", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
 	rdfgNo, _ := strconv.Atoi(rdfGroupNo)
-	createSGReplicaPayload := c.GetCreateSGReplicaPayload(remoteSymID, rdfMode, rdfgNo, remoteSGName, remoteServiceLevel, true)
+	createSGReplicaPayload := c.GetCreateSGReplicaPayload(remoteSymID, rdfMode, rdfgNo, remoteSGName, remoteServiceLevel, true, bias)
 	Debug = true
 	ifDebugLogPayload(createSGReplicaPayload)
 	URL := c.urlPrefix() + ReplicationX + SymmetrixX + symID + XStorageGroup + "/" + sourceSG + XRDFGroup
 
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodPost, URL, c.getDefaultHeaders(), createSGReplicaPayload)
@@ -246,6 +290,15 @@ func (c *Client) GetCreateRDFPairPayload(devList types.LocalDeviceListCriteria, 
 			LocalDeviceListCriteria: &devList,
 			ExecutionOption:         types.ExecutionOptionSynchronous,
 		}
+	case SYNC:
+		payload = &types.CreateRDFPair{
+			RdfMode:                 "Synchronous",
+			RdfType:                 rdfType,
+			Establish:               establish,
+			Exempt:                  exemptConsistency,
+			LocalDeviceListCriteria: &devList,
+			ExecutionOption:         types.ExecutionOptionSynchronous,
+		}
 	case METRO:
 		payload = &types.CreateRDFPair{
 			RdfMode:                 "Active",
@@ -261,7 +314,7 @@ func (c *Client) GetCreateRDFPairPayload(devList types.LocalDeviceListCriteria, 
 }
 
 // CreateRDFPair creates an RDF device pair in the given RDF group
-func (c *Client) CreateRDFPair(symID, rdfGroupNo, deviceID, rdfMode, rdfType string, establish, exemptConsistency bool) (*types.RDFDevicePairList, error) {
+func (c *Client) CreateRDFPair(ctx context.Context, symID, rdfGroupNo, deviceID, rdfMode, rdfType string, establish, exemptConsistency bool) (*types.RDFDevicePairList, error) {
 	defer c.TimeSpent("CreateRDFPair", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -276,7 +329,7 @@ func (c *Client) CreateRDFPair(symID, rdfGroupNo, deviceID, rdfMode, rdfType str
 	ifDebugLogPayload(createPairPayload)
 	URL := c.urlPrefix() + ReplicationX + SymmetrixX + symID + XRDFGroup + "/" + rdfGroupNo + XVolume + "/" + deviceID
 
-	ctx, cancel := GetTimeoutContext()
+	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodPost, URL, c.getDefaultHeaders(), createPairPayload)
@@ -294,13 +347,16 @@ func (c *Client) CreateRDFPair(symID, rdfGroupNo, deviceID, rdfMode, rdfType str
 }
 
 // GetRDFDevicePairInfo returns RDF volume information
-func (c *Client) GetRDFDevicePairInfo(symID, rdfGroup, volumeID string) (*types.RDFDevicePair, error) {
+func (c *Client) GetRDFDevicePairInfo(ctx context.Context, symID, rdfGroup, volumeID string) (*types.RDFDevicePair, error) {
 	defer c.TimeSpent("GetRDFDevicePairInfo", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
+
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
 	URL := c.urlPrefix() + ReplicationX + SymmetrixX + symID + XRDFGroup + "/" + rdfGroup + XVolume + "/" + volumeID
-	resp, err := c.api.DoAndGetResponseBody(context.Background(), http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
 		log.Error("GetRDFDevicePairInfo failed: " + err.Error())
 		return nil, err
@@ -318,13 +374,16 @@ func (c *Client) GetRDFDevicePairInfo(symID, rdfGroup, volumeID string) (*types.
 }
 
 // GetStorageGroupRDFInfo returns the of RDF info of protected storage group
-func (c *Client) GetStorageGroupRDFInfo(symID, sgName, rdfGroupNo string) (*types.StorageGroupRDFG, error) {
+func (c *Client) GetStorageGroupRDFInfo(ctx context.Context, symID, sgName, rdfGroupNo string) (*types.StorageGroupRDFG, error) {
 	defer c.TimeSpent("GetStorageGroupRDFInfo", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
+
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
 	URL := c.urlPrefix() + ReplicationX + SymmetrixX + symID + XStorageGroup + "/" + sgName + XRDFGroup + "/" + rdfGroupNo
-	resp, err := c.api.DoAndGetResponseBody(context.Background(), http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
 		log.Error("GetStorageGroupRDFInfo failed: " + err.Error())
 		return nil, err
