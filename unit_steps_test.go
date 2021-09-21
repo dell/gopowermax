@@ -1477,9 +1477,9 @@ func (c *unitContext) iCallGetStorageGroupRDFInfo() error {
 func (c *unitContext) iCallGetRDFDevicePairInfo() error {
 	var (
 		devicePairInfo *types.RDFDevicePair
-		localVolID     string = c.volIDList[0]
-		remoteVolID    string = c.volIDList[0]
 	)
+	localVolID := c.volIDList[0]
+	remoteVolID := c.volIDList[0]
 
 	devicePairInfo, c.err = c.client.GetRDFDevicePairInfo(context.TODO(), symID, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo), localVolID)
 	if c.err == nil {
