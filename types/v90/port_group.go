@@ -14,19 +14,23 @@
 
 package types
 
+// AddPortParam ...
 type AddPortParam struct {
 	Ports []SymmetrixPortKeyType `json:"port"`
 }
 
+// RemovePortParam ...
 type RemovePortParam struct {
 	Ports []SymmetrixPortKeyType `json:"port"`
 }
 
+// EditPortGroupActionParam ...
 type EditPortGroupActionParam struct {
 	AddPortParam    *AddPortParam    `json:"addPortParam,omitempty"`
 	RemovePortParam *RemovePortParam `json:"removePortParam,omitempty"`
 }
 
+// EditPortGroup ...
 type EditPortGroup struct {
 	EditPortGroupActionParam *EditPortGroupActionParam `json:"editPortGroupActionParam"`
 }

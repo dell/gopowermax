@@ -61,10 +61,15 @@ const (
 
 const (
 	_ = 1 << (10 * iota)
+	// KiB ...
 	KiB
+	// MiB ...
 	MiB
+	// GiB ...
 	GiB
+	// TiB ...
 	TiB
+	// PiB ...
 	PiB
 )
 
@@ -324,16 +329,16 @@ func Reset() {
 
 func initMockCache() {
 	// Initialize SGs
-	AddStorageGroup("CSI-Test-SG-1", "SRP_1", "Diamond")
-	AddStorageGroup("CSI-Test-SG-2", "SRP_1", "Diamond")
-	AddStorageGroup("CSI-Test-SG-3", "SRP_2", "Silver")
-	AddStorageGroup("CSI-Test-SG-4", "SRP_2", "Optimized")
-	AddStorageGroup("CSI-Test-SG-5", "SRP_2", "None")
-	AddStorageGroup("CSI-Test-SG-6", "None", "None")
-	AddStorageGroup("CSI-Test-Fake-Remote-SG", "None", "None")
+	AddStorageGroup("CSI-Test-SG-1", "SRP_1", "Diamond")       // #nosec G20
+	AddStorageGroup("CSI-Test-SG-2", "SRP_1", "Diamond")       // #nosec G20
+	AddStorageGroup("CSI-Test-SG-3", "SRP_2", "Silver")        // #nosec G20
+	AddStorageGroup("CSI-Test-SG-4", "SRP_2", "Optimized")     // #nosec G20
+	AddStorageGroup("CSI-Test-SG-5", "SRP_2", "None")          // #nosec G20
+	AddStorageGroup("CSI-Test-SG-6", "None", "None")           // #nosec G20
+	AddStorageGroup("CSI-Test-Fake-Remote-SG", "None", "None") // #nosec G20
 	// Initialize protected SG
-	AddStorageGroup(DefaultProtectedStorageGroup, "None", "None")
-	AddRDFStorageGroup(DefaultProtectedStorageGroup, DefaultRemoteSymID)
+	AddStorageGroup(DefaultProtectedStorageGroup, "None", "None")        // #nosec G20
+	AddRDFStorageGroup(DefaultProtectedStorageGroup, DefaultRemoteSymID) // #nosec G20
 	// ISCSI directors
 	iscsiDir1 := "SE-1E"
 	iscsidir1PortKey1 := iscsiDir1 + ":" + "4"
@@ -344,15 +349,15 @@ func initMockCache() {
 	fcDir1PortKey1 := fcDir1 + ":" + "5"
 	fcDir2PortKey1 := fcDir2 + ":" + "1"
 	// Add Port groups
-	AddPortGroup("csi-pg", "Fibre", []string{fcDir1PortKey1, fcDir2PortKey1})
+	AddPortGroup("csi-pg", "Fibre", []string{fcDir1PortKey1, fcDir2PortKey1}) // #nosec G20
 	// Initialize initiators
 	// Initialize Hosts
 	initNode1List := make([]string, 0)
 	iqnNode1 := "iqn.1993-08.org.centos:01:5ae577b352a0"
 	initNode1 := iscsidir1PortKey1 + ":" + iqnNode1
 	initNode1List = append(initNode1List, iqnNode1)
-	AddInitiator(initNode1, iqnNode1, "GigE", []string{iscsidir1PortKey1}, "")
-	AddHost("CSI-Test-Node-1", "iSCSI", initNode1List)
+	AddInitiator(initNode1, iqnNode1, "GigE", []string{iscsidir1PortKey1}, "") // #nosec G20
+	AddHost("CSI-Test-Node-1", "iSCSI", initNode1List)                         // #nosec G20
 
 	initNode2List := make([]string, 0)
 	iqn1Node2 := "iqn.1993-08.org.centos:01:5ae577b352a1"
@@ -361,10 +366,10 @@ func initMockCache() {
 	init2Node2 := iscsidir1PortKey1 + ":" + iqn2Node2
 	initNode2List = append(initNode2List, iqn1Node2)
 	initNode2List = append(initNode2List, iqn2Node2)
-	AddInitiator(init1Node2, iqn1Node2, "GigE", []string{iscsidir1PortKey1}, "")
-	AddInitiator(init2Node2, iqn2Node2, "GigE", []string{iscsidir1PortKey1}, "")
-	AddHost("CSI-Test-Node-2", "iSCSI", initNode2List)
-	AddMaskingView("CSI-Test-MV-1", "CSI-Test-SG-1", "CSI-Test-Node-1", "iscsi_ports")
+	AddInitiator(init1Node2, iqn1Node2, "GigE", []string{iscsidir1PortKey1}, "")       // #nosec G20
+	AddInitiator(init2Node2, iqn2Node2, "GigE", []string{iscsidir1PortKey1}, "")       // #nosec G20
+	AddHost("CSI-Test-Node-2", "iSCSI", initNode2List)                                 // #nosec G20
+	AddMaskingView("CSI-Test-MV-1", "CSI-Test-SG-1", "CSI-Test-Node-1", "iscsi_ports") // #nosec G20
 
 	initNode3List := make([]string, 0)
 	hba1Node3 := "20000090fa9278dd"
@@ -373,13 +378,13 @@ func initMockCache() {
 	init2Node3 := fcDir2PortKey1 + ":" + hba1Node3
 	init3Node3 := fcDir1PortKey1 + ":" + hba2Node3
 	init4Node3 := fcDir2PortKey1 + ":" + hba2Node3
-	AddInitiator(init1Node3, hba1Node3, "Fibre", []string{fcDir1PortKey1}, "")
-	AddInitiator(init2Node3, hba1Node3, "Fibre", []string{fcDir2PortKey1}, "")
-	AddInitiator(init3Node3, hba2Node3, "Fibre", []string{fcDir1PortKey1}, "")
-	AddInitiator(init4Node3, hba2Node3, "Fibre", []string{fcDir2PortKey1}, "")
+	AddInitiator(init1Node3, hba1Node3, "Fibre", []string{fcDir1PortKey1}, "") // #nosec G20
+	AddInitiator(init2Node3, hba1Node3, "Fibre", []string{fcDir2PortKey1}, "") // #nosec G20
+	AddInitiator(init3Node3, hba2Node3, "Fibre", []string{fcDir1PortKey1}, "") // #nosec G20
+	AddInitiator(init4Node3, hba2Node3, "Fibre", []string{fcDir2PortKey1}, "") // #nosec G20
 	initNode3List = append(initNode3List, hba1Node3)
 	initNode3List = append(initNode3List, hba2Node3)
-	AddHost("CSI-Test-Node-3-FC", "Fibre", initNode3List)
+	AddHost("CSI-Test-Node-3-FC", "Fibre", initNode3List) // #nosec G20
 	AddTempSnapshots()
 }
 
@@ -393,7 +398,7 @@ func GetHandler() http.Handler {
 				log.Printf("handler called: %s %s", r.Method, r.URL)
 			}
 			if InducedErrors.InvalidJSON {
-				w.Write([]byte(`this is not json`))
+				w.Write([]byte(`this is not json`)) // #nosec G20
 			} else if InducedErrors.NoConnection {
 				writeError(w, "No Connection", http.StatusRequestTimeout)
 			} else if InducedErrors.BadHTTPStatus != 0 {
@@ -699,10 +704,10 @@ func handleVersion(w http.ResponseWriter, r *http.Request) {
 	// check the apiversion
 	switch apiversion {
 	case "90":
-		w.Write([]byte(`{ "version": "V9.0.1.6" }`))
+		w.Write([]byte(`{ "version": "V9.0.1.6" }`)) // #nosec G20
 		break
 	case "": // for version 91, as URL does not have apiversion in V9.1
-		w.Write([]byte(`{ "version": "V9.1.0.2" }`))
+		w.Write([]byte(`{ "version": "V9.1.0.2" }`)) // #nosec G20
 		break
 	default:
 		writeError(w, "Unsupport API version: "+apiversion, http.StatusServiceUnavailable)
@@ -873,7 +878,7 @@ func handleVolume(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error deleting Volume: induced error - device is a member of a storage group", http.StatusForbidden)
 			return
 		}
-		DeleteVolume(volID)
+		DeleteVolume(volID) // #nosec G20
 	}
 }
 
@@ -913,9 +918,11 @@ func returnVolume(w http.ResponseWriter, volID string, remote bool) {
 			if remote {
 				if InducedErrors.FetchResponseError {
 					writeError(w, "Error fetching response", http.StatusBadRequest)
+					return
 				}
 				if InducedErrors.GetRemoteVolumeError {
 					writeError(w, "Volume cannot be found", http.StatusNotFound)
+					return
 				}
 				if InducedErrors.InvalidRemoteVolumeError {
 					newVol.StorageGroupIDList = nil
@@ -923,10 +930,10 @@ func returnVolume(w http.ResponseWriter, volID string, remote bool) {
 				if !strings.Contains(vol.Type, "RDF") {
 					writeError(w, "Volume not found", http.StatusNotFound)
 					return
-				} else {
-					newVol.Type = strings.ReplaceAll(newVol.Type, "RDF1", "RDF2")
-					newVol.VolumeIdentifier = ""
 				}
+
+				newVol.Type = strings.ReplaceAll(newVol.Type, "RDF1", "RDF2")
+				newVol.VolumeIdentifier = ""
 			}
 			writeJSON(w, newVol)
 			return
@@ -1061,7 +1068,7 @@ func handleJob(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		encoder := json.NewEncoder(w)
-		encoder.Encode(jobIDList)
+		encoder.Encode(jobIDList) // #nosec G20
 		return
 	}
 	// Return a specific job
@@ -1279,7 +1286,7 @@ func handleMaskingViewConnections(w http.ResponseWriter, r *http.Request) {
 			result := &types.MaskingViewConnectionsResult{
 				MaskingViewConnections: make([]*types.MaskingViewConnection, 0),
 			}
-			for id, _ := range Data.VolumeIDToVolume {
+			for id := range Data.VolumeIDToVolume {
 				conn1 := &types.MaskingViewConnection{
 					VolumeID:       id,
 					HostLUNAddress: fmt.Sprintf("%4d", index),
@@ -1421,7 +1428,8 @@ func AddStorageGroup(storageGroupID string, storageResourcePoolID string,
 	return Data.StorageGroupIDToStorageGroup[storageGroupID], nil
 }
 
-func AddRDFStorageGroup(storageGroupID, symmetrixId string) (*types.RDFStorageGroup, error) {
+// AddRDFStorageGroup ...
+func AddRDFStorageGroup(storageGroupID, symmetrixID string) (*types.RDFStorageGroup, error) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	if _, ok := Data.StorageGroupIDToRDFStorageGroup[storageGroupID]; ok {
@@ -1430,7 +1438,7 @@ func AddRDFStorageGroup(storageGroupID, symmetrixId string) (*types.RDFStorageGr
 	Data.StorageGroupIDToStorageGroup[storageGroupID].Unprotected = false
 	rdfSG := &types.RDFStorageGroup{
 		Name:        storageGroupID,
-		SymmetrixID: symmetrixId,
+		SymmetrixID: symmetrixID,
 		Rdf:         true,
 	}
 	Data.StorageGroupIDToRDFStorageGroup[storageGroupID] = rdfSG
@@ -1486,9 +1494,9 @@ func addMaskingViewFromCreateParams(createParams *types.MaskingViewCreateParam) 
 	portGroupID := createParams.PortGroupSelection.UseExistingPortGroupParam.PortGroupID
 	sgID := createParams.StorageGroupSelection.UseExistingStorageGroupParam.StorageGroupID
 	if hostID != "" {
-		AddMaskingView(mvID, sgID, hostID, portGroupID)
+		AddMaskingView(mvID, sgID, hostID, portGroupID) // #nosec G20
 	} else if hostGroupID != "" {
-		AddMaskingView(mvID, sgID, hostGroupID, portGroupID)
+		AddMaskingView(mvID, sgID, hostGroupID, portGroupID) // #nosec G20
 	}
 }
 
@@ -1853,7 +1861,7 @@ func addPortGroup(portGroupID string, portGroupType string, portKeys []types.Por
 func updatePortGroup(portGroupID string, editPayload *types.EditPortGroupActionParam) (*types.PortGroup, error) {
 	pg, ok := Data.PortGroupIDToPortGroup[portGroupID]
 	if !ok {
-		return nil, fmt.Errorf("Error! PortGroup %s does not exist.", portGroupID)
+		return nil, fmt.Errorf("error! PortGroup %s does not exist", portGroupID)
 	}
 
 	// Collect the ports to add (if any)
@@ -1912,22 +1920,21 @@ func removePortKey(slice []types.PortKey, keyToRemove types.PortKey) []types.Por
 		// Found the index with matching port
 		copy(slice[index:], slice[index+1:])
 		return slice[:len(slice)-1]
-	} else {
-		// No match was found, return unchanged slice
-		return slice
 	}
+	// No match was found, return unchanged slice
+	return slice
 }
 
 // UpdatePortGroupFromParams - Updates PortGroup given an EditPortGroup payload
 func UpdatePortGroupFromParams(portGroupID string, updateParams *types.EditPortGroup) {
-	updatePortGroup(portGroupID, updateParams.EditPortGroupActionParam)
+	updatePortGroup(portGroupID, updateParams.EditPortGroupActionParam) // #nosec G20
 }
 
 // DeletePortGroup - Remove PortGroup by ID 'portGroupID'
 func DeletePortGroup(portGroupID string) (*types.PortGroup, error) {
 	pg, ok := Data.PortGroupIDToPortGroup[portGroupID]
 	if !ok {
-		return nil, fmt.Errorf("Error! PortGroup %s does not exist.", portGroupID)
+		return nil, fmt.Errorf("error! PortGroup %s does not exist", portGroupID)
 	}
 
 	delete(Data.PortGroupIDToPortGroup, portGroupID)
@@ -1938,7 +1945,7 @@ func DeletePortGroup(portGroupID string) (*types.PortGroup, error) {
 func AddPortGroupFromCreateParams(createParams *types.CreatePortGroupParams) {
 	portGroupID := createParams.PortGroupID
 	portKeys := createParams.SymmetrixPortKey
-	addPortGroup(portGroupID, "Fibre", portKeys)
+	addPortGroup(portGroupID, "Fibre", portKeys) // #nosec G20
 }
 
 // AddPortGroup - Adds a port group to the mock data cache
@@ -1975,7 +1982,7 @@ func AddStorageGroupFromCreateParams(createParams *types.CreateStorageGroupParam
 	} else {
 		srpID = ""
 	}
-	AddStorageGroup(sgID, srpID, serviceLevel)
+	AddStorageGroup(sgID, srpID, serviceLevel) // #nosec G20
 }
 
 // keys - Return keys of the given map
@@ -2117,7 +2124,7 @@ func addOneVolumeToStorageGroup(volumeID, volumeIdentifier, sgID string, size in
 		}
 	} else {
 		// We are adding a new volume
-		addNewVolume(volumeID, volumeIdentifier, size, sgID)
+		addNewVolume(volumeID, volumeIdentifier, size, sgID) // #nosec G20
 	}
 	return nil
 }
@@ -2139,7 +2146,7 @@ func addVolumeToStorageGroupTest(w http.ResponseWriter, name, size, sgID string)
 		writeError(w, "unable to convert size string to integer", http.StatusBadRequest)
 	}
 	if InducedErrors.VolumeNotCreatedError == false {
-		addOneVolumeToStorageGroup(id, name, sgID, sizeInt)
+		addOneVolumeToStorageGroup(id, name, sgID, sizeInt) // #nosec G20
 	}
 	// Make a job to return
 	resourceLink := fmt.Sprintf("sloprovisioning/system/%s/storagegroup/%s", DefaultSymmetrixID, sgID)
@@ -2168,7 +2175,7 @@ func addSpecificVolumeToStorageGroup(w http.ResponseWriter, volumeIDs []string, 
 		return
 	}
 	for _, volumeID := range volumeIDs {
-		addOneVolumeToStorageGroup(volumeID, "TestVol", sgID, 0)
+		addOneVolumeToStorageGroup(volumeID, "TestVol", sgID, 0) // #nosec G20
 	}
 	// Make a job to return
 	resourceLink := fmt.Sprintf("sloprovisioning/system/%s/storagegroup/%s", DefaultSymmetrixID, sgID)
@@ -2251,7 +2258,7 @@ func RemoveVolumeFromStorageGroup(w http.ResponseWriter, volumeIDs []string, sgI
 func removeVolumeFromStorageGroup(w http.ResponseWriter, volumeIDs []string, sgID string) {
 	for _, volID := range volumeIDs {
 		fmt.Println("Volume ID: " + volID)
-		removeOneVolumeFromStorageGroup(volID, sgID)
+		removeOneVolumeFromStorageGroup(volID, sgID) // #nosec G20
 	}
 	returnStorageGroup(w, sgID, false)
 }
@@ -2303,7 +2310,7 @@ func handlePortGroup(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error deleting Port Group: induced error", http.StatusRequestTimeout)
 			return
 		}
-		DeletePortGroup(pgID)
+		DeletePortGroup(pgID) // #nosec G20
 	default:
 		writeError(w, "Invalid Method", http.StatusBadRequest)
 	}
@@ -2360,7 +2367,7 @@ func handlePort(w http.ResponseWriter, r *http.Request) {
 						SymmetrixPort: *port,
 					}
 					encoder := json.NewEncoder(w)
-					encoder.Encode(symPort)
+					encoder.Encode(symPort) // #nosec G20
 				}
 				return
 			}
@@ -2494,11 +2501,11 @@ func handleHost(w http.ResponseWriter, r *http.Request) {
 		}
 		if isFibre {
 			// Might need to add the Port information here
-			AddHost(createHostParam.HostID, "Fibre", createHostParam.InitiatorIDs)
+			AddHost(createHostParam.HostID, "Fibre", createHostParam.InitiatorIDs) // #nosec G20
 		} else {
 			//initNode := make([]string, 0)
 			//initNode = append(initNode, "iqn.1993-08.org.centos:01:5ae577b352a7")
-			AddHost(createHostParam.HostID, "iSCSI", createHostParam.InitiatorIDs)
+			AddHost(createHostParam.HostID, "iSCSI", createHostParam.InitiatorIDs) // #nosec G20
 		}
 		ReturnHost(w, createHostParam.HostID)
 
@@ -2522,7 +2529,7 @@ func handleHost(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error deleting Host: induced error", http.StatusRequestTimeout)
 			return
 		}
-		RemoveHost(hostID)
+		RemoveHost(hostID) // #nosec G20
 
 	default:
 		writeError(w, "Invalid Method", http.StatusBadRequest)
@@ -2606,7 +2613,7 @@ func writeError(w http.ResponseWriter, message string, httpStatus int) {
 //  wrriter ResponseWriter where data is output
 // An optional replacement map. If supplied every instance of a key in the JSON file will be replaced with the corresponding value.
 func returnJSONFile(directory, filename string, w http.ResponseWriter, replacements map[string]string) (jsonBytes []byte) {
-	jsonBytes, err := ioutil.ReadFile(filepath.Join(directory, filename))
+	jsonBytes, err := ioutil.ReadFile(filepath.Join(directory, filename)) // #nosec G20
 	if err != nil {
 		log.Printf("Couldn't read %s/%s\n", directory, filename)
 		if w != nil {
@@ -2644,7 +2651,7 @@ func AddTempSnapshots() {
 		id := fmt.Sprintf("%05d", i)
 		size := 7
 		volumeIdentifier := "Vol" + id
-		AddNewVolume(id, volumeIdentifier, size, DefaultStorageGroup)
+		AddNewVolume(id, volumeIdentifier, size, DefaultStorageGroup) // #nosec G20
 		SnapID := fmt.Sprintf("%s-%s-%d", "DEL", "snapshot", i)
 		AddNewSnapshot(id, SnapID)
 	}
