@@ -182,7 +182,7 @@ type AddVolumeParam struct {
 	CreateNewVolumes      bool                  `json:"create_new_volumes"`
 	Emulation             string                `json:"emulation,omitempty"`
 	EnableMobilityID      bool                  `json:"enable_mobility_id"`
-	VolumeIdentifier      VolumeIdentifierType  `json:"volumeIdentifier,omitempty"`
+	VolumeIdentifier      *VolumeIdentifierType  `json:"volumeIdentifier,omitempty"`
 	RemoteSymmetrixSGInfo RemoteSymmSGInfoParam `json:"remoteSymmSGInfoParam"`
 }
 
