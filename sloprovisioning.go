@@ -1311,7 +1311,7 @@ func (c *Client) GetMaskingViewConnections(ctx context.Context, symID string, ma
 }
 
 // CreatePortGroup - Creates a Port Group
-func (c *Client) CreatePortGroup(ctx context.Context, symID string, portGroupID string, dirPorts []v100.PortKey) (*v100.PortGroup, error) {
+func (c *Client) CreatePortGroup(ctx context.Context, symID string, portGroupID string, dirPorts []v100.PortKey, protocol string) (*v100.PortGroup, error) {
 	defer c.TimeSpent("CreatePortGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -1321,6 +1321,7 @@ func (c *Client) CreatePortGroup(ctx context.Context, symID string, portGroupID 
 		PortGroupID:      portGroupID,
 		SymmetrixPortKey: dirPorts,
 		ExecutionOption:  v100.ExecutionOptionSynchronous,
+		PortGroupProtocol : protocol,
 	}
 	ifDebugLogPayload(createPortGroupParams)
 	portGroup := &v100.PortGroup{}

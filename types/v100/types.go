@@ -93,11 +93,26 @@ type StoragePool struct {
 	ReliabilityState     string         `json:"reliability_state"`
 	DiskGroupIDs         []string       `json:"diskGroupId"`
 	ExternalCap          float64        `json:"external_capacity_gb"`
-	SrpCap               *SrpCap        `json:"srp_capacity"`
+	SrpCap               *SrpCap        `json:"srp_capacity,omitempty"`
+        FbaCap               *FbaCap        `json:"fba_srp_capacity,omitempty"`
+        CkdCap               *CkdCap        `json:"ckd_srp_capacity,omitempty"`
 	SrpEfficiency        *SrpEfficiency `json:"srp_efficiency"`
 	ServiceLevels        []string       `json:"service_levels"`
 }
 
+type FbaCap struct{
+	Provisioned       *provisioned       `json:"provisioned"`
+}
+
+type CkdCap struct{
+	Provisioned       *provisioned       `json:"provisioned"`
+}
+
+type provisioned struct {
+	UsableUsedInTB               float64 `json:"used_tb"`
+	UsableTotInTB                float64 `json:"effective_capacity_tb"`
+//	EffectiveUsedCapacityPercent float64 `json:"provisioned_percent"`
+}
 // SrpCap : capacity of an SRP
 type SrpCap struct {
 	SubAllocCapInTB              float64 `json:"subscribed_allocated_tb"`
@@ -221,7 +236,7 @@ type CreatePortGroupParams struct {
 	PortGroupID       string    `json:"portGroupId"`
 	SymmetrixPortKey  []PortKey `json:"symmetrixPortKey"`
 	ExecutionOption   string    `json:"executionOption"`
-	PortGroupProtocol string    `json:"port_Group_Protocol"`
+	PortGroupProtocol string    `json:"port_group_protocol,omitempty"`
 }
 
 // InitiatorList : list of initiators

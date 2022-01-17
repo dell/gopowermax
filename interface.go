@@ -171,7 +171,7 @@ type Pmax interface {
 	CreateMaskingView(ctx context.Context, symID string, maskingViewID string, storageGroupID string, hostOrhostGroupID string, isHost bool, portGroupID string) (*v100.MaskingView, error)
 
 	// CreatePortGroup creates a port group given the Port Group id and a list of dir/port ids
-	CreatePortGroup(ctx context.Context, symID string, portGroupID string, dirPorts []v100.PortKey) (*v100.PortGroup, error)
+	CreatePortGroup(ctx context.Context, symID string, portGroupID string, dirPorts []v100.PortKey, protocol string) (*v100.PortGroup, error)
 
 	// System
 	GetSymmetrixIDList(ctx context.Context) (*v100.SymmetrixIDList, error)
