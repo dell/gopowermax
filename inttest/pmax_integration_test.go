@@ -1308,7 +1308,7 @@ func TestCreatePortGroup(t *testing.T) {
 		PortID:     "4",
 	}
 	portKeys = append(portKeys, portKey)
-	portGroup, err := client.CreatePortGroup(context.TODO(), symmetrixID, portGroupID, portKeys)
+	portGroup, err := client.CreatePortGroup(context.TODO(), symmetrixID, portGroupID, portKeys, "SCSI_FC")
 	if err != nil {
 		t.Error("Couldn't create port group")
 		return
