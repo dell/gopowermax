@@ -46,6 +46,7 @@ const (
 	mvID                   = "12se0042_mv"
 	testFCInitiatorWWN     = "10000090fa66060a"
 	testFCInitiator        = "FA-1D:4:10000090fa66060a"
+	protocol               = "SCSI_FC"
 )
 
 type uMV struct {
@@ -824,7 +825,7 @@ func (c *unitContext) iCallCreatePortGroup(groupName string, strSliceOfPorts str
 	}
 
 	initialPorts := convertStringSliceOfPortsToPortKeys(strSliceOfPorts)
-	c.portGroup, c.err = c.client.CreatePortGroup(context.TODO(), symID, groupName, initialPorts)
+	c.portGroup, c.err = c.client.CreatePortGroup(context.TODO(), symID, groupName, initialPorts, protocol)
 	return nil
 }
 
