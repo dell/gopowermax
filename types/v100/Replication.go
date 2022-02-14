@@ -163,7 +163,7 @@ type SGRDFInfo struct {
 	SrcR2InvalidTracksHop2    int      `json:"srcR2InvalidTracksHop2"`
 	TgtR1InvalidTracksHop2    int      `json:"tgtR1InvalidTracksHop2"`
 	TgtR2InvalidTracksHop2    int      `json:"tgtR2InvalidTracksHop2"`
-	Domino                    string   `json:"domino"`
+	Domino                    []string `json:"domino"`
 	ConsistencyProtection     string   `json:"consistency_protection"`
 	ConsistencyProtectionHop2 string   `json:"consistency_protection_hop2"`
 }
