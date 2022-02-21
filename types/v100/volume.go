@@ -23,7 +23,7 @@ type VolumeIDList struct {
 
 // VolumeResultList : volume list resulted
 type VolumeResultList struct {
-	VolumeList []VolumeIDList `json:"result"`
+	VolumeList []VolumeIDList `json:"result,,omitempty"`
 	From       int            `json:"from"`
 	To         int            `json:"to"`
 }

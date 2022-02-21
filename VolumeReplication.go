@@ -134,7 +134,6 @@ func (c *Client) ExecuteReplicationActionOnSG(ctx context.Context, symID, action
 			Star:         false,
 			Hop2:         false,
 			Remote:       false,
-			RecoverPoint: false,
 		}
 		modifyParam = &v100.ModifySGRDFGroup{
 			Resume:          actionParam,
@@ -149,7 +148,6 @@ func (c *Client) ExecuteReplicationActionOnSG(ctx context.Context, symID, action
 			Hop2:         false,
 			Bypass:       false,
 			Remote:       false,
-			RecoverPoint: false,
 		}
 		modifyParam = &v100.ModifySGRDFGroup{
 			Failback:        actionParam,
