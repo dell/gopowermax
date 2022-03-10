@@ -63,7 +63,7 @@ type Resume struct {
 	Hop2         bool `json:"hop2"`
 	Bypass       bool `json:"bypass"`
 	Remote       bool `json:"remote"`
-	RecoverPoint bool `json:"recoverPoint"`
+	RecoverPoint bool `json:"recoverPoint,omitempty"`
 }
 
 // Failover action
@@ -99,7 +99,7 @@ type Failback struct {
 	Hop2         bool `json:"hop2"`
 	Bypass       bool `json:"bypass"`
 	Remote       bool `json:"remote"`
-	RecoverPoint bool `json:"recoverPoint"`
+	RecoverPoint bool `json:"recoverPoint,omitempty"`
 }
 
 // Establish action
