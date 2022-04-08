@@ -63,7 +63,7 @@ type Resume struct {
 	Hop2         bool `json:"hop2"`
 	Bypass       bool `json:"bypass"`
 	Remote       bool `json:"remote"`
-	RecoverPoint bool `json:"recoverPoint"`
+	RecoverPoint bool `json:"recoverPoint,omitempty"`
 }
 
 // Failover action
@@ -99,7 +99,7 @@ type Failback struct {
 	Hop2         bool `json:"hop2"`
 	Bypass       bool `json:"bypass"`
 	Remote       bool `json:"remote"`
-	RecoverPoint bool `json:"recoverPoint"`
+	RecoverPoint bool `json:"recoverPoint,omitempty"`
 }
 
 // Establish action
@@ -187,7 +187,7 @@ type RDFStorageGroup struct {
 	Rdf                         bool                    `json:"rdf"`
 	IsLinkTarget                bool                    `json:"isLinkTarget"`
 	SnapshotPolicies            []string                `json:"snapshot_policies"`
-	RDFGroups                   []string                `json:"rdf_groups"`
+	RDFGroups                   []int                   `json:"rdf_groups"`
 	NumCloneTargetStorageGroups int                     `json:"num_clone_target_storage_groups"`
 	RemoteStorageGroups         []RemoteRDFStorageGroup `json:"remote_storage_groups"`
 }
@@ -227,7 +227,7 @@ type CreateRDFPair struct {
 	NoWD                    bool                     `json:"noWD"`
 	Remote                  bool                     `json:"remote"`
 	Bias                    bool                     `json:"bias"`
-	RecoverPoint            bool                     `json:"recoverPoint"`
+	RecoverPoint            bool                     `json:"recoverPoint,omitempty"`
 	LocalDeviceAutoCriteria *LocalDeviceAutoCriteria `json:"localDeviceAutoCriteriaParam"`
 	LocalDeviceListCriteria *LocalDeviceListCriteria `json:"localDeviceListCriteriaParam"`
 	ExecutionOption         string                   `json:"executionOption"`

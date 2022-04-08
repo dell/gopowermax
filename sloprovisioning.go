@@ -24,7 +24,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 	v100 "github.com/dell/gopowermax/v2/types/v100"
 
 	log "github.com/sirupsen/logrus"
@@ -70,7 +69,7 @@ func (c *Client) GetVolumeIDsIterator(ctx context.Context, symID string, volumeI
 	var query string
 	if volumeIdentifierMatch != "" {
 		if like {
-			query = fmt.Sprintf("?volume_identifier=<like>%s", volumeIdentifierMatch)
+			query = fmt.Sprintf("?volume_identifier=%%3Clike%%3E%s", volumeIdentifierMatch)
 		} else {
 			query = fmt.Sprintf("?volume_identifier=%s", volumeIdentifierMatch)
 		}
@@ -106,13 +105,17 @@ func (c *Client) getVolumeIDsIteratorBase(ctx context.Context, symID string, que
 		return nil, err
 	}
 	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 
 	iter := &v100.VolumeIterator{}
 	decoder := json.NewDecoder(resp.Body)
-	if err = decoder.Decode(iter); err != nil {
+	if err = decoder.Decode(iter);	 err != nil {
+		if err.Error() == "EOF"{
+			return nil, nil 
+		}
 		return nil, err
 	}
 	return iter, nil
