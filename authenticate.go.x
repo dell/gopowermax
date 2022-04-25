@@ -69,7 +69,7 @@ func (c *Client) Authenticate(configConnect *ConfigConnect) error {
 	if err != nil {
 		return nil
         }
-        log.Printf("API version: %s\n", version.Version)
+        log.Printf("API version: %s", version.Version)
 
 	return nil
 }
