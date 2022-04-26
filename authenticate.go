@@ -56,7 +56,7 @@ var (
 // Authenticate and get API version
 func (c *Client) Authenticate(ctx context.Context, configConnect *ConfigConnect) error {
 	if debug {
-		log.Printf("PowerMax debug: %v\n", debug)
+		log.Printf("PowerMax debug: %v", debug)
 		log.SetLevel(log.DebugLevel)
 	}
 

@@ -2604,7 +2604,7 @@ func writeError(w http.ResponseWriter, message string, httpStatus int) {
 	encoder := json.NewEncoder(w)
 	err := encoder.Encode(resp)
 	if err != nil {
-		log.Printf("error encoding json: %s\n", err.Error())
+		log.Printf("error encoding json: %s", err.Error())
 	}
 }
 
@@ -2615,7 +2615,7 @@ func writeError(w http.ResponseWriter, message string, httpStatus int) {
 func returnJSONFile(directory, filename string, w http.ResponseWriter, replacements map[string]string) (jsonBytes []byte) {
 	jsonBytes, err := ioutil.ReadFile(filepath.Join(directory, filename)) // #nosec G20
 	if err != nil {
-		log.Printf("Couldn't read %s/%s\n", directory, filename)
+		log.Printf("Couldn't read %s/%s", directory, filename)
 		if w != nil {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -2627,12 +2627,12 @@ func returnJSONFile(directory, filename string, w http.ResponseWriter, replaceme
 			jsonString = strings.Replace(jsonString, key, value, -1)
 		}
 		if Debug {
-			log.Printf("Edited payload:\n%s\n", jsonString)
+			log.Printf("Edited payload:%s", jsonString)
 		}
 		jsonBytes = []byte(jsonString)
 	}
 	if Debug {
-		log.Printf("jsonBytes:\n%s\n", jsonBytes)
+		log.Printf("jsonBytes:%s", jsonBytes)
 	}
 	if w != nil {
 		_, err = w.Write(jsonBytes)
