@@ -14,7 +14,7 @@ require (
 	github.com/cucumber/messages-go/v10 v10.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
-	github.com/gogo/protobuf v1.3.1 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.0 // indirect
 	github.com/hashicorp/go-memdb v1.3.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
