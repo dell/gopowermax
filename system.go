@@ -18,11 +18,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	v100 "github.com/dell/gopowermax/v2/types/v100"
 	"net/http"
 	"strings"
 	"time"
-
-	v100 "github.com/dell/gopowermax/v2/types/v100"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -61,8 +60,8 @@ func (c *Client) checkResponse(resp *http.Response) error {
 }
 
 // GetSymmetrixIDList returns a list of all the symmetrix systems known to the connected Unisphere instance.
-func (c *Client) GetSymmetrixIDList(ctx context.Context) (*v100.SymmetrixIDList, error) {
 
+func (c *Client) GetSymmetrixIDList(ctx context.Context) (*v100.SymmetrixIDList, error) {
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(

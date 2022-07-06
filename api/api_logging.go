@@ -50,7 +50,7 @@ func logRequest(
 		return
 	}
 
-	WriteIndented(w, buf)
+	WriteIndented(w, buf) // #nosec G20
 	fmt.Fprintln(w)
 
 	lf(log.Debug, w.String())
@@ -74,7 +74,7 @@ func logResponse(
 	}
 
 	bw := &bytes.Buffer{}
-	WriteIndented(bw, buf)
+	WriteIndented(bw, buf) // #nosec G20
 
 	scanner := bufio.NewScanner(bw)
 	for {
@@ -228,7 +228,7 @@ func dumpRequest(req *http.Request, body bool) ([]byte, error) {
 		return nil, err
 	}
 
-	io.WriteString(&b, "\r\n")
+	io.WriteString(&b, "\r\n") // #nosec G20
 
 	if req.Body != nil {
 		var dest io.Writer = &b
@@ -237,8 +237,8 @@ func dumpRequest(req *http.Request, body bool) ([]byte, error) {
 		}
 		_, err = io.Copy(dest, req.Body)
 		if chunked {
-			dest.(io.Closer).Close()
-			io.WriteString(&b, "\r\n")
+			dest.(io.Closer).Close()   // #nosec G20
+			io.WriteString(&b, "\r\n") // #nosec G20
 		}
 	}
 

@@ -255,7 +255,7 @@ type Initiator struct {
 	FCIDLockdown         string    `json:"fcid_lockdown"`
 	IPAddress            string    `json:"ip_address,omitempty"`
 	Host                 string    `json:"host,omitempty"`
-	HostGroups           []string  `json:"hostGroup,omitempty"`
+	HostGroupIDs           []string  `json:"hostGroup,omitempty"`
 	LoggedIn             bool      `json:"logged_in"`
 	OnFabric             bool      `json:"on_fabric"`
 	FabricName           string    `json:"fabric_name"`

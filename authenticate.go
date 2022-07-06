@@ -56,7 +56,7 @@ var (
 // Authenticate and get API version
 func (c *Client) Authenticate(ctx context.Context, configConnect *ConfigConnect) error {
 	if debug {
-		log.Printf("PowerMax debug: %v\n", debug)
+		log.Printf("PowerMax debug: %v", debug)
 		log.SetLevel(log.DebugLevel)
 	}
 
@@ -66,9 +66,7 @@ func (c *Client) Authenticate(ctx context.Context, configConnect *ConfigConnect)
 
 	headers := make(map[string]string, 1)
 	headers["Authorization"] = "Basic " + basicAuthString
-
 	path := "univmax/restapi/" + "version"
-
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, path, headers, nil)
@@ -181,12 +179,16 @@ func NewClientWithArgs(
 	}
 
 	client = &Client{
-		api:            ac,
+		api: ac,
+		configConnect: &ConfigConnect{
+			Version: DefaultAPIVersion,
+		},
 		allowedArrays:  []string{},
 		version:        DefaultAPIVersion,
 		contextTimeout: contextTimeout,
 	}
 
+	accHeader = api.HeaderValContentTypeJSON
 	accHeader = fmt.Sprintf("%s;version=%s", api.HeaderValContentTypeJSON, DefaultAPIVersion)
 	conHeader = accHeader
 

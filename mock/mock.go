@@ -27,10 +27,8 @@ import (
 	"sync"
 	"time"
 
-	v100 "github.com/dell/gopowermax/v2/types/v100"
-
+	types "github.com/dell/gopowermax/v2/types/v100"
 	"github.com/jinzhu/copier"
-
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -61,10 +59,15 @@ const (
 
 const (
 	_ = 1 << (10 * iota)
+	// KiB ...
 	KiB
+	// MiB ...
 	MiB
+	// GiB ...
 	GiB
+	// TiB ...
 	TiB
+	// PiB ...
 	PiB
 )
 
@@ -83,25 +86,25 @@ var Data struct {
 	StorageGroupIDToMaskingViewID map[string]string
 	JobIDToMockJob                map[string]*JobInfo
 	StorageGroupIDToNVolumes      map[string]int
-	StorageGroupIDToStorageGroup  map[string]*v100.StorageGroup
+	StorageGroupIDToStorageGroup  map[string]*types.StorageGroup
 	StorageGroupIDToVolumes       map[string][]string
-	MaskingViewIDToMaskingView    map[string]*v100.MaskingView
-	InitiatorIDToInitiator        map[string]*v100.Initiator
-	HostIDToHost                  map[string]*v100.Host
-	PortGroupIDToPortGroup        map[string]*v100.PortGroup
-	PortIDToSymmetrixPortType     map[string]*v100.SymmetrixPortType
-	VolumeIDToVolume              map[string]*v100.Volume
+	MaskingViewIDToMaskingView    map[string]*types.MaskingView
+	InitiatorIDToInitiator        map[string]*types.Initiator
+	HostIDToHost                  map[string]*types.Host
+	PortGroupIDToPortGroup        map[string]*types.PortGroup
+	PortIDToSymmetrixPortType     map[string]*types.SymmetrixPortType
+	VolumeIDToVolume              map[string]*types.Volume
 	JSONDir                       string
 	InitiatorHost                 string
 
 	// Snapshots
-	VolIDToSnapshots  map[string]map[string]*v100.Snapshot
-	SnapIDToLinkedVol map[string]map[string]*v100.LinkedVolumes
+	VolIDToSnapshots  map[string]map[string]*types.Snapshot
+	SnapIDToLinkedVol map[string]map[string]*types.LinkedVolumes
 
 	// SRDF
-	StorageGroupIDToRDFStorageGroup map[string]*v100.RDFStorageGroup
-	RDFGroup                        *v100.RDFGroup
-	SGRDFInfo                       *v100.SGRDFInfo
+	StorageGroupIDToRDFStorageGroup map[string]*types.RDFStorageGroup
+	RDFGroup                        *types.RDFGroup
+	SGRDFInfo                       *types.SGRDFInfo
 }
 
 // InducedErrors constants
@@ -290,18 +293,18 @@ func Reset() {
 	Data.JobIDToMockJob = make(map[string]*JobInfo)
 	Data.StorageGroupIDToNVolumes = make(map[string]int)
 	Data.StorageGroupIDToNVolumes[DefaultStorageGroup] = 0
-	Data.StorageGroupIDToStorageGroup = make(map[string]*v100.StorageGroup)
-	Data.MaskingViewIDToMaskingView = make(map[string]*v100.MaskingView)
-	Data.InitiatorIDToInitiator = make(map[string]*v100.Initiator)
-	Data.HostIDToHost = make(map[string]*v100.Host)
-	Data.PortGroupIDToPortGroup = make(map[string]*v100.PortGroup)
-	Data.PortIDToSymmetrixPortType = make(map[string]*v100.SymmetrixPortType)
-	Data.VolumeIDToVolume = make(map[string]*v100.Volume)
+	Data.StorageGroupIDToStorageGroup = make(map[string]*types.StorageGroup)
+	Data.MaskingViewIDToMaskingView = make(map[string]*types.MaskingView)
+	Data.InitiatorIDToInitiator = make(map[string]*types.Initiator)
+	Data.HostIDToHost = make(map[string]*types.Host)
+	Data.PortGroupIDToPortGroup = make(map[string]*types.PortGroup)
+	Data.PortIDToSymmetrixPortType = make(map[string]*types.SymmetrixPortType)
+	Data.VolumeIDToVolume = make(map[string]*types.Volume)
 	Data.StorageGroupIDToVolumes = make(map[string][]string)
-	Data.VolIDToSnapshots = make(map[string]map[string]*v100.Snapshot)
-	Data.SnapIDToLinkedVol = make(map[string]map[string]*v100.LinkedVolumes)
-	Data.StorageGroupIDToRDFStorageGroup = make(map[string]*v100.RDFStorageGroup)
-	Data.RDFGroup = &v100.RDFGroup{
+	Data.VolIDToSnapshots = make(map[string]map[string]*types.Snapshot)
+	Data.SnapIDToLinkedVol = make(map[string]map[string]*types.LinkedVolumes)
+	Data.StorageGroupIDToRDFStorageGroup = make(map[string]*types.RDFStorageGroup)
+	Data.RDFGroup = &types.RDFGroup{
 		RdfgNumber:          DefaultRDFGNo,
 		Label:               "RG_13",
 		RemoteRdfgNumber:    DefaultRDFGNo,
@@ -312,7 +315,7 @@ func Reset() {
 		Type:                "VASA_ASYNC",
 		Async:               true,
 	}
-	Data.SGRDFInfo = &v100.SGRDFInfo{
+	Data.SGRDFInfo = &types.SGRDFInfo{
 		RdfGroupNumber: DefaultRDFGNo,
 		VolumeRdfTypes: []string{"R1"},
 		States:         []string{"Consistent"},
@@ -324,16 +327,16 @@ func Reset() {
 
 func initMockCache() {
 	// Initialize SGs
-	AddStorageGroup("CSI-Test-SG-1", "SRP_1", "Diamond")
-	AddStorageGroup("CSI-Test-SG-2", "SRP_1", "Diamond")
-	AddStorageGroup("CSI-Test-SG-3", "SRP_2", "Silver")
-	AddStorageGroup("CSI-Test-SG-4", "SRP_2", "Optimized")
-	AddStorageGroup("CSI-Test-SG-5", "SRP_2", "None")
-	AddStorageGroup("CSI-Test-SG-6", "None", "None")
-	AddStorageGroup("CSI-Test-Fake-Remote-SG", "None", "None")
+	AddStorageGroup("CSI-Test-SG-1", "SRP_1", "Diamond")       // #nosec G20
+	AddStorageGroup("CSI-Test-SG-2", "SRP_1", "Diamond")       // #nosec G20
+	AddStorageGroup("CSI-Test-SG-3", "SRP_2", "Silver")        // #nosec G20
+	AddStorageGroup("CSI-Test-SG-4", "SRP_2", "Optimized")     // #nosec G20
+	AddStorageGroup("CSI-Test-SG-5", "SRP_2", "None")          // #nosec G20
+	AddStorageGroup("CSI-Test-SG-6", "None", "None")           // #nosec G20
+	AddStorageGroup("CSI-Test-Fake-Remote-SG", "None", "None") // #nosec G20
 	// Initialize protected SG
-	AddStorageGroup(DefaultProtectedStorageGroup, "None", "None")
-	AddRDFStorageGroup(DefaultProtectedStorageGroup, DefaultRemoteSymID)
+	AddStorageGroup(DefaultProtectedStorageGroup, "None", "None")        // #nosec G20
+	AddRDFStorageGroup(DefaultProtectedStorageGroup, DefaultRemoteSymID) // #nosec G20
 	// ISCSI directors
 	iscsiDir1 := "SE-1E"
 	iscsidir1PortKey1 := iscsiDir1 + ":" + "4"
@@ -344,16 +347,15 @@ func initMockCache() {
 	fcDir1PortKey1 := fcDir1 + ":" + "5"
 	fcDir2PortKey1 := fcDir2 + ":" + "1"
 	// Add Port groups
-	AddPortGroup("csi-pg", "Fibre", []string{fcDir1PortKey1, fcDir2PortKey1})
+	AddPortGroup("csi-pg", "Fibre", []string{fcDir1PortKey1, fcDir2PortKey1}) // #nosec G20
 	// Initialize initiators
 	// Initialize Hosts
 	initNode1List := make([]string, 0)
 	iqnNode1 := "iqn.1993-08.org.centos:01:5ae577b352a0"
 	initNode1 := iscsidir1PortKey1 + ":" + iqnNode1
 	initNode1List = append(initNode1List, iqnNode1)
-	AddInitiator(initNode1, iqnNode1, "GigE", []string{iscsidir1PortKey1}, "")
-	AddHost("CSI-Test-Node-1", "iSCSI", initNode1List)
-
+	AddInitiator(initNode1, iqnNode1, "GigE", []string{iscsidir1PortKey1}, "") // #nosec G20
+	AddHost("CSI-Test-Node-1", "iSCSI", initNode1List)                         // #nosec G20
 	initNode2List := make([]string, 0)
 	iqn1Node2 := "iqn.1993-08.org.centos:01:5ae577b352a1"
 	iqn2Node2 := "iqn.1993-08.org.centos:01:5ae577b352a2"
@@ -361,10 +363,10 @@ func initMockCache() {
 	init2Node2 := iscsidir1PortKey1 + ":" + iqn2Node2
 	initNode2List = append(initNode2List, iqn1Node2)
 	initNode2List = append(initNode2List, iqn2Node2)
-	AddInitiator(init1Node2, iqn1Node2, "GigE", []string{iscsidir1PortKey1}, "")
-	AddInitiator(init2Node2, iqn2Node2, "GigE", []string{iscsidir1PortKey1}, "")
-	AddHost("CSI-Test-Node-2", "iSCSI", initNode2List)
-	AddMaskingView("CSI-Test-MV-1", "CSI-Test-SG-1", "CSI-Test-Node-1", "iscsi_ports")
+	AddInitiator(init1Node2, iqn1Node2, "GigE", []string{iscsidir1PortKey1}, "")       // #nosec G20
+	AddInitiator(init2Node2, iqn2Node2, "GigE", []string{iscsidir1PortKey1}, "")       // #nosec G20
+	AddHost("CSI-Test-Node-2", "iSCSI", initNode2List)                                 // #nosec G20
+	AddMaskingView("CSI-Test-MV-1", "CSI-Test-SG-1", "CSI-Test-Node-1", "iscsi_ports") // #nosec G20
 
 	initNode3List := make([]string, 0)
 	hba1Node3 := "20000090fa9278dd"
@@ -373,13 +375,13 @@ func initMockCache() {
 	init2Node3 := fcDir2PortKey1 + ":" + hba1Node3
 	init3Node3 := fcDir1PortKey1 + ":" + hba2Node3
 	init4Node3 := fcDir2PortKey1 + ":" + hba2Node3
-	AddInitiator(init1Node3, hba1Node3, "Fibre", []string{fcDir1PortKey1}, "")
-	AddInitiator(init2Node3, hba1Node3, "Fibre", []string{fcDir2PortKey1}, "")
-	AddInitiator(init3Node3, hba2Node3, "Fibre", []string{fcDir1PortKey1}, "")
-	AddInitiator(init4Node3, hba2Node3, "Fibre", []string{fcDir2PortKey1}, "")
+	AddInitiator(init1Node3, hba1Node3, "Fibre", []string{fcDir1PortKey1}, "") // #nosec G20
+	AddInitiator(init2Node3, hba1Node3, "Fibre", []string{fcDir2PortKey1}, "") // #nosec G20
+	AddInitiator(init3Node3, hba2Node3, "Fibre", []string{fcDir1PortKey1}, "") // #nosec G20
+	AddInitiator(init4Node3, hba2Node3, "Fibre", []string{fcDir2PortKey1}, "") // #nosec G20
 	initNode3List = append(initNode3List, hba1Node3)
 	initNode3List = append(initNode3List, hba2Node3)
-	AddHost("CSI-Test-Node-3-FC", "Fibre", initNode3List)
+	AddHost("CSI-Test-Node-3-FC", "Fibre", initNode3List) // #nosec G20
 	AddTempSnapshots()
 }
 
@@ -393,7 +395,7 @@ func GetHandler() http.Handler {
 				log.Printf("handler called: %s %s", r.Method, r.URL)
 			}
 			if InducedErrors.InvalidJSON {
-				w.Write([]byte(`this is not json`))
+				w.Write([]byte(`this is not json`)) // #nosec G20
 			} else if InducedErrors.NoConnection {
 				writeError(w, "No Connection", http.StatusRequestTimeout)
 			} else if InducedErrors.BadHTTPStatus != 0 {
@@ -491,8 +493,8 @@ func handleRDFDevicePair(w http.ResponseWriter, r *http.Request) {
 func handleRDFDevicePairCreation(w http.ResponseWriter, r *http.Request) {
 	// TODO: Update mock cache based on the request payload.
 	routeParams := mux.Vars(r)
-	rdfPairs := new(v100.RDFDevicePairList)
-	rdfPairs.RDFDevicePair = []v100.RDFDevicePair{
+	rdfPairs := new(types.RDFDevicePairList)
+	rdfPairs.RDFDevicePair = []types.RDFDevicePair{
 		{
 			RemoteVolumeName:     routeParams["volume_id"],
 			LocalVolumeName:      routeParams["volume_id"],
@@ -522,7 +524,7 @@ func handleRDFDevicePairInfo(w http.ResponseWriter, r *http.Request) {
 	} else {
 		volumeConfig = "RDF1+TDEV"
 	}
-	rdfDevicePairInfo := &v100.RDFDevicePair{
+	rdfDevicePairInfo := &types.RDFDevicePair{
 		LocalRdfGroupNumber:  Data.RDFGroup.RdfgNumber,
 		RemoteRdfGroupNumber: Data.RDFGroup.RdfgNumber,
 		LocalSymmID:          routeParams["symid"],
@@ -588,7 +590,7 @@ func handleSGRDFFetch(w http.ResponseWriter, r *http.Request) {
 	storageGroupID := routeParams["id"]
 	symmetrixID := routeParams["symid"]
 	var (
-		rdfStorageGroup *v100.RDFStorageGroup
+		rdfStorageGroup *types.RDFStorageGroup
 		ok              bool
 	)
 	if _, ok = Data.StorageGroupIDToStorageGroup[storageGroupID]; !ok {
@@ -596,7 +598,7 @@ func handleSGRDFFetch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if rdfStorageGroup, ok = Data.StorageGroupIDToRDFStorageGroup[storageGroupID]; !ok {
-		rdfStorageGroup = &v100.RDFStorageGroup{
+		rdfStorageGroup = &types.RDFStorageGroup{
 			SymmetrixID: symmetrixID,
 			Name:        storageGroupID,
 			Rdf:         false,
@@ -609,7 +611,7 @@ func handleSGRDFFetch(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleSGRDFCreation(w http.ResponseWriter, r *http.Request) {
-	sgsrdf := new(v100.CreateSGSRDF)
+	sgsrdf := new(types.CreateSGSRDF)
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(sgsrdf); err != nil {
 		writeError(w, "invalid json", http.StatusBadRequest)
@@ -628,11 +630,11 @@ func handleSGRDFCreation(w http.ResponseWriter, r *http.Request) {
 		}
 		volume := Data.VolumeIDToVolume[volumeID]
 		volume.Type = "RDF1+TDEV"
-		volume.RDFGroupIDList = []v100.RDFGroupID{
+		volume.RDFGroupIDList = []types.RDFGroupID{
 			{RDFGroupNumber: Data.RDFGroup.RdfgNumber},
 		}
 	}
-	sgrdfInfo := new(v100.SGRDFInfo)
+	sgrdfInfo := new(types.SGRDFInfo)
 	err := copier.Copy(sgrdfInfo, Data.SGRDFInfo)
 	if err != nil {
 		writeError(w, err.Error(), http.StatusInternalServerError)
@@ -664,7 +666,7 @@ func handleSGRDFInfo(w http.ResponseWriter, r *http.Request) {
 	if routeParams["rdf_no"] != fmt.Sprintf("%d", Data.RDFGroup.RdfgNumber) {
 		writeError(w, "The specified RA group is not valid", http.StatusNotFound)
 	} else {
-		sgrdfInfo := new(v100.SGRDFInfo)
+		sgrdfInfo := new(types.SGRDFInfo)
 		err := copier.Copy(sgrdfInfo, Data.SGRDFInfo)
 		if err != nil {
 			writeError(w, err.Error(), http.StatusInternalServerError)
@@ -699,10 +701,10 @@ func handleVersion(w http.ResponseWriter, r *http.Request) {
 	// check the apiversion
 	switch apiversion {
 	case "90":
-		w.Write([]byte(`{ "version": "V9.0.1.6" }`))
+		w.Write([]byte(`{ "version": "V9.0.1.6" }`)) // #nosec G20
 		break
 	case "": // for version 91, as URL does not have apiversion in V9.1
-		w.Write([]byte(`{ "version": "V9.1.0.2" }`))
+		w.Write([]byte(`{ "version": "V9.1.0.2" }`)) // #nosec G20
 		break
 	default:
 		writeError(w, "Unsupport API version: "+apiversion, http.StatusServiceUnavailable)
@@ -792,7 +794,7 @@ func handleVolume(w http.ResponseWriter, r *http.Request) {
 			if Debug {
 				fmt.Printf("Data.VolumeIDIteratorList %#v", Data.VolumeIDIteratorList)
 			}
-			iter := &v100.VolumeIterator{
+			iter := &types.VolumeIterator{
 				Count:          len(Data.VolumeIDIteratorList),
 				ID:             "Volume",
 				MaxPageSize:    10,
@@ -805,7 +807,7 @@ func handleVolume(w http.ResponseWriter, r *http.Request) {
 			iter.ResultList.From = 1
 			iter.ResultList.To = numberToDo
 			for i := iter.ResultList.From - 1; i <= iter.ResultList.To-1; i++ {
-				volIDList := v100.VolumeIDList{VolumeIDs: Data.VolumeIDIteratorList[i]}
+				volIDList := types.VolumeIDList{VolumeIDs: Data.VolumeIDIteratorList[i]}
 				iter.ResultList.VolumeList = append(iter.ResultList.VolumeList, volIDList)
 			}
 			if Debug {
@@ -840,7 +842,7 @@ func handleVolume(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		decoder := json.NewDecoder(r.Body)
-		updateVolumePayload := &v100.EditVolumeParam{}
+		updateVolumePayload := &types.EditVolumeParam{}
 		err := decoder.Decode(updateVolumePayload)
 		if err != nil {
 			writeError(w, "problem decoding PUT Volume payload: "+err.Error(), http.StatusBadRequest)
@@ -873,7 +875,7 @@ func handleVolume(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error deleting Volume: induced error - device is a member of a storage group", http.StatusForbidden)
 			return
 		}
-		DeleteVolume(volID)
+		DeleteVolume(volID) // #nosec G20
 	}
 }
 
@@ -900,7 +902,7 @@ func deleteVolume(volID string) error {
 func returnVolume(w http.ResponseWriter, volID string, remote bool) {
 	if volID != "" {
 		if vol, ok := Data.VolumeIDToVolume[volID]; ok {
-			newVol := new(v100.Volume)
+			newVol := new(types.Volume)
 			err := copier.Copy(newVol, vol)
 			if err != nil {
 				writeError(w, err.Error(), http.StatusInternalServerError)
@@ -913,9 +915,11 @@ func returnVolume(w http.ResponseWriter, volID string, remote bool) {
 			if remote {
 				if InducedErrors.FetchResponseError {
 					writeError(w, "Error fetching response", http.StatusBadRequest)
+					return
 				}
 				if InducedErrors.GetRemoteVolumeError {
 					writeError(w, "Volume cannot be found", http.StatusNotFound)
+					return
 				}
 				if InducedErrors.InvalidRemoteVolumeError {
 					newVol.StorageGroupIDList = nil
@@ -936,38 +940,38 @@ func returnVolume(w http.ResponseWriter, volID string, remote bool) {
 }
 
 // FreeVolume - handler for free volume job
-func FreeVolume(w http.ResponseWriter, param *v100.FreeVolumeParam, volID string, executionOption string) {
+func FreeVolume(w http.ResponseWriter, param *types.FreeVolumeParam, volID string, executionOption string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	freeVolume(w, param, volID, executionOption)
 }
 
 // This returns a job for freeing space in a volume
-func freeVolume(w http.ResponseWriter, param *v100.FreeVolumeParam, volID string, executionOption string) {
-	if executionOption != v100.ExecutionOptionAsynchronous {
+func freeVolume(w http.ResponseWriter, param *types.FreeVolumeParam, volID string, executionOption string) {
+	if executionOption != types.ExecutionOptionAsynchronous {
 		writeError(w, "expected ASYNCHRONOUS", http.StatusBadRequest)
 		return
 	}
 	// Make a job to return
 	resourceLink := fmt.Sprintf("sloprovisioning/system/%s/volume/%s", DefaultSymmetrixID, volID)
 	if InducedErrors.JobFailedError {
-		newMockJob(volID, v100.JobStatusRunning, v100.JobStatusFailed, resourceLink)
+		newMockJob(volID, types.JobStatusRunning, types.JobStatusFailed, resourceLink)
 	} else {
-		newMockJob(volID, v100.JobStatusRunning, v100.JobStatusSucceeded, resourceLink)
+		newMockJob(volID, types.JobStatusRunning, types.JobStatusSucceeded, resourceLink)
 	}
 	returnJobByID(w, volID)
 }
 
 // RenameVolume - renames volume in cache
-func RenameVolume(w http.ResponseWriter, param *v100.ModifyVolumeIdentifierParam, volID string, executionOption string, remote bool) {
+func RenameVolume(w http.ResponseWriter, param *types.ModifyVolumeIdentifierParam, volID string, executionOption string, remote bool) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	renameVolume(w, param, volID, executionOption, remote)
 }
 
 // This returns the volume itself after renaming
-func renameVolume(w http.ResponseWriter, param *v100.ModifyVolumeIdentifierParam, volID string, executionOption string, remote bool) {
-	if executionOption != v100.ExecutionOptionSynchronous {
+func renameVolume(w http.ResponseWriter, param *types.ModifyVolumeIdentifierParam, volID string, executionOption string, remote bool) {
+	if executionOption != types.ExecutionOptionSynchronous {
 		writeError(w, "expected SYNCHRONOUS", http.StatusBadRequest)
 		return
 	}
@@ -976,19 +980,19 @@ func renameVolume(w http.ResponseWriter, param *v100.ModifyVolumeIdentifierParam
 }
 
 // ExpandVolume - Expands volume size in cache
-func ExpandVolume(w http.ResponseWriter, param *v100.ExpandVolumeParam, volID string, executionOption string) {
+func ExpandVolume(w http.ResponseWriter, param *types.ExpandVolumeParam, volID string, executionOption string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	expandVolume(w, param, volID, executionOption)
 }
 
 // This returns the volume itself after expanding the volume's size
-func expandVolume(w http.ResponseWriter, param *v100.ExpandVolumeParam, volID string, executionOption string) {
+func expandVolume(w http.ResponseWriter, param *types.ExpandVolumeParam, volID string, executionOption string) {
 	if InducedErrors.ExpandVolumeError {
 		writeError(w, "Error expanding volume: induced error", http.StatusRequestTimeout)
 		return
 	}
-	if executionOption != v100.ExecutionOptionSynchronous {
+	if executionOption != types.ExecutionOptionSynchronous {
 		writeError(w, "expected SYNCHRONOUS", http.StatusBadRequest)
 		return
 	}
@@ -1017,7 +1021,7 @@ func expandVolume(w http.ResponseWriter, param *v100.ExpandVolumeParam, volID st
 // The first call to read it returns Status as the InitialState.
 // Subsequent calls return the Status as the FinalState.
 type JobInfo struct {
-	Job          v100.Job
+	Job          types.Job
 	InitialState string
 	FinalState   string
 }
@@ -1050,7 +1054,7 @@ func handleJob(w http.ResponseWriter, r *http.Request) {
 	if jobID == "" {
 		queryParams := r.URL.Query()
 		// Return a job id list
-		jobIDList := new(v100.JobIDList)
+		jobIDList := new(types.JobIDList)
 		jobIDList.JobIDs = make([]string, 0)
 		mockCacheMutex.Lock()
 		defer mockCacheMutex.Unlock()
@@ -1061,7 +1065,7 @@ func handleJob(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		encoder := json.NewEncoder(w)
-		encoder.Encode(jobIDList)
+		encoder.Encode(jobIDList) // #nosec G20
 		return
 	}
 	// Return a specific job
@@ -1114,8 +1118,7 @@ func handleIterator(w http.ResponseWriter, r *http.Request) {
 		from := queryParams.Get("from")
 		to := queryParams.Get("to")
 		fmt.Printf("mux iterId %s from %s to %s\n", vars["iterId"], from, to)
-
-		result := &v100.VolumeResultList{}
+		result := &types.VolumeResultList{}
 		result.From, err = strconv.Atoi(from)
 		if err != nil {
 			writeError(w, "bad from query parameter", http.StatusBadRequest)
@@ -1125,7 +1128,7 @@ func handleIterator(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "bad from query parameter", http.StatusBadRequest)
 		}
 		for i := result.From - 1; i < result.To-1; i++ {
-			volIDList := v100.VolumeIDList{VolumeIDs: Data.VolumeIDIteratorList[i]}
+			volIDList := types.VolumeIDList{VolumeIDs: Data.VolumeIDIteratorList[i]}
 			result.VolumeList = append(result.VolumeList, volIDList)
 		}
 		if Debug {
@@ -1172,7 +1175,7 @@ func handleStorageGroup(w http.ResponseWriter, r *http.Request) {
 		}
 		decoder := json.NewDecoder(r.Body)
 		if apiversion == "90" {
-			updateSGPayload := &v100.UpdateStorageGroupPayload{}
+			updateSGPayload := &types.UpdateStorageGroupPayload{}
 			err := decoder.Decode(updateSGPayload)
 			if err != nil {
 				writeError(w, "problem decoding PUT StorageGroup payload: "+err.Error(), http.StatusBadRequest)
@@ -1189,6 +1192,7 @@ func handleStorageGroup(w http.ResponseWriter, r *http.Request) {
 					if len(addVolumeParam.VolumeAttributes) > 0 {
 						size = addVolumeParam.VolumeAttributes[0].VolumeSize
 					}
+					size = addVolumeParam.VolumeAttributes[0].VolumeSize
 					AddVolumeToStorageGroupTest(w, name, size, sgID)
 				}
 				addSpecificVolumeParam := expandPayload.AddSpecificVolumeParam
@@ -1202,7 +1206,7 @@ func handleStorageGroup(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			// for apiVersion 91
-			updateSGPayload := &v100.UpdateStorageGroupPayload{}
+			updateSGPayload := &types.UpdateStorageGroupPayload{}
 			err := decoder.Decode(updateSGPayload)
 			if err != nil {
 				writeError(w, "problem decoding PUT StorageGroup payload: "+err.Error(), http.StatusBadRequest)
@@ -1237,7 +1241,7 @@ func handleStorageGroup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		decoder := json.NewDecoder(r.Body)
-		createSGPayload := &v100.CreateStorageGroupParam{}
+		createSGPayload := &types.CreateStorageGroupParam{}
 		err := decoder.Decode(createSGPayload)
 		if err != nil {
 			writeError(w, "problem decoding POST StorageGroup payload: "+err.Error(), http.StatusBadRequest)
@@ -1279,11 +1283,11 @@ func handleMaskingViewConnections(w http.ResponseWriter, r *http.Request) {
 		if volID == "" {
 			// Return a response for all volumes
 			index := 1
-			result := &v100.MaskingViewConnectionsResult{
-				MaskingViewConnections: make([]*v100.MaskingViewConnection, 0),
+			result := &types.MaskingViewConnectionsResult{
+				MaskingViewConnections: make([]*types.MaskingViewConnection, 0),
 			}
-			for id, _ := range Data.VolumeIDToVolume {
-				conn1 := &v100.MaskingViewConnection{
+			for id := range Data.VolumeIDToVolume {
+				conn1 := &types.MaskingViewConnection{
 					VolumeID:       id,
 					HostLUNAddress: fmt.Sprintf("%4d", index),
 					CapacityGB:     "0.1",
@@ -1293,7 +1297,7 @@ func handleMaskingViewConnections(w http.ResponseWriter, r *http.Request) {
 					OnFabric:       true,
 				}
 				result.MaskingViewConnections = append(result.MaskingViewConnections, conn1)
-				conn2 := &v100.MaskingViewConnection{
+				conn2 := &types.MaskingViewConnection{
 					VolumeID:       id,
 					HostLUNAddress: fmt.Sprintf("%4d", index),
 					CapacityGB:     "0.1",
@@ -1342,7 +1346,7 @@ func handleMaskingView(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Storage Group on Symmetrix cannot be found", http.StatusInternalServerError)
 		}
 		decoder := json.NewDecoder(r.Body)
-		createMVPayload := &v100.MaskingViewCreateParam{}
+		createMVPayload := &types.MaskingViewCreateParam{}
 		err := decoder.Decode(createMVPayload)
 		if err != nil {
 			writeError(w, "problem decoding POST Masking View payload: "+err.Error(), http.StatusBadRequest)
@@ -1378,7 +1382,7 @@ func newStorageGroup(storageGroupID string, maskingViewID string, storageResourc
 	if maskingViewID != "" {
 		maskingViews = append(maskingViews, maskingViewID)
 	}
-	storageGroup := &v100.StorageGroup{
+	storageGroup := &types.StorageGroup{
 		StorageGroupID:    storageGroupID,
 		SLO:               serviceLevel,
 		SRP:               storageResourcePoolID,
@@ -1402,7 +1406,7 @@ func newStorageGroup(storageGroupID string, maskingViewID string, storageResourc
 }
 
 func newMaskingView(maskingViewID string, storageGroupID string, hostID string, portGroupID string) {
-	maskingView := &v100.MaskingView{
+	maskingView := &types.MaskingView{
 		MaskingViewID:  maskingViewID,
 		HostID:         hostID,
 		HostGroupID:    "",
@@ -1414,7 +1418,7 @@ func newMaskingView(maskingViewID string, storageGroupID string, hostID string, 
 
 // AddStorageGroup - Adds a storage group to the mock data cache
 func AddStorageGroup(storageGroupID string, storageResourcePoolID string,
-	serviceLevel string) (*v100.StorageGroup, error) {
+	serviceLevel string) (*types.StorageGroup, error) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	if _, ok := Data.StorageGroupIDToStorageGroup[storageGroupID]; ok {
@@ -1424,16 +1428,17 @@ func AddStorageGroup(storageGroupID string, storageResourcePoolID string,
 	return Data.StorageGroupIDToStorageGroup[storageGroupID], nil
 }
 
-func AddRDFStorageGroup(storageGroupID, symmetrixId string) (*v100.RDFStorageGroup, error) {
+// AddRDFStorageGroup ...
+func AddRDFStorageGroup(storageGroupID, symmetrixID string) (*types.RDFStorageGroup, error) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	if _, ok := Data.StorageGroupIDToRDFStorageGroup[storageGroupID]; ok {
 		return nil, fmt.Errorf("rdfStorageGroup already exists")
 	}
 	Data.StorageGroupIDToStorageGroup[storageGroupID].Unprotected = false
-	rdfSG := &v100.RDFStorageGroup{
+	rdfSG := &types.RDFStorageGroup{
 		Name:        storageGroupID,
-		SymmetrixID: symmetrixId,
+		SymmetrixID: symmetrixID,
 		Rdf:         true,
 	}
 	Data.StorageGroupIDToRDFStorageGroup[storageGroupID] = rdfSG
@@ -1477,7 +1482,7 @@ func removeStorageGroup(w http.ResponseWriter, storageGroupID string) {
 	delete(Data.StorageGroupIDToRDFStorageGroup, storageGroupID+"-remote")
 }
 
-func addMaskingViewFromCreateParams(createParams *v100.MaskingViewCreateParam) {
+func addMaskingViewFromCreateParams(createParams *types.MaskingViewCreateParam) {
 	mvID := createParams.MaskingViewID
 	hostID := ""
 	hostGroupID := ""
@@ -1489,20 +1494,20 @@ func addMaskingViewFromCreateParams(createParams *v100.MaskingViewCreateParam) {
 	portGroupID := createParams.PortGroupSelection.UseExistingPortGroupParam.PortGroupID
 	sgID := createParams.StorageGroupSelection.UseExistingStorageGroupParam.StorageGroupID
 	if hostID != "" {
-		AddMaskingView(mvID, sgID, hostID, portGroupID)
+		AddMaskingView(mvID, sgID, hostID, portGroupID) // #nosec G20
 	} else if hostGroupID != "" {
-		AddMaskingView(mvID, sgID, hostGroupID, portGroupID)
+		AddMaskingView(mvID, sgID, hostGroupID, portGroupID) // #nosec G20
 	}
 }
 
 // AddMaskingView - Adds a masking view to the mock data cache
-func AddMaskingView(maskingViewID string, storageGroupID string, hostID string, portGroupID string) (*v100.MaskingView, error) {
+func AddMaskingView(maskingViewID string, storageGroupID string, hostID string, portGroupID string) (*types.MaskingView, error) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	return addMaskingView(maskingViewID, storageGroupID, hostID, portGroupID)
 }
 
-func addMaskingView(maskingViewID string, storageGroupID string, hostID string, portGroupID string) (*v100.MaskingView, error) {
+func addMaskingView(maskingViewID string, storageGroupID string, hostID string, portGroupID string) (*types.MaskingView, error) {
 	if _, ok := Data.MaskingViewIDToMaskingView[maskingViewID]; ok {
 		return nil, errors.New("Error! Masking View already exists")
 	}
@@ -1628,7 +1633,7 @@ func uniqueElements(slice []string) []string {
 
 // newVolume creates a new mock volume with the specified characteristics.
 func newVolume(volumeID, volumeIdentifier string, size int, sgList []string) {
-	volume := &v100.Volume{
+	volume := &types.Volume{
 		VolumeID:              volumeID,
 		Type:                  "TDEV",
 		Emulation:             "FBA",
@@ -1649,7 +1654,7 @@ func newVolume(volumeID, volumeIdentifier string, size int, sgList []string) {
 	}
 	if _, ok := Data.StorageGroupIDToRDFStorageGroup[sgList[0]]; ok {
 		volume.Type = "RDF1+TDEV"
-		volume.RDFGroupIDList = []v100.RDFGroupID{
+		volume.RDFGroupIDList = []types.RDFGroupID{
 			{RDFGroupNumber: Data.RDFGroup.RdfgNumber},
 		}
 	}
@@ -1679,16 +1684,16 @@ func addNewVolume(volumeID, volumeIdentifier string, size int, storageGroupID st
 	return nil
 }
 
-func newInitiator(initiatorID string, initiatorName string, initiatorType string, dirPortKeys []v100.PortKey, hostID string) {
+func newInitiator(initiatorID string, initiatorName string, initiatorType string, dirPortKeys []types.PortKey, hostID string) {
 	//maskingViewIDs := []string{}
-	initiator := &v100.Initiator{
+	initiator := &types.Initiator{
 		InitiatorID:          initiatorName,
 		SymmetrixPortKey:     dirPortKeys,
 		InitiatorType:        initiatorType,
 		FCID:                 "0",
 		IPAddress:            "192.168.1.175",
 		HostID:               hostID,
-		HostGroups:           []string{},
+		HostGroupIDs:         []string{},
 		LoggedIn:             true,
 		OnFabric:             true,
 		FlagsInEffect:        "Common_Serial_Number(C), SCSI_3(SC3), SPC2_Protocol_Version(SPC2)",
@@ -1701,7 +1706,7 @@ func newInitiator(initiatorID string, initiatorName string, initiatorType string
 }
 
 // AddInitiator - Adds an initiator to the mock data cache
-func AddInitiator(initiatorID string, initiatorName string, initiatorType string, dirPortKeys []string, hostID string) (*v100.Initiator, error) {
+func AddInitiator(initiatorID string, initiatorName string, initiatorType string, dirPortKeys []string, hostID string) (*types.Initiator, error) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	if _, ok := Data.InitiatorIDToInitiator[initiatorID]; ok {
@@ -1713,10 +1718,10 @@ func AddInitiator(initiatorID string, initiatorName string, initiatorType string
 			return nil, errors.New("Error! Host doesn't exist")
 		}
 	}
-	portKeys := make([]v100.PortKey, 0)
+	portKeys := make([]types.PortKey, 0)
 	for _, dirPortKey := range dirPortKeys {
 		dirPortDetails := strings.Split(dirPortKey, ":")
-		portKey := v100.PortKey{
+		portKey := types.PortKey{
 			DirectorID: dirPortDetails[0],
 			PortID:     dirPortKey,
 		}
@@ -1745,7 +1750,7 @@ func returnInitiator(w http.ResponseWriter, initiatorID string) {
 		for k := range Data.InitiatorIDToInitiator {
 			initIDs = append(initIDs, k)
 		}
-		initiatorIDList := &v100.InitiatorList{
+		initiatorIDList := &types.InitiatorList{
 			InitiatorIDs: initIDs,
 		}
 		writeJSON(w, initiatorIDList)
@@ -1754,7 +1759,7 @@ func returnInitiator(w http.ResponseWriter, initiatorID string) {
 
 func newHost(hostID string, hostType string, initiatorIDs []string) {
 	maskingViewIDs := []string{}
-	host := &v100.Host{
+	host := &types.Host{
 		HostID:             hostID,
 		NumberMaskingViews: 0,
 		NumberInitiators:   int64(len(initiatorIDs)),
@@ -1772,7 +1777,7 @@ func newHost(hostID string, hostType string, initiatorIDs []string) {
 }
 
 // AddHost - Adds a host to the mock data cache
-func AddHost(hostID string, hostType string, initiatorIDs []string) (*v100.Host, error) {
+func AddHost(hostID string, hostType string, initiatorIDs []string) (*types.Host, error) {
 	if _, ok := Data.HostIDToHost[hostID]; ok {
 		return nil, errors.New("Error! Host already exists")
 	}
@@ -1830,8 +1835,9 @@ func removeHost(hostID string) error {
 	return nil
 }
 
-func newPortGroup(portGroupID string, portGroupType string, portKeys []v100.PortKey) {
-	portGroup := &v100.PortGroup{
+
+func newPortGroup(portGroupID string, portGroupType string, portKeys []types.PortKey) {
+	portGroup := &types.PortGroup{
 		PortGroupID:        portGroupID,
 		SymmetrixPortKey:   portKeys,
 		NumberPorts:        int64(len(portKeys)),
@@ -1842,7 +1848,7 @@ func newPortGroup(portGroupID string, portGroupType string, portKeys []v100.Port
 }
 
 // addPortGroup - Adds a port group to the mock data cache
-func addPortGroup(portGroupID string, portGroupType string, portKeys []v100.PortKey) (*v100.PortGroup, error) {
+func addPortGroup(portGroupID string, portGroupType string, portKeys []types.PortKey) (*types.PortGroup, error) {
 	if _, ok := Data.PortGroupIDToPortGroup[portGroupID]; ok {
 		return nil, errors.New("Error! Port Group already exists")
 	}
@@ -1851,20 +1857,20 @@ func addPortGroup(portGroupID string, portGroupType string, portKeys []v100.Port
 }
 
 // updatePortGroup - Update PortGroup by ID by adding 'addKeys' and removing 'removeKeys'
-func updatePortGroup(portGroupID string, editPayload *v100.EditPortGroupActionParam) (*v100.PortGroup, error) {
+func updatePortGroup(portGroupID string, editPayload *types.EditPortGroupActionParam) (*types.PortGroup, error) {
 	pg, ok := Data.PortGroupIDToPortGroup[portGroupID]
 	if !ok {
-		return nil, fmt.Errorf("Error! PortGroup %s does not exist.", portGroupID)
+		return nil, fmt.Errorf("error! PortGroup %s does not exist", portGroupID)
 	}
 
 	// Collect the ports to add (if any)
-	addKeys := make([]v100.PortKey, 0)
+	addKeys := make([]types.PortKey, 0)
 	if editPayload.AddPortParam != nil {
 		addKeys = convertToPortKeys(editPayload.AddPortParam.Ports)
 	}
 
 	// Collect the ports to remove (if any)
-	removeKeys := make([]v100.PortKey, 0)
+	removeKeys := make([]types.PortKey, 0)
 	if editPayload.RemovePortParam != nil {
 		removeKeys = convertToPortKeys(editPayload.RemovePortParam.Ports)
 	}
@@ -1882,15 +1888,15 @@ func updatePortGroup(portGroupID string, editPayload *v100.EditPortGroupActionPa
 	return pg, nil
 }
 
-// convertToPortKeys - Convert a slice of v100.SymmetrixPortKeyType to slice of v100.PortKey
-func convertToPortKeys(symmPorts []v100.SymmetrixPortKeyType) []v100.PortKey {
+// convertToPortKeys - Convert a slice of types.SymmetrixPortKeyType to slice of types.PortKey
+func convertToPortKeys(symmPorts []types.SymmetrixPortKeyType) []types.PortKey {
 	if symmPorts == nil || len(symmPorts) == 0 {
-		return make([]v100.PortKey, 0)
+		return make([]types.PortKey, 0)
 	}
 
-	out := make([]v100.PortKey, len(symmPorts))
+	out := make([]types.PortKey, len(symmPorts))
 	for idx, it := range symmPorts {
-		out[idx] = v100.PortKey{
+		out[idx] = types.PortKey{
 			DirectorID: it.DirectorID,
 			PortID:     it.PortID,
 		}
@@ -1900,7 +1906,7 @@ func convertToPortKeys(symmPorts []v100.SymmetrixPortKeyType) []v100.PortKey {
 }
 
 // removePortKey - delete PortKey 'key' from the slice
-func removePortKey(slice []v100.PortKey, keyToRemove v100.PortKey) []v100.PortKey {
+func removePortKey(slice []types.PortKey, keyToRemove types.PortKey) []types.PortKey {
 	index := -1
 	// Find the index in the slice that has the match
 	for it, thisKey := range slice {
@@ -1920,31 +1926,30 @@ func removePortKey(slice []v100.PortKey, keyToRemove v100.PortKey) []v100.PortKe
 }
 
 // UpdatePortGroupFromParams - Updates PortGroup given an EditPortGroup payload
-func UpdatePortGroupFromParams(portGroupID string, updateParams *v100.EditPortGroup) {
-	updatePortGroup(portGroupID, updateParams.EditPortGroupActionParam)
+func UpdatePortGroupFromParams(portGroupID string, updateParams *types.EditPortGroup) {
+	updatePortGroup(portGroupID, updateParams.EditPortGroupActionParam) // #nosec G20
 }
 
 // DeletePortGroup - Remove PortGroup by ID 'portGroupID'
-func DeletePortGroup(portGroupID string) (*v100.PortGroup, error) {
+func DeletePortGroup(portGroupID string) (*types.PortGroup, error) {
 	pg, ok := Data.PortGroupIDToPortGroup[portGroupID]
 	if !ok {
-		return nil, fmt.Errorf("Error! PortGroup %s does not exist.", portGroupID)
+		return nil, fmt.Errorf("error! PortGroup %s does not exist", portGroupID)
 	}
-
 	delete(Data.PortGroupIDToPortGroup, portGroupID)
 	return pg, nil
 }
 
 // AddPortGroupFromCreateParams - Adds a storage group from create params
-func AddPortGroupFromCreateParams(createParams *v100.CreatePortGroupParams) {
+func AddPortGroupFromCreateParams(createParams *types.CreatePortGroupParams) {
 	portGroupID := createParams.PortGroupID
 	portKeys := createParams.SymmetrixPortKey
-	addPortGroup(portGroupID, "Fibre", portKeys)
+	addPortGroup(portGroupID, "Fibre", portKeys) // #nosec G20
 }
 
 // AddPortGroup - Adds a port group to the mock data cache
-func AddPortGroup(portGroupID string, portGroupType string, portIdentifiers []string) (*v100.PortGroup, error) {
-	portKeys := make([]v100.PortKey, 0)
+func AddPortGroup(portGroupID string, portGroupType string, portIdentifiers []string) (*types.PortGroup, error) {
+	portKeys := make([]types.PortKey, 0)
 	for _, dirPortKey := range portIdentifiers {
 		dirPortDetails := strings.Split(dirPortKey, ":")
 		if len(dirPortDetails) != 2 {
@@ -1952,7 +1957,7 @@ func AddPortGroup(portGroupID string, portGroupType string, portIdentifiers []st
 			log.Error(errormsg)
 			return nil, fmt.Errorf(errormsg)
 		}
-		portKey := v100.PortKey{
+		portKey := types.PortKey{
 			DirectorID: dirPortDetails[0],
 			PortID:     dirPortKey,
 		}
@@ -1966,7 +1971,7 @@ func AddPortGroup(portGroupID string, portGroupType string, portIdentifiers []st
 }
 
 // AddStorageGroupFromCreateParams - Adds a storage group from create params
-func AddStorageGroupFromCreateParams(createParams *v100.CreateStorageGroupParam) {
+func AddStorageGroupFromCreateParams(createParams *types.CreateStorageGroupParam) {
 	sgID := createParams.StorageGroupID
 	srpID := createParams.SRPID
 	serviceLevel := "None"
@@ -1980,7 +1985,7 @@ func AddStorageGroupFromCreateParams(createParams *v100.CreateStorageGroupParam)
 }
 
 // keys - Return keys of the given map
-func keys(m map[string]*v100.StorageGroup) (keys []string) {
+func keys(m map[string]*types.StorageGroup) (keys []string) {
 	for k := range m {
 		keys = append(keys, k)
 	}
@@ -2021,7 +2026,7 @@ func returnStorageGroup(w http.ResponseWriter, sgID string, remote bool) {
 		writeError(w, "StorageGroup not found", http.StatusNotFound)
 	} else {
 		storageGroupIDs := keys(Data.StorageGroupIDToStorageGroup)
-		storageGroupIDList := &v100.StorageGroupIDList{
+		storageGroupIDList := &types.StorageGroupIDList{
 			StorageGroupIDs: storageGroupIDs,
 		}
 		writeJSON(w, storageGroupIDList)
@@ -2040,7 +2045,7 @@ func returnMaskingView(w http.ResponseWriter, mvID string) {
 		for k := range Data.MaskingViewIDToMaskingView {
 			maskingViewIDs = append(maskingViewIDs, k)
 		}
-		maskingViewIDList := &v100.MaskingViewList{
+		maskingViewIDList := &types.MaskingViewList{
 			MaskingViewIDs: maskingViewIDs,
 		}
 		writeJSON(w, maskingViewIDList)
@@ -2099,7 +2104,7 @@ func addOneVolumeToStorageGroup(volumeID, volumeIdentifier, sgID string, size in
 			// Update volume's replication details in case the storage-group is replicated
 			if _, ok := Data.StorageGroupIDToRDFStorageGroup[sgID]; ok {
 				Data.VolumeIDToVolume[volumeID].Type = "RDF1+TDEV"
-				Data.VolumeIDToVolume[volumeID].RDFGroupIDList = []v100.RDFGroupID{
+				Data.VolumeIDToVolume[volumeID].RDFGroupIDList = []types.RDFGroupID{
 					{RDFGroupNumber: Data.RDFGroup.RdfgNumber},
 				}
 			}
@@ -2118,7 +2123,7 @@ func addOneVolumeToStorageGroup(volumeID, volumeIdentifier, sgID string, size in
 		}
 	} else {
 		// We are adding a new volume
-		addNewVolume(volumeID, volumeIdentifier, size, sgID)
+		addNewVolume(volumeID, volumeIdentifier, size, sgID) // #nosec G20
 	}
 	return nil
 }
@@ -2140,14 +2145,14 @@ func addVolumeToStorageGroupTest(w http.ResponseWriter, name, size, sgID string)
 		writeError(w, "unable to convert size string to integer", http.StatusBadRequest)
 	}
 	if InducedErrors.VolumeNotCreatedError == false {
-		addOneVolumeToStorageGroup(id, name, sgID, sizeInt)
+		addOneVolumeToStorageGroup(id, name, sgID, sizeInt) // #nosec G20
 	}
 	// Make a job to return
 	resourceLink := fmt.Sprintf("sloprovisioning/system/%s/storagegroup/%s", DefaultSymmetrixID, sgID)
 	if InducedErrors.JobFailedError {
-		newMockJob(id, v100.JobStatusRunning, v100.JobStatusFailed, resourceLink)
+		newMockJob(id, types.JobStatusRunning, types.JobStatusFailed, resourceLink)
 	} else {
-		newMockJob(id, v100.JobStatusRunning, v100.JobStatusSucceeded, resourceLink)
+		newMockJob(id, types.JobStatusRunning, types.JobStatusSucceeded, resourceLink)
 	}
 	returnJobByID(w, id)
 }
@@ -2169,14 +2174,14 @@ func addSpecificVolumeToStorageGroup(w http.ResponseWriter, volumeIDs []string, 
 		return
 	}
 	for _, volumeID := range volumeIDs {
-		addOneVolumeToStorageGroup(volumeID, "TestVol", sgID, 0)
+		addOneVolumeToStorageGroup(volumeID, "TestVol", sgID, 0) // #nosec G20
 	}
 	// Make a job to return
 	resourceLink := fmt.Sprintf("sloprovisioning/system/%s/storagegroup/%s", DefaultSymmetrixID, sgID)
 	if InducedErrors.JobFailedError {
-		newMockJob(jobID, v100.JobStatusRunning, v100.JobStatusFailed, resourceLink)
+		newMockJob(jobID, types.JobStatusRunning, types.JobStatusFailed, resourceLink)
 	} else {
-		newMockJob(jobID, v100.JobStatusRunning, v100.JobStatusSucceeded, resourceLink)
+		newMockJob(jobID, types.JobStatusRunning, types.JobStatusSucceeded, resourceLink)
 	}
 	returnJobByID(w, jobID)
 }
@@ -2252,7 +2257,7 @@ func RemoveVolumeFromStorageGroup(w http.ResponseWriter, volumeIDs []string, sgI
 func removeVolumeFromStorageGroup(w http.ResponseWriter, volumeIDs []string, sgID string) {
 	for _, volID := range volumeIDs {
 		fmt.Println("Volume ID: " + volID)
-		removeOneVolumeFromStorageGroup(volID, sgID)
+		removeOneVolumeFromStorageGroup(volID, sgID) // #nosec G20
 	}
 	returnStorageGroup(w, sgID, false)
 }
@@ -2277,7 +2282,7 @@ func handlePortGroup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		decoder := json.NewDecoder(r.Body)
-		createPortGroupParams := &v100.CreatePortGroupParams{}
+		createPortGroupParams := &types.CreatePortGroupParams{}
 		err := decoder.Decode(createPortGroupParams)
 		if err != nil {
 			writeError(w, "InvalidJson", http.StatusBadRequest)
@@ -2291,7 +2296,7 @@ func handlePortGroup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		decoder := json.NewDecoder(r.Body)
-		updatePortGroupParams := &v100.EditPortGroup{}
+		updatePortGroupParams := &types.EditPortGroup{}
 		err := decoder.Decode(updatePortGroupParams)
 		if err != nil {
 			writeError(w, "InvalidJson", http.StatusBadRequest)
@@ -2304,7 +2309,7 @@ func handlePortGroup(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error deleting Port Group: induced error", http.StatusRequestTimeout)
 			return
 		}
-		DeletePortGroup(pgID)
+		DeletePortGroup(pgID) // #nosec G20
 	default:
 		writeError(w, "Invalid Method", http.StatusBadRequest)
 	}
@@ -2357,11 +2362,11 @@ func handlePort(w http.ResponseWriter, r *http.Request) {
 				if port == nil || port.Type == "" {
 					writeError(w, "port not found", http.StatusNotFound)
 				} else {
-					symPort := &v100.Port{
+					symPort := &types.Port{
 						SymmetrixPort: *port,
 					}
 					encoder := json.NewEncoder(w)
-					encoder.Encode(symPort)
+					encoder.Encode(symPort) // #nosec G20
 				}
 				return
 			}
@@ -2369,7 +2374,6 @@ func handlePort(w http.ResponseWriter, r *http.Request) {
 		}
 		// return a list of Ports
 		returnPortIDList(w, dID)
-
 	default:
 		writeError(w, "Invalid Method", http.StatusBadRequest)
 	}
@@ -2379,7 +2383,7 @@ func handlePort(w http.ResponseWriter, r *http.Request) {
 func AddPort(id, identifier, portType string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
-	port := &v100.SymmetrixPortType{
+	port := &types.SymmetrixPortType{
 		Type:       portType,
 		Identifier: identifier,
 	}
@@ -2479,7 +2483,7 @@ func handleHost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		decoder := json.NewDecoder(r.Body)
-		createHostParam := &v100.CreateHostParam{}
+		createHostParam := &types.CreateHostParam{}
 		err := decoder.Decode(createHostParam)
 		if err != nil {
 			writeError(w, "InvalidJson", http.StatusBadRequest)
@@ -2495,11 +2499,11 @@ func handleHost(w http.ResponseWriter, r *http.Request) {
 		}
 		if isFibre {
 			// Might need to add the Port information here
-			AddHost(createHostParam.HostID, "Fibre", createHostParam.InitiatorIDs)
+			AddHost(createHostParam.HostID, "Fibre", createHostParam.InitiatorIDs) // #nosec G20
 		} else {
 			//initNode := make([]string, 0)
 			//initNode = append(initNode, "iqn.1993-08.org.centos:01:5ae577b352a7")
-			AddHost(createHostParam.HostID, "iSCSI", createHostParam.InitiatorIDs)
+			AddHost(createHostParam.HostID, "iSCSI", createHostParam.InitiatorIDs) // #nosec G20
 		}
 		ReturnHost(w, createHostParam.HostID)
 
@@ -2510,7 +2514,7 @@ func handleHost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		decoder := json.NewDecoder(r.Body)
-		updateHostParam := &v100.UpdateHostParam{}
+		updateHostParam := &types.UpdateHostParam{}
 		err := decoder.Decode(updateHostParam)
 		if err != nil {
 			writeError(w, "InvalidJson", http.StatusBadRequest)
@@ -2523,8 +2527,7 @@ func handleHost(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error deleting Host: induced error", http.StatusRequestTimeout)
 			return
 		}
-		RemoveHost(hostID)
-
+		RemoveHost(hostID) // #nosec G20
 	default:
 		writeError(w, "Invalid Method", http.StatusBadRequest)
 	}
@@ -2549,7 +2552,7 @@ func returnHost(w http.ResponseWriter, hostID string) {
 		for k := range Data.HostIDToHost {
 			hostIDs = append(hostIDs, k)
 		}
-		hostIDList := &v100.HostList{
+		hostIDList := &types.HostList{
 			HostIDs: hostIDs,
 		}
 		writeJSON(w, hostIDList)
@@ -2576,7 +2579,7 @@ func returnPortGroup(w http.ResponseWriter, portGroupID string) {
 		for k := range Data.PortGroupIDToPortGroup {
 			portGroupIDs = append(portGroupIDs, k)
 		}
-		portGroupList := &v100.PortGroupList{
+		portGroupList := &types.PortGroupList{
 			PortGroupIDs: portGroupIDs,
 		}
 		writeJSON(w, portGroupList)
@@ -2590,7 +2593,7 @@ func handleNotFound(w http.ResponseWriter, r *http.Request) {
 // Write an error code to the response writer
 func writeError(w http.ResponseWriter, message string, httpStatus int) {
 	w.WriteHeader(httpStatus)
-	resp := new(v100.Error)
+	resp := new(types.Error)
 	resp.Message = message
 	// The following aren't used by the hardware but could be used internally
 	//resp.HTTPStatusCode = http.StatusNotFound
@@ -2598,7 +2601,7 @@ func writeError(w http.ResponseWriter, message string, httpStatus int) {
 	encoder := json.NewEncoder(w)
 	err := encoder.Encode(resp)
 	if err != nil {
-		log.Printf("error encoding json: %s\n", err.Error())
+		log.Printf("error encoding json: %s", err.Error())
 	}
 }
 
@@ -2607,9 +2610,9 @@ func writeError(w http.ResponseWriter, message string, httpStatus int) {
 //  wrriter ResponseWriter where data is output
 // An optional replacement map. If supplied every instance of a key in the JSON file will be replaced with the corresponding value.
 func returnJSONFile(directory, filename string, w http.ResponseWriter, replacements map[string]string) (jsonBytes []byte) {
-	jsonBytes, err := ioutil.ReadFile(filepath.Join(directory, filename))
+	jsonBytes, err := ioutil.ReadFile(filepath.Join(directory, filename)) // #nosec G20
 	if err != nil {
-		log.Printf("Couldn't read %s/%s\n", directory, filename)
+		log.Printf("Couldn't read %s/%s", directory, filename)
 		if w != nil {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -2621,12 +2624,12 @@ func returnJSONFile(directory, filename string, w http.ResponseWriter, replaceme
 			jsonString = strings.Replace(jsonString, key, value, -1)
 		}
 		if Debug {
-			log.Printf("Edited payload:\n%s\n", jsonString)
+			log.Printf("Edited payload:%s", jsonString)
 		}
 		jsonBytes = []byte(jsonString)
 	}
 	if Debug {
-		log.Printf("jsonBytes:\n%s\n", jsonBytes)
+		log.Printf("jsonBytes:%s", jsonBytes)
 	}
 	if w != nil {
 		_, err = w.Write(jsonBytes)
@@ -2645,7 +2648,7 @@ func AddTempSnapshots() {
 		id := fmt.Sprintf("%05d", i)
 		size := 7
 		volumeIdentifier := "Vol" + id
-		AddNewVolume(id, volumeIdentifier, size, DefaultStorageGroup)
+		AddNewVolume(id, volumeIdentifier, size, DefaultStorageGroup) // #nosec G20
 		SnapID := fmt.Sprintf("%s-%s-%d", "DEL", "snapshot", i)
 		AddNewSnapshot(id, SnapID)
 	}
@@ -2668,7 +2671,7 @@ func handleSnapshot(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		decoder := json.NewDecoder(r.Body)
-		createSnapParam := &v100.CreateVolumesSnapshot{}
+		createSnapParam := &types.CreateVolumesSnapshot{}
 		err := decoder.Decode(createSnapParam)
 		if err != nil {
 			writeError(w, "problem decoding POST Snapshot payload: "+err.Error(), http.StatusBadRequest)
@@ -2682,7 +2685,7 @@ func handleSnapshot(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		decoder := json.NewDecoder(r.Body)
-		updateSnapParam := &v100.ModifyVolumeSnapshot{}
+		updateSnapParam := &types.ModifyVolumeSnapshot{}
 		err := decoder.Decode(updateSnapParam)
 		if err != nil {
 			writeError(w, "problem decoding PUT Snapshot payload: "+err.Error(), http.StatusBadRequest)
@@ -2725,7 +2728,7 @@ func handleSnapshot(w http.ResponseWriter, r *http.Request) {
 		}
 	case http.MethodDelete:
 		decoder := json.NewDecoder(r.Body)
-		deleteSnapParam := &v100.DeleteVolumeSnapshot{}
+		deleteSnapParam := &types.DeleteVolumeSnapshot{}
 		err := decoder.Decode(deleteSnapParam)
 		if err != nil {
 			writeError(w, "problem decoding Delete Snapshot payload: "+err.Error(), http.StatusBadRequest)
@@ -2737,18 +2740,18 @@ func handleSnapshot(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateSnapshot - Creates a snapshot and updates mock cache
-func CreateSnapshot(w http.ResponseWriter, r *http.Request, SnapID, executionOption string, sourceVolumeList []v100.VolumeList) {
+func CreateSnapshot(w http.ResponseWriter, r *http.Request, SnapID, executionOption string, sourceVolumeList []types.VolumeList) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	createSnapshot(w, r, SnapID, executionOption, sourceVolumeList)
 }
 
-func createSnapshot(w http.ResponseWriter, r *http.Request, SnapID, executionOption string, sourceVolumeList []v100.VolumeList) {
+func createSnapshot(w http.ResponseWriter, r *http.Request, SnapID, executionOption string, sourceVolumeList []types.VolumeList) {
 	if strings.Contains(SnapID, ":") {
 		writeError(w, "error, invalid snapshot name", http.StatusBadRequest)
 		return
 	}
-	if executionOption != v100.ExecutionOptionSynchronous {
+	if executionOption != types.ExecutionOptionSynchronous {
 		writeError(w, "expected SYNCHRONOUS", http.StatusBadRequest)
 		return
 	}
@@ -2760,7 +2763,7 @@ func createSnapshot(w http.ResponseWriter, r *http.Request, SnapID, executionOpt
 	resourceLink := fmt.Sprintf("/replication/symmetrix/%s/snapshot/%s", DefaultSymmetrixID, SnapID)
 	jobID := fmt.Sprintf("SnapID-%d", time.Now().Nanosecond())
 	if InducedErrors.JobFailedError {
-		newMockJob(jobID, v100.JobStatusRunning, v100.JobStatusFailed, resourceLink)
+		newMockJob(jobID, types.JobStatusRunning, types.JobStatusFailed, resourceLink)
 		returnJobByID(w, jobID)
 		return
 	}
@@ -2770,7 +2773,7 @@ func createSnapshot(w http.ResponseWriter, r *http.Request, SnapID, executionOpt
 			//Snapshot with unique name
 			addNewSnapshot(source, SnapID)
 		}
-		newMockJob(jobID, v100.JobStatusRunning, v100.JobStatusSucceeded, resourceLink)
+		newMockJob(jobID, types.JobStatusRunning, types.JobStatusSucceeded, resourceLink)
 	}
 	returnJobByID(w, jobID)
 }
@@ -2784,7 +2787,7 @@ func AddNewSnapshot(source, SnapID string) {
 
 func addNewSnapshot(source, SnapID string) {
 	time := time.Now().Nanosecond()
-	snapshot := &v100.Snapshot{
+	snapshot := &types.Snapshot{
 		Name:       SnapID,
 		Generation: 0,
 		State:      "Established",
@@ -2792,7 +2795,7 @@ func addNewSnapshot(source, SnapID string) {
 	}
 	snapIDtoSnap := Data.VolIDToSnapshots[source]
 	if snapIDtoSnap == nil {
-		snapIDtoSnap = map[string]*v100.Snapshot{}
+		snapIDtoSnap = map[string]*types.Snapshot{}
 	}
 	snapIDtoSnap[SnapID] = snapshot
 	Data.VolIDToSnapshots[source] = snapIDtoSnap
@@ -2802,13 +2805,13 @@ func addNewSnapshot(source, SnapID string) {
 }
 
 // DeleteSnapshot - Deletes a snapshot and updates mock cache
-func DeleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, executionOption string, deviceNameListSource []v100.VolumeList, genID int64) {
+func DeleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, executionOption string, deviceNameListSource []types.VolumeList, genID int64) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	deleteSnapshot(w, r, SnapID, executionOption, deviceNameListSource, genID)
 }
 
-func deleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, executionOption string, deviceNameListSource []v100.VolumeList, genID int64) {
+func deleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, executionOption string, deviceNameListSource []types.VolumeList, genID int64) {
 	if InducedErrors.DeleteSnapshotError {
 		writeError(w, "error deleting the snapshot: induced error", http.StatusBadRequest)
 		return
@@ -2824,7 +2827,7 @@ func deleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, execu
 	resourceLink := fmt.Sprintf("/replication/symmetrix/%s/snapshot/%s", DefaultSymmetrixID, SnapID)
 	jobID := fmt.Sprintf("SnapID-%d", time.Now().Nanosecond())
 	if InducedErrors.JobFailedError {
-		newMockJob(jobID, v100.JobStatusRunning, v100.JobStatusFailed, resourceLink)
+		newMockJob(jobID, types.JobStatusRunning, types.JobStatusFailed, resourceLink)
 	} else {
 		for i := 0; i < len(deviceNameListSource); i++ {
 			source := deviceNameListSource[i].Name
@@ -2849,20 +2852,20 @@ func deleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, execu
 			//all checks done: volume exists, snapshot existing without links -> it can be deleted
 			delete(snapIDtoSnap, SnapID)
 			Data.VolumeIDToVolume[source].SnapSource = false
-			newMockJob(jobID, v100.JobStatusRunning, v100.JobStatusSucceeded, resourceLink)
+			newMockJob(jobID, types.JobStatusRunning, types.JobStatusSucceeded, resourceLink)
 		}
 	}
 	returnJobByID(w, jobID)
 }
 
 // RenameSnapshot - Renames a snapshot and updates mock cache
-func RenameSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v100.VolumeList, executionOption, oldSnapID, newSnapID string) {
+func RenameSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []types.VolumeList, executionOption, oldSnapID, newSnapID string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	renameSnapshot(w, r, sourceVolumeList, executionOption, oldSnapID, newSnapID)
 }
 
-func renameSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v100.VolumeList, executionOption, oldSnapID, newSnapID string) {
+func renameSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []types.VolumeList, executionOption, oldSnapID, newSnapID string) {
 	if fewVolumeUnavalaible(sourceVolumeList) {
 		writeError(w, "few devices not available", http.StatusBadRequest)
 		return
@@ -2871,7 +2874,7 @@ func renameSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v
 	resourceLink := fmt.Sprintf("/replication/symmetrix/%s/snapshot/%s", DefaultSymmetrixID, oldSnapID)
 	jobID := fmt.Sprintf("SnapID-%d", time.Now().Nanosecond())
 	if InducedErrors.JobFailedError {
-		newMockJob(jobID, v100.JobStatusRunning, v100.JobStatusFailed, resourceLink)
+		newMockJob(jobID, types.JobStatusRunning, types.JobStatusFailed, resourceLink)
 	} else {
 		for _, volID := range sourceVolumeList {
 			if Data.VolIDToSnapshots[volID.Name][oldSnapID] == nil {
@@ -2881,8 +2884,10 @@ func renameSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v
 			for _, snap := range Data.VolIDToSnapshots[volID.Name] {
 				if snap.Name == oldSnapID {
 					snap.Name = newSnapID
-					Data.VolIDToSnapshots[volID.Name] = map[string]*v100.Snapshot{newSnapID: snap}
-					newMockJob(jobID, v100.JobStatusRunning, v100.JobStatusSucceeded, resourceLink)
+					Data.VolIDToSnapshots[volID.Name] = map[string]*types.Snapshot{newSnapID: snap}
+					newMockJob(jobID, types.JobStatusRunning, types.JobStatusSucceeded, resourceLink)
+					Data.VolIDToSnapshots[volID.Name] = map[string]*types.Snapshot{newSnapID: snap}
+					newMockJob(jobID, types.JobStatusRunning, types.JobStatusSucceeded, resourceLink)
 				}
 			}
 		}
@@ -2891,13 +2896,13 @@ func renameSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v
 }
 
 // LinkSnapshot - Links a snapshot and updates a mock cache
-func LinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v100.VolumeList, targetVolumeList []v100.VolumeList, executionOption, SnapID string) {
+func LinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []types.VolumeList, targetVolumeList []types.VolumeList, executionOption, SnapID string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	linkSnapshot(w, r, sourceVolumeList, targetVolumeList, executionOption, SnapID)
 }
 
-func linkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v100.VolumeList, targetVolumeList []v100.VolumeList, executionOption, SnapID string) {
+func linkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []types.VolumeList, targetVolumeList []types.VolumeList, executionOption, SnapID string) {
 	if sourceVolumeList[0].Name == "" {
 		writeError(w, "no source volume names given to link the snapshot", http.StatusBadRequest)
 		return
@@ -2923,7 +2928,7 @@ func linkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v10
 	jobID := fmt.Sprintf("SnapID-%d", time.Now().Nanosecond())
 
 	if InducedErrors.JobFailedError {
-		newMockJob(jobID, v100.JobStatusRunning, v100.JobStatusFailed, resourceLink)
+		newMockJob(jobID, types.JobStatusRunning, types.JobStatusFailed, resourceLink)
 	} else {
 		for key, volID := range sourceVolumeList {
 			snapIDtoSnap := Data.VolIDToSnapshots[volID.Name]
@@ -2937,7 +2942,7 @@ func linkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v10
 			volIDToLinkedVols := Data.SnapIDToLinkedVol[snapIDtoLinkedVolKey]
 			if volIDToLinkedVols == nil {
 				//No Linked Volume, first link request for this SnapID
-				volIDToLinkedVols = map[string]*v100.LinkedVolumes{}
+				volIDToLinkedVols = map[string]*types.LinkedVolumes{}
 			} else {
 				//snapshot is linked to few devices, check if target is already linked
 				if !(volIDToLinkedVols[targetVolID] == nil) {
@@ -2948,7 +2953,7 @@ func linkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v10
 			}
 			//all devices exist, #source=#target, snapshot exist, target is not linked -> ideal for Linking
 			time := time.Now().Nanosecond()
-			linkedVolume := &v100.LinkedVolumes{
+			linkedVolume := &types.LinkedVolumes{
 				TargetDevice: targetVolID,
 				Timestamp:    strconv.Itoa(time),
 				State:        "Linked",
@@ -2964,20 +2969,20 @@ func linkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v10
 			volIDToLinkedVols[targetVolID] = linkedVolume
 			Data.SnapIDToLinkedVol[snapIDtoLinkedVolKey] = volIDToLinkedVols
 			Data.VolumeIDToVolume[targetVolID].SnapTarget = true
-			newMockJob(jobID, v100.JobStatusRunning, v100.JobStatusSucceeded, resourceLink)
+			newMockJob(jobID, types.JobStatusRunning, types.JobStatusSucceeded, resourceLink)
 		}
 	}
 	returnJobByID(w, jobID)
 }
 
 // UnlinkSnapshot - Unlinks a snapshot and updates mock cache
-func UnlinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v100.VolumeList, targetVolumeList []v100.VolumeList, executionOption, SnapID string) {
+func UnlinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []types.VolumeList, targetVolumeList []types.VolumeList, executionOption, SnapID string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	unlinkSnapshot(w, r, sourceVolumeList, targetVolumeList, executionOption, SnapID)
 }
 
-func unlinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v100.VolumeList, targetVolumeList []v100.VolumeList, executionOption, SnapID string) {
+func unlinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []types.VolumeList, targetVolumeList []types.VolumeList, executionOption, SnapID string) {
 	if sourceVolumeList[0].Name == "" {
 		writeError(w, "no source volume names given to unlink the snapshot", http.StatusBadRequest)
 		return
@@ -3003,7 +3008,7 @@ func unlinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v
 	jobID := fmt.Sprintf("SnapID-%d", time.Now().Nanosecond())
 
 	if InducedErrors.JobFailedError {
-		newMockJob(jobID, v100.JobStatusRunning, v100.JobStatusFailed, resourceLink)
+		newMockJob(jobID, types.JobStatusRunning, types.JobStatusFailed, resourceLink)
 	} else {
 		for key, volID := range sourceVolumeList {
 			snapIDtoSnap := Data.VolIDToSnapshots[volID.Name]
@@ -3020,7 +3025,7 @@ func unlinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v
 				delete(volIDToLinkedVolumes, targetVolID)
 				volIDToLinkedVolumes = Data.SnapIDToLinkedVol[snapIDtoLinkedVolKey]
 				Data.VolumeIDToVolume[targetVolID].SnapTarget = false
-				newMockJob(jobID, v100.JobStatusRunning, v100.JobStatusSucceeded, resourceLink)
+				newMockJob(jobID, types.JobStatusRunning, types.JobStatusSucceeded, resourceLink)
 			} else {
 				//already unlinked
 				writeError(w, "devices already in desired state", http.StatusBadRequest)
@@ -3032,7 +3037,7 @@ func unlinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []v
 }
 
 //check if all the devices exist in the Mock VolumeIDToVolume or check if any unvailable devices
-func fewVolumeUnavalaible(sourceVolumeList []v100.VolumeList) bool {
+func fewVolumeUnavalaible(sourceVolumeList []types.VolumeList) bool {
 	for _, volID := range sourceVolumeList {
 		if Data.VolumeIDToVolume[volID.Name] == nil {
 			return true
@@ -3056,17 +3061,17 @@ func handleSymVolumes(w http.ResponseWriter, r *http.Request) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	queryParams := r.URL.Query()
-	symVolumeList := new(v100.SymVolumeList)
+	symVolumeList := new(types.SymVolumeList)
 	if details := queryParams.Get("includeDetails"); details == "true" {
 		for key, snapshots := range Data.VolIDToSnapshots {
 			symVolumeList.Name = append(symVolumeList.Name, key)
-			var snapList []v100.Snapshot
+			var snapList []types.Snapshot
 			for _, snap := range snapshots {
 				snapshotName := fmt.Sprintf("%s-SRC-%s-%d", symVolumeList.Name[0], snap.Name, snap.Generation)
 				if InducedErrors.InvalidSnapshotName {
 					snapshotName = "InvalidSnapshot"
 				}
-				snapshot := v100.Snapshot{
+				snapshot := types.Snapshot{
 					Name:       snapshotName,
 					Generation: snap.Generation,
 					Timestamp:  snap.Timestamp,
@@ -3074,7 +3079,7 @@ func handleSymVolumes(w http.ResponseWriter, r *http.Request) {
 				}
 				snapList = append(snapList, snapshot)
 			}
-			symDevice := v100.SymDevice{
+			symDevice := types.SymDevice{
 				SymmetrixID: DefaultSymmetrixID,
 				Name:        key,
 				Snapshot:    snapList,
@@ -3112,7 +3117,7 @@ func handleVolSnaps(w http.ResponseWriter, r *http.Request) {
 	if SnapID == "" {
 		// Both Volume Snapshots exist
 		// for /{symid}/volume/{volID}/snapshot/
-		snaphotVolumeGeneration := new(v100.SnapshotVolumeGeneration)
+		snaphotVolumeGeneration := new(types.SnapshotVolumeGeneration)
 		snaphotVolumeGeneration.DeviceName = volID
 		snaphotVolumeGeneration.VolumeSnapshotSource = volumeSnapshotSource
 		snaphotVolumeGeneration.VolumeSnapshotLink = volumeSnapshotLink
@@ -3120,12 +3125,12 @@ func handleVolSnaps(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Both Volume Snapshots exist
 		// for /{symid}/volume/{volID}/snapshot/{SnapID}
-		volumeSnapshot := new(v100.VolumeSnapshot)
+		volumeSnapshot := new(types.VolumeSnapshot)
 		volumeSnapshot.DeviceName = volID
 		volumeSnapshot.SnapshotName = SnapID
 		for _, snapSrc := range volumeSnapshotSource {
 			if snapSrc.SnapshotName == SnapID {
-				volumeSnapshot.VolumeSnapshotSource = append(volumeSnapshot.VolumeSnapshotSource, v100.VolumeSnapshotSource{
+				volumeSnapshot.VolumeSnapshotSource = append(volumeSnapshot.VolumeSnapshotSource, types.VolumeSnapshotSource{
 					SnapshotName: snapSrc.SnapshotName,
 					Generation:   snapSrc.Generation,
 					TimeStamp:    snapSrc.TimeStamp,
@@ -3139,11 +3144,11 @@ func handleVolSnaps(w http.ResponseWriter, r *http.Request) {
 }
 
 // returns the List of VolumesSnapshot objects derived based on existing mock Snapshot object
-func returnSnapshotObjectList(volID string) ([]v100.VolumeSnapshotSource, []int64) {
-	var volumeSnapshotSrc []v100.VolumeSnapshotSource
+func returnSnapshotObjectList(volID string) ([]types.VolumeSnapshotSource, []int64) {
+	var volumeSnapshotSrc []types.VolumeSnapshotSource
 	var generations []int64
 	for _, snap := range Data.VolIDToSnapshots[volID] {
-		snapshotSrc := v100.VolumeSnapshotSource{
+		snapshotSrc := types.VolumeSnapshotSource{
 			SnapshotName:  snap.Name,
 			Generation:    snap.Generation,
 			TimeStamp:     snap.Timestamp,
@@ -3161,8 +3166,8 @@ func returnSnapshotObjectList(volID string) ([]v100.VolumeSnapshotSource, []int6
 }
 
 //returns the List of Linked Volumes to Snapshots of a volume
-func returnLinkedVolumes(snapIDtoLinkedVolKey string) []v100.LinkedVolumes {
-	var linkedVolumes []v100.LinkedVolumes
+func returnLinkedVolumes(snapIDtoLinkedVolKey string) []types.LinkedVolumes {
+	var linkedVolumes []types.LinkedVolumes
 	for _, volume := range Data.SnapIDToLinkedVol[snapIDtoLinkedVolKey] {
 		linkedVolumes = append(linkedVolumes, *volume)
 	}
@@ -3170,11 +3175,11 @@ func returnLinkedVolumes(snapIDtoLinkedVolKey string) []v100.LinkedVolumes {
 }
 
 //returns the List of volumeSnapshotLink to a Snapshot
-func returnVolumeSnapshotLink(targetVolID string) []v100.VolumeSnapshotLink {
-	var snapshotLnk []v100.VolumeSnapshotLink
+func returnVolumeSnapshotLink(targetVolID string) []types.VolumeSnapshotLink {
+	var snapshotLnk []types.VolumeSnapshotLink
 	for _, volume := range Data.SnapIDToLinkedVol {
 		if target, ok := volume[targetVolID]; ok {
-			snapshotLnk = append(snapshotLnk, v100.VolumeSnapshotLink{
+			snapshotLnk = append(snapshotLnk, types.VolumeSnapshotLink{
 				TargetDevice:     target.TargetDevice,
 				Timestamp:        target.Timestamp,
 				State:            target.State,
@@ -3213,7 +3218,7 @@ func handleGenerations(w http.ResponseWriter, r *http.Request) {
 	if genID == "" {
 		// Both Volume Snapshots exist
 		// for /{symid}/volume/{volID}/snapshot/{SnapID}/generation/
-		volumeSnapshotGenerations := new(v100.VolumeSnapshotGenerations)
+		volumeSnapshotGenerations := new(types.VolumeSnapshotGenerations)
 		volumeSnapshotGenerations.DeviceName = volID
 		volumeSnapshotGenerations.Generation = generations
 		volumeSnapshotGenerations.SnapshotName = SnapID
@@ -3224,7 +3229,7 @@ func handleGenerations(w http.ResponseWriter, r *http.Request) {
 	}
 	// Both Volume Snapshots exist
 	// for /{symid}/volume/{volID}/snapshot/{SnapID}/generation/{genID}
-	volumeSnapshotGeneration := new(v100.VolumeSnapshotGeneration)
+	volumeSnapshotGeneration := new(types.VolumeSnapshotGeneration)
 	volumeSnapshotGeneration.DeviceName = volID
 	volumeSnapshotGeneration.SnapshotName = SnapID
 	volumeSnapshotGeneration.VolumeSnapshotLink = volumeSnapshotLink
@@ -3269,18 +3274,18 @@ func handlePrivVolume(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	queryParams := r.URL.Query()
-	privateVolumeIterator := new(v100.PrivVolumeIterator)
+	privateVolumeIterator := new(types.PrivVolumeIterator)
 	if wwn := queryParams.Get("wwn"); wwn != "" {
 		volID := wwn[27:]
 		volume := Data.VolumeIDToVolume[volID]
 		volumeHeader := parseVolumetoVolumeHeader(volume)
 		timeFinderInfo := returnTimeFinderInfo(volID)
-		var result []v100.VolumeResultPrivate
-		result = append(result, v100.VolumeResultPrivate{
+		var result []types.VolumeResultPrivate
+		result = append(result, types.VolumeResultPrivate{
 			VolumeHeader:   *volumeHeader,
 			TimeFinderInfo: *timeFinderInfo,
 		})
-		privVolumeResultList := v100.PrivVolumeResultList{
+		privVolumeResultList := types.PrivVolumeResultList{
 			PrivVolumeList: result,
 			From:           1,
 			To:             1,
@@ -3294,8 +3299,8 @@ func handlePrivVolume(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, privateVolumeIterator)
 }
 
-func parseVolumetoVolumeHeader(volume *v100.Volume) *v100.VolumeHeader {
-	volumeHeader := &v100.VolumeHeader{
+func parseVolumetoVolumeHeader(volume *types.Volume) *types.VolumeHeader {
+	volumeHeader := &types.VolumeHeader{
 		VolumeID:     volume.VolumeID,
 		CapGB:        volume.CapacityGB,
 		CapMB:        volume.FloatCapacityMB,
@@ -3308,8 +3313,9 @@ func parseVolumetoVolumeHeader(volume *v100.Volume) *v100.VolumeHeader {
 	return volumeHeader
 }
 
-func returnTimeFinderInfo(volID string) *v100.TimeFinderInfo {
-	timeFinder := new(v100.TimeFinderInfo)
+
+func returnTimeFinderInfo(volID string) *types.TimeFinderInfo {
+	timeFinder := new(types.TimeFinderInfo)
 	if _, ok := Data.VolIDToSnapshots[volID]; ok {
 		timeFinder.SnapVXSrc = ok
 	}
@@ -3325,8 +3331,9 @@ func returnTimeFinderInfo(volID string) *v100.TimeFinderInfo {
 	return timeFinder
 }
 
-func returnSnapVXSession(volID string, isSource, isTarget bool) v100.SnapVXSession {
-	var snapVXSession v100.SnapVXSession
+
+func returnSnapVXSession(volID string, isSource, isTarget bool) types.SnapVXSession {
+	var snapVXSession types.SnapVXSession
 	if isSource {
 		snapVXSession.SourceSnapshotGenInfo = returnSrcSnapshotGenInfo(volID)
 	}
@@ -3336,7 +3343,7 @@ func returnSnapVXSession(volID string, isSource, isTarget bool) v100.SnapVXSessi
 			sourceVolID := strings.Split(snapIDtoLinkedVolKey, ":")[1]
 			SnapID := strings.Split(snapIDtoLinkedVolKey, ":")[0]
 			if _, ok := volIDToLinkedVolumes[volID]; ok {
-				snapVXSession.TargetSourceSnapshotGenInfo = &v100.TargetSourceSnapshotGenInfo{
+				snapVXSession.TargetSourceSnapshotGenInfo = &types.TargetSourceSnapshotGenInfo{
 					TargetDevice: volID,
 					SourceDevice: sourceVolID,
 					SnapshotName: SnapID,
@@ -3347,13 +3354,13 @@ func returnSnapVXSession(volID string, isSource, isTarget bool) v100.SnapVXSessi
 	return snapVXSession
 }
 
-func returnSrcSnapshotGenInfo(volID string) []v100.SourceSnapshotGenInfo {
-	var srcSnapGenInfo []v100.SourceSnapshotGenInfo
+func returnSrcSnapshotGenInfo(volID string) []types.SourceSnapshotGenInfo {
+	var srcSnapGenInfo []types.SourceSnapshotGenInfo
 
 	for _, snapIDtoSnap := range Data.VolIDToSnapshots[volID] {
 		timestamp, _ := strconv.ParseInt(snapIDtoSnap.Timestamp, 10, 64)
-		srcSnapGenInfo = append(srcSnapGenInfo, v100.SourceSnapshotGenInfo{
-			SnapshotHeader: v100.SnapshotHeader{
+		srcSnapGenInfo = append(srcSnapGenInfo, types.SourceSnapshotGenInfo{
+			SnapshotHeader: types.SnapshotHeader{
 				Device:       volID,
 				SnapshotName: snapIDtoSnap.Name,
 				Generation:   snapIDtoSnap.Generation,

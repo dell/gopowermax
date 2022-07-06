@@ -62,14 +62,13 @@ func (c *Client) Authenticate(configConnect *ConfigConnect) error {
 		return c.api.ParseJSONError(resp)
 	}
         c.api.SetToken(basicAuthString)
-
-        version := &v100.Version{}
+        version := &types.Version{}
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(version)
 	if err != nil {
 		return nil
         }
-        log.Printf("API version: %s\n", version.Version)
+        log.Printf("API version: %s", version.Version)
 
 	return nil
 }

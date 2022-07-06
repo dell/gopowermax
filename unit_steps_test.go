@@ -23,10 +23,9 @@ import (
 	"strconv"
 	"strings"
 
-	v100 "github.com/dell/gopowermax/v2/types/v100"
-
 	"github.com/cucumber/godog"
 	"github.com/dell/gopowermax/v2/mock"
+	types "github.com/dell/gopowermax/v2/types/v100"
 )
 
 const (
@@ -67,40 +66,40 @@ type unitContext struct {
 	err         error // First error observed
 	flag91      bool
 
-	symIDList          *v100.SymmetrixIDList
-	sym                *v100.Symmetrix
-	vol                *v100.Volume
+	symIDList          *types.SymmetrixIDList
+	sym                *types.Symmetrix
+	vol                *types.Volume
 	volList            []string
-	storageGroup       *v100.StorageGroup
-	storageGroupIDList *v100.StorageGroupIDList
+	storageGroup       *types.StorageGroup
+	storageGroupIDList *types.StorageGroupIDList
 	jobIDList          []string
-	job                *v100.Job
-	storagePoolList    *v100.StoragePoolList
-	portGroupList      *v100.PortGroupList
-	portGroup          *v100.PortGroup
-	initiatorList      *v100.InitiatorList
-	initiator          *v100.Initiator
-	hostList           *v100.HostList
-	host               *v100.Host
-	maskingViewList    *v100.MaskingViewList
-	maskingView        *v100.MaskingView
+	job                *types.Job
+	storagePoolList    *types.StoragePoolList
+	portGroupList      *types.PortGroupList
+	portGroup          *types.PortGroup
+	initiatorList      *types.InitiatorList
+	initiator          *types.Initiator
+	hostList           *types.HostList
+	host               *types.Host
+	maskingViewList    *types.MaskingViewList
+	maskingView        *types.MaskingView
 	uMaskingView       *uMV
 	addressList        []string
 	targetList         []ISCSITarget
-	storagePool        *v100.StoragePool
+	storagePool        *types.StoragePool
 	volIDList          []string
 	hostID             string
 	hostGroupID        string
 	sgID               string
 
-	symRepCapibilities    *v100.SymReplicationCapabilities
-	sourceVolumeList      []v100.VolumeList
-	symVolumeList         *v100.SymVolumeList
-	volSnapList           *v100.SnapshotVolumeGeneration
-	volumeSnapshot        *v100.VolumeSnapshot
-	volSnapGenerationList *v100.VolumeSnapshotGenerations
-	volSnapGenerationInfo *v100.VolumeSnapshotGeneration
-	volResultPrivate      *v100.VolumeResultPrivate
+	symRepCapabilities    *types.SymReplicationCapabilities
+	sourceVolumeList      []types.VolumeList
+	symVolumeList         *types.SymVolumeList
+	volSnapList           *types.SnapshotVolumeGeneration
+	volumeSnapshot        *types.VolumeSnapshot
+	volSnapGenerationList *types.VolumeSnapshotGenerations
+	volSnapGenerationInfo *types.VolumeSnapshotGeneration
+	volResultPrivate      *types.VolumeResultPrivate
 
 	inducedErrors struct {
 		badCredentials bool
@@ -138,8 +137,8 @@ func (c *unitContext) reset() {
 	c.hostGroupID = ""
 	c.sgID = ""
 
-	c.symRepCapibilities = nil
-	c.sourceVolumeList = make([]v100.VolumeList, 0)
+	c.symRepCapabilities = nil
+	c.sourceVolumeList = make([]types.VolumeList, 0)
 	c.symVolumeList = nil
 	c.volSnapList = nil
 	c.volumeSnapshot = nil
@@ -1222,14 +1221,14 @@ func convertStringToSlice(input string) []string {
 }
 
 func (c *unitContext) iExcuteTheCapabilitiesOnTheSymmetrixArray() error {
-	c.symRepCapibilities, c.err = c.client.GetReplicationCapabilities(context.TODO())
+	c.symRepCapabilities, c.err = c.client.GetReplicationCapabilities(context.TODO())
 	return nil
 }
 
 func (c *unitContext) iCallGetSnapVolumeListWithAnd(queryKey, queryValue string) error {
 	if queryKey != "" {
 		if queryValue == "true" {
-			c.symVolumeList, c.err = c.client.GetSnapVolumeList(context.TODO(), symID, v100.QueryParams{
+			c.symVolumeList, c.err = c.client.GetSnapVolumeList(context.TODO(), symID, types.QueryParams{
 				queryKey: true})
 		}
 	} else {
@@ -1382,22 +1381,22 @@ func (c *unitContext) thereShouldBeNoErrors() error {
 }
 
 // createVolumeList will extract all the volumes and will return a list of type VolumeList
-func (c *unitContext) createVolumeList(volIds string) []v100.VolumeList {
-	var VolumeList []v100.VolumeList
+func (c *unitContext) createVolumeList(volIds string) []types.VolumeList {
+	var VolumeList []types.VolumeList
 	volNames := strings.Split(volIds, ",")
 	for i := 0; i < len(volNames); i++ {
-		VolumeList = append(VolumeList, v100.VolumeList{Name: volNames[i]})
+		VolumeList = append(VolumeList, types.VolumeList{Name: volNames[i]})
 	}
 	return VolumeList
 }
 
 // convertStringSliceOfPortsToPortKeys - Given a comma delimited string of ports in
-// this format "<DIRECTOR>:<PORT>", produce a slice of v100.PortKey values
-func convertStringSliceOfPortsToPortKeys(strListOfPorts string) []v100.PortKey {
-	initialPorts := make([]v100.PortKey, 0)
+// this format "<DIRECTOR>:<PORT>", produce a slice of types.PortKey values
+func convertStringSliceOfPortsToPortKeys(strListOfPorts string) []types.PortKey {
+	initialPorts := make([]types.PortKey, 0)
 	for _, it := range convertStringToSlice(strListOfPorts) {
 		dirAndPort := strings.Split(it, ":")
-		port := v100.PortKey{
+		port := types.PortKey{
 			DirectorID: dirAndPort[0],
 			PortID:     dirAndPort[1],
 		}
@@ -1442,7 +1441,7 @@ func (c *unitContext) thenSGShouldBeReplicated() error {
 	return nil
 }
 
-func (c *unitContext) checkReplication(volume *v100.Volume, compliment string) bool {
+func (c *unitContext) checkReplication(volume *types.Volume, compliment string) bool {
 	isReplicated := strings.Contains(volume.Type, "RDF") || len(volume.RDFGroupIDList) > 0
 	if compliment == "not" {
 		isReplicated = !isReplicated
@@ -1464,7 +1463,7 @@ func (c *unitContext) theVolumesShouldBeReplicated(compliment string) error {
 }
 
 func (c *unitContext) iCallGetStorageGroupRDFInfo() error {
-	var sgrdf *v100.StorageGroupRDFG
+	var sgrdf *types.StorageGroupRDFG
 	sgrdf, c.err = c.client.GetStorageGroupRDFInfo(context.TODO(), symID, mock.DefaultStorageGroup, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo))
 	if c.err == nil {
 		if sgrdf.SymmetrixID != symID ||
@@ -1478,7 +1477,7 @@ func (c *unitContext) iCallGetStorageGroupRDFInfo() error {
 
 func (c *unitContext) iCallGetRDFDevicePairInfo() error {
 	var (
-		devicePairInfo *v100.RDFDevicePair
+		devicePairInfo *types.RDFDevicePair
 	)
 	localVolID := c.volIDList[0]
 	remoteVolID := c.volIDList[0]
@@ -1494,7 +1493,7 @@ func (c *unitContext) iCallGetRDFDevicePairInfo() error {
 }
 
 func (c *unitContext) iCallGetProtectedStorageGroup() error {
-	var protectedSG *v100.RDFStorageGroup
+	var protectedSG *types.RDFStorageGroup
 	protectedSG, c.err = c.client.GetProtectedStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup)
 	if c.err == nil {
 		if protectedSG.SymmetrixID != symID || protectedSG.Name != mock.DefaultStorageGroup {
@@ -1508,7 +1507,7 @@ func (c *unitContext) iCallGetProtectedStorageGroup() error {
 }
 
 func (c *unitContext) iCallGetRDFGroup() error {
-	var rdfGroup *v100.RDFGroup
+	var rdfGroup *types.RDFGroup
 	rdfGroup, c.err = c.client.GetRDFGroup(context.TODO(), symID, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo))
 	if c.err == nil {
 		if !rdfGroup.Async || rdfGroup.RemoteSymmetrix != mock.DefaultRemoteSymID || rdfGroup.RdfgNumber != mock.DefaultRemoteRDFGNo {

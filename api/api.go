@@ -27,10 +27,9 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
-	v100 "github.com/dell/gopowermax/v2/types/v100"
-
+	types "github.com/dell/gopowermax/v2/types/v100"
 	log "github.com/sirupsen/logrus"
+
 )
 
 // constants
@@ -392,7 +391,7 @@ func (c *client) GetToken() string {
 }
 
 func (c *client) ParseJSONError(r *http.Response) error {
-	jsonError := &v100.Error{}
+	jsonError := &types.Error{}
 	if err := json.NewDecoder(r.Body).Decode(jsonError); err != nil {
 		if err != nil {
 			jsonError.HTTPStatusCode = r.StatusCode

@@ -22,7 +22,6 @@ import (
 	"time"
 
 	v100 "github.com/dell/gopowermax/v2/types/v100"
-
 	pmax "github.com/dell/gopowermax/v2"
 )
 
