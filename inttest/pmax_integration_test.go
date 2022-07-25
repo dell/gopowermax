@@ -18,14 +18,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/dell/gopowermax/types/v90"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
 	"time"
 
-	pmax "github.com/dell/gopowermax"
-	types "github.com/dell/gopowermax/types/v90"
+	pmax "github.com/dell/gopowermax/v2"
+	types "github.com/dell/gopowermax/v2/types/v100"
 )
 
 const (
@@ -295,7 +296,7 @@ func cleanupRDFSetup(t *testing.T) {
 
 func getClient() error {
 	var err error
-	client, err = pmax.NewClientWithArgs(endpoint, apiVersion, "CSI Driver for Dell EMC PowerMax v1.0",
+	client, err = pmax.NewClientWithArgs(endpoint, "CSI Driver for Dell EMC PowerMax v1.0",
 		true, false)
 	if err != nil {
 		return err
@@ -1307,7 +1308,7 @@ func TestCreatePortGroup(t *testing.T) {
 		PortID:     "4",
 	}
 	portKeys = append(portKeys, portKey)
-	portGroup, err := client.CreatePortGroup(context.TODO(), symmetrixID, portGroupID, portKeys)
+	portGroup, err := client.CreatePortGroup(context.TODO(), symmetrixID, portGroupID, portKeys, "SCSI_FC")
 	if err != nil {
 		t.Error("Couldn't create port group")
 		return

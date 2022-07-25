@@ -76,7 +76,7 @@ fi
 
 if [ ${SHORT} = "yes" ]; then
     echo "running an abbreviated set of tests"
-    go test -v -short -timeout 90m -coverprofile=c.out -coverpkg github.com/dell/gopowermax $integrationfiles
+    go test -v -short -timeout 90m -coverprofile=c.out -coverpkg github.com/dell/gopowermax/v2 $integrationfiles
 else
-    go test -v -timeout 90m -coverprofile=c.out -coverpkg github.com/dell/gopowermax $integrationfiles
+    go test -v -timeout 90m -coverprofile=c.out -coverpkg github.com/dell/gopowermax/v2 $integrationfiles
 fi

@@ -12,7 +12,7 @@
  limitations under the License.
 */
 
-package types
+package v100
 
 import (
 	"strings"
@@ -41,16 +41,37 @@ type SymmetrixIDList struct {
 
 // Symmetrix : information about a Symmetrix system
 type Symmetrix struct {
-	SymmetrixID    string `json:"symmetrixId"`
-	DeviceCount    int    `json:"device_count"`
-	Ucode          string `json:"ucode"`
-	Model          string `json:"model"`
-	Local          bool   `json:"local"`
-	AllFlash       bool   `json:"all_flash"`
-	DisplayName    string `json:"display_name"`
-	DiskCount      int    `json:"disk_count"`
-	CacheSizeMB    int    `json:"cache_size_mb"`
-	DataEncryption string `json:"data_encryption"`
+	SymmetrixID          string                `json:"symmetrixId"`
+	DellServiceTag       string                `json:"dell_service_tag"`
+	DeviceCount          int                   `json:"device_count"`
+	Ucode                string                `json:"ucode"`
+	UcodeDate            string                `json:"ucode_date"`
+	Model                string                `json:"model"`
+	Local                bool                  `json:"local"`
+	AllFlash             bool                  `json:"all_flash"`
+	DisplayName          string                `json:"display_name"`
+	DiskCount            int                   `json:"disk_count"`
+	CacheSizeMB          int                   `json:"cache_size_mb"`
+	DataEncryption       string                `json:"data_encryption"`
+	FEDirCount           int                   `json:"fe_dir_count"`
+	BEDirCount           int                   `json:"be_dir_count"`
+	RDFDirCount          int                   `json:"rdf_dir_count"`
+	MaxHyperPerDisk      int                   `json:"max_hyper_per_disk"`
+	VCMState             string                `json:"vcm_state"`
+	VCMDBState           string                `json:"vcmdb_state"`
+	ReliabilityState     string                `json:"reliability_state"`
+	UcodeRegisteredBuild int                   `json:"ucode_registered_build"`
+	SystemSizedProperty  []SystemSizedProperty `json:"system_sized_property"`
+}
+
+type SystemSizedProperty struct {
+	SRPName                    string `json:"srp_name"`
+	SizedFBADataReductionRatio string `json:"sized_fba_data_reduction_ratio"`
+	SizedCKDDataReductionRatio string `json:"sized_ckd_data_reduction_ratio"`
+	SizedFBACapacityTB         int    `json:"sized_fba_capacity_tb"`
+	SizedCKDCapacityTB         int    `json:"sized_ckd_capacity_tb"`
+	SizedFBAReduciblePercent   int    `json:"sized_fba_reducible_percent"`
+	SizedCKDReduciblePercent   int    `json:"sized_ckd_reducible_percent"`
 }
 
 // StoragePoolList : list of storage pools in the system
@@ -60,7 +81,7 @@ type StoragePoolList struct {
 
 // StoragePool : information about a storage pool
 type StoragePool struct {
-	StoragePoolID        string         `json:"srpID"`
+	StoragePoolID        string         `json:"srpId"`
 	DiskGrouCount        int            `json:"num_of_disk_groups"`
 	Description          string         `json:"description"`
 	Emulation            string         `json:"emulation"`
@@ -69,20 +90,38 @@ type StoragePool struct {
 	ReservedCapPerc      int            `json:"reserved_cap_percent"`
 	SrdfDseAllocCap      float64        `json:"total_srdf_dse_allocated_cap_gb"`
 	RdfaDse              bool           `json:"rdfa_dse"`
+	ReliabilityState     string         `json:"reliability_state"`
 	DiskGroupIDs         []string       `json:"diskGroupId"`
 	ExternalCap          float64        `json:"external_capacity_gb"`
-	SrpCap               *SrpCap        `json:"srp_capacity"`
+	SrpCap               *SrpCap        `json:"srp_capacity,omitempty"`
+        FbaCap               *FbaCap        `json:"fba_srp_capacity,omitempty"`
+        CkdCap               *CkdCap        `json:"ckd_srp_capacity,omitempty"`
 	SrpEfficiency        *SrpEfficiency `json:"srp_efficiency"`
+	ServiceLevels        []string       `json:"service_levels"`
 }
 
+type FbaCap struct{
+	Provisioned       *provisioned       `json:"provisioned"`
+}
+
+type CkdCap struct{
+	Provisioned       *provisioned       `json:"provisioned"`
+}
+
+type provisioned struct {
+	UsableUsedInTB               float64 `json:"used_tb"`
+	UsableTotInTB                float64 `json:"effective_capacity_tb"`
+//	EffectiveUsedCapacityPercent float64 `json:"provisioned_percent"`
+}
 // SrpCap : capacity of an SRP
 type SrpCap struct {
-	SubAllocCapInTB float64 `json:"subscribed_allocated_tb"`
-	SubTotInTB      float64 `json:"subscribed_total_tb"`
-	SnapModInTB     float64 `json:"snapshot_modified_tb"`
-	SnapTotInTB     float64 `json:"snapshot_total_tb"`
-	UsableUsedInTB  float64 `json:"usable_used_tb"`
-	UsableTotInTB   float64 `json:"usable_total_tb"`
+	SubAllocCapInTB              float64 `json:"subscribed_allocated_tb"`
+	SubTotInTB                   float64 `json:"subscribed_total_tb"`
+	SnapModInTB                  float64 `json:"snapshot_modified_tb"`
+	SnapTotInTB                  float64 `json:"snapshot_total_tb"`
+	UsableUsedInTB               float64 `json:"usable_used_tb"`
+	UsableTotInTB                float64 `json:"usable_total_tb"`
+	EffectiveUsedCapacityPercent int     `json:"effective_used_capacity_percent"`
 }
 
 // SrpEfficiency : efficiency attributes of an SRP
@@ -102,12 +141,6 @@ const (
 	CapacityUnitCyl = "CYL"
 )
 
-// VolumeAttributeType : volume attributes
-type VolumeAttributeType struct {
-	CapacityUnit string `json:"capacityUnit"` // CAPACITY_UNIT_{TB,GB,MB,CYL}
-	VolumeSize   string `json:"volume_size"`
-}
-
 // VolumeIdentifierType : volume identifier
 type VolumeIdentifierType struct {
 	VolumeIdentifierChoice string `json:"volumeIdentifierChoice,omitempty"`
@@ -118,7 +151,7 @@ type VolumeIdentifierType struct {
 // Link : key and URI
 type Link struct {
 	Key string   `json:"key"`
-	URI []string `json:"uri"`
+	URI []string `json:"uris"`
 }
 
 // Task : holds execution order with a description
@@ -143,20 +176,21 @@ type JobIDList struct {
 
 // Job : information about a job
 type Job struct {
-	JobID                    string `json:"jobId"`
-	Name                     string `json:"name"`
-	Status                   string `json:"status"`
-	Username                 string `json:"username"`
-	LastModifiedDate         string `json:"last_modified_date"`
-	LastModifiedMilliseconds int64  `json:"last_modified_milliseconds"`
-	ScheduledDate            string `json:"scheduled_date"`
-	ScheduledMilliseconds    int64  `json:"scheduled_milliseconds"`
-	CompletedDate            string `json:"completed_date"`
-	CompletedMilliseconds    int64  `json:"completed_milliseconds"`
-	Tasks                    []Task `json:"task"`
-	ResourceLink             string `json:"resourceLink"`
-	Result                   string `json:"result"`
-	Links                    []Link `json:"links"`
+	JobID                        string `json:"jobId"`
+	Name                         string `json:"name"`
+	SymmetrixId                  string `json:"symmetrixId"`
+	Status                       string `json:"status"`
+	Username                     string `json:"username"`
+	LastModifiedDate             string `json:"last_modified_date"`
+	LastModifiedDateMilliseconds int64  `json:"last_modified_date_milliseconds"`
+	ScheduledDate                string `json:"scheduled_date"`
+	ScheduledDateMilliseconds    int64  `json:"scheduled_date_milliseconds"`
+	CompletedDate                string `json:"completed_date"`
+	CompletedDateMilliseconds    int64  `json:"completed_date_milliseconds"`
+	Tasks                        []Task `json:"task"`
+	ResourceLink                 string `json:"resourceLink"`
+	Result                       string `json:"result"`
+	Links                        []Link `json:"links"`
 }
 
 // GetJobResource parses the Resource link and returns three things:
@@ -193,13 +227,16 @@ type PortGroup struct {
 	NumberMaskingViews int64     `json:"number_of_masking_views"`
 	PortGroupType      string    `json:"type"`
 	MaskingView        []string  `json:"maskingview"`
+	TestID             string    `json:"testId"`
+	PortGroupProtocol  string    `json:"port_group_protocol"`
 }
 
 // CreatePortGroupParams - Input params for creating port groups
 type CreatePortGroupParams struct {
-	PortGroupID      string    `json:"portGroupId"`
-	SymmetrixPortKey []PortKey `json:"symmetrixPortKey"`
-	ExecutionOption  string    `json:"executionOption"`
+	PortGroupID       string    `json:"portGroupId"`
+	SymmetrixPortKey  []PortKey `json:"symmetrixPortKey"`
+	ExecutionOption   string    `json:"executionOption"`
+	PortGroupProtocol string    `json:"port_group_protocol,omitempty"`
 }
 
 // InitiatorList : list of initiators
@@ -211,18 +248,28 @@ type InitiatorList struct {
 type Initiator struct {
 	InitiatorID          string    `json:"initiatorId"`
 	SymmetrixPortKey     []PortKey `json:"symmetrixPortKey"`
+	Alias                string    `json:"alias"`
 	InitiatorType        string    `json:"type"`
 	FCID                 string    `json:"fcid,omitempty"`
+	FCIDValue            string    `json:"fcid_value"`
+	FCIDLockdown         string    `json:"fcid_lockdown"`
 	IPAddress            string    `json:"ip_address,omitempty"`
-	HostID               string    `json:"host,omitempty"`
-	HostGroupIDs         []string  `json:"hostGroup,omitempty"`
+	Host                 string    `json:"host,omitempty"`
+	HostGroupIDs           []string  `json:"hostGroup,omitempty"`
 	LoggedIn             bool      `json:"logged_in"`
 	OnFabric             bool      `json:"on_fabric"`
+	FabricName           string    `json:"fabric_name"`
+	PortFlagsOverride    bool      `json:"port_flags_override"`
+	EnabledFlags         string    `json:"enabled_flags"`
+	DisabledFlags        string    `json:"disabled_flags"`
 	FlagsInEffect        string    `json:"flags_in_effect"`
 	NumberVols           int64     `json:"num_of_vols"`
 	NumberHostGroups     int64     `json:"num_of_host_groups"`
 	NumberMaskingViews   int64     `json:"number_of_masking_views"`
+	MaskingView          []string  `json:"maskingview"`
+	PowerPathHosts       []string  `json:"powerpathhosts"`
 	NumberPowerPathHosts int64     `json:"num_of_powerpath_hosts"`
+	HostID               string    `json:"host_id"`
 }
 
 // HostList : list of hosts
@@ -243,7 +290,9 @@ type Host struct {
 	HostType           string   `json:"type"`
 	Initiators         []string `json:"initiator"`
 	MaskingviewIDs     []string `json:"maskingview"`
+	PowerPathHosts     []string `json:"powerpathhosts"`
 	NumPowerPathHosts  int64    `json:"num_of_powerpath_hosts"`
+	BWLimit            int      `json:"bw_limit"`
 }
 
 // DirectorIDList : list of directors
@@ -253,18 +302,27 @@ type DirectorIDList struct {
 
 // PortList : list of ports
 type PortList struct {
+	ExecutionOption  string    `json:"executionOption,omitempty"`
 	SymmetrixPortKey []PortKey `json:"symmetrixPortKey"`
 }
 
 // SymmetrixPortType : type of symmetrix port
 type SymmetrixPortType struct {
-	ISCSITarget bool     `json:"iscsi_target,omitempty"`
-	IPAddresses []string `json:"ip_addresses,omitempty"`
-	Identifier  string   `json:"identifier,omitempty"`
-	Type        string   `json:"type,omitempty"`
+	SymmetrixPortKey PortKey  `json:"symmetrixPortKey"`
+	PortStatus       string   `json:"port_status"`
+	DirectorStatus   string   `json:"director_status"`
+	Type             string   `json:"type,omitempty"`
+	NumberOfCores    string   `json:"number_of_cores"`
+	Identifier       string   `json:"identifier,omitempty"`
+	PortGroups       []string `json:"portgroup"`
+	MaskingViews     []string `json:"maskingview"`
+	PortInterface    string   `json:"port_interface"`
+	ISCSITarget      bool     `json:"iscsi_target,omitempty"`
+	IPAddresses      []string `json:"ip_addresses,omitempty"`
 }
 
 // Port is a minimal represation of a Symmetrix Port for iSCSI target purpose
 type Port struct {
-	SymmetrixPort SymmetrixPortType `json:"symmetrixPort"`
+	ExecutionOption string            `json:"executionOption,omitempty"`
+	SymmetrixPort   SymmetrixPortType `json:"symmetrixPort"`
 }

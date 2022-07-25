@@ -18,16 +18,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	types "github.com/dell/gopowermax/v2/types/v100"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
-
-	types "github.com/dell/gopowermax/types/v90"
-	types91 "github.com/dell/gopowermax/types/v91"
-	log "github.com/sirupsen/logrus"
 )
 
 // The follow constants are for internal use within the pmax library.
@@ -70,7 +68,7 @@ func (c *Client) GetVolumeIDsIterator(ctx context.Context, symID string, volumeI
 	var query string
 	if volumeIdentifierMatch != "" {
 		if like {
-			query = fmt.Sprintf("?volume_identifier=<like>%s", volumeIdentifierMatch)
+			query = fmt.Sprintf("?volume_identifier=%%3Clike%%3E%s", volumeIdentifierMatch)
 		} else {
 			query = fmt.Sprintf("?volume_identifier=%s", volumeIdentifierMatch)
 		}
@@ -282,40 +280,13 @@ func (c *Client) GetStorageGroupIDList(ctx context.Context, symID string) (*type
 //GetCreateStorageGroupPayload returns U4P payload for creating storage group
 func (c *Client) GetCreateStorageGroupPayload(storageGroupID, srpID, serviceLevel string, thickVolumes bool) (payload interface{}) {
 	workload := "None"
-	if c.version == "90" {
-		sloParams := []types.SLOBasedStorageGroupParam{}
-		if srpID != "None" {
-			sloParams = []types.SLOBasedStorageGroupParam{
-				{
-					SLOID:             serviceLevel,
-					WorkloadSelection: workload,
-					NumberOfVolumes:   0,
-					VolumeAttribute: types.VolumeAttributeType{
-						VolumeSize:   "0",
-						CapacityUnit: "CYL",
-					},
-					AllocateCapacityForEachVol: thickVolumes,
-					// compression not allowed with thick volumes
-					NoCompression: thickVolumes,
-				},
-			}
-		}
-		createStorageGroupParam := &types.CreateStorageGroupParam{
-			StorageGroupID:            storageGroupID,
-			SRPID:                     srpID,
-			Emulation:                 Emulation,
-			ExecutionOption:           types.ExecutionOptionSynchronous,
-			SLOBasedStorageGroupParam: sloParams,
-		}
-		return createStorageGroupParam
-	}
-	sloParams := []types91.SLOBasedStorageGroupParam{}
+	sloParams := []types.SLOBasedStorageGroupParam{}
 	if srpID != "None" {
-		sloParams = []types91.SLOBasedStorageGroupParam{
+		sloParams = []types.SLOBasedStorageGroupParam{
 			{
 				SLOID:             serviceLevel,
 				WorkloadSelection: workload,
-				VolumeAttributes: []types91.VolumeAttributeType{
+				VolumeAttributes: []types.VolumeAttributeType{
 					{
 						VolumeSize:      "0",
 						CapacityUnit:    "CYL",
@@ -328,11 +299,11 @@ func (c *Client) GetCreateStorageGroupPayload(storageGroupID, srpID, serviceLeve
 			},
 		}
 	}
-	createStorageGroupParam := &types91.CreateStorageGroupParam{
+	createStorageGroupParam := &types.CreateStorageGroupParam{
 		StorageGroupID:            storageGroupID,
 		SRPID:                     srpID,
 		Emulation:                 Emulation,
-		ExecutionOption:           types91.ExecutionOptionSynchronous,
+		ExecutionOption:           types.ExecutionOptionSynchronous,
 		SLOBasedStorageGroupParam: sloParams,
 	}
 	return createStorageGroupParam
@@ -765,91 +736,49 @@ func (c *Client) RemoveVolumesFromProtectedStorageGroup(ctx context.Context, sym
 func (c *Client) GetCreateVolInSGPayload(sizeInCylinders int, volumeName string, isSync bool, remoteSymID, remoteStorageGroupID string, opts ...http.Header) (payload interface{}) {
 	var executionOption string
 	size := strconv.Itoa(sizeInCylinders)
-	if c.version == "90" {
-		if isSync {
-			executionOption = types.ExecutionOptionSynchronous
-		} else {
-			executionOption = types.ExecutionOptionAsynchronous
-		}
-		addVolumeParam := &types.AddVolumeParam{
-			NumberOfVols: 1,
-			VolumeAttribute: types.VolumeAttributeType{
-				VolumeSize:   size,
-				CapacityUnit: "CYL",
-			},
-			// CreateNewVolumes: true,
-			Emulation: "FBA",
-			VolumeIdentifier: types.VolumeIdentifierType{
-				VolumeIdentifierChoice: "identifier_name",
-				IdentifierName:         volumeName,
-			},
-		}
-
-		payload = &types.UpdateStorageGroupPayload{
-			EditStorageGroupActionParam: types.EditStorageGroupActionParam{
-				ExpandStorageGroupParam: &types.ExpandStorageGroupParam{
-					AddVolumeParam: addVolumeParam,
-				},
-			},
-			ExecutionOption: executionOption,
-		}
-
-		if opts != nil && len(opts) != 0 {
-			// If the payload has a SetMetaData method, set the metadata headers.
-			if t, ok := interface{}(payload).(interface {
-				SetMetaData(metadata http.Header)
-			}); ok {
-				t.SetMetaData(opts[0])
-			} else {
-				log.Println("warning: gopowermax.UpdateStorageGroupPayload: no SetMetaData method exists, consider updating gopowermax library.")
-			}
-		}
-
+	if isSync {
+		executionOption = types.ExecutionOptionSynchronous
 	} else {
-		if isSync {
-			executionOption = types91.ExecutionOptionSynchronous
+		executionOption = types.ExecutionOptionAsynchronous
+	}
+	addVolumeParam := &types.AddVolumeParam{
+		CreateNewVolumes: true,
+		Emulation:        "FBA",
+		VolumeAttributes: []types.VolumeAttributeType{
+			{
+				NumberOfVolumes: 1,
+				VolumeIdentifier: &types.VolumeIdentifierType{
+					VolumeIdentifierChoice: "identifier_name",
+					IdentifierName:         volumeName,
+				},
+				CapacityUnit: "CYL",
+				VolumeSize:   size,
+			},
+		},
+		RemoteSymmetrixSGInfo: types.RemoteSymmSGInfoParam{
+			Force: true,
+		},
+	}
+	if remoteSymID != "" {
+		addVolumeParam.RemoteSymmetrixSGInfo.RemoteSymmetrix1ID = remoteSymID
+		addVolumeParam.RemoteSymmetrixSGInfo.RemoteSymmetrix1SGs = []string{remoteStorageGroupID}
+	}
+	payload = &types.UpdateStorageGroupPayload{
+		EditStorageGroupActionParam: types.EditStorageGroupActionParam{
+			ExpandStorageGroupParam: &types.ExpandStorageGroupParam{
+				AddVolumeParam: addVolumeParam,
+			},
+		},
+		ExecutionOption: executionOption,
+	}
+	if opts != nil && len(opts) != 0 {
+		// If the payload has a SetMetaData method, set the metadata headers.
+		if t, ok := interface{}(payload).(interface {
+			SetMetaData(metadata http.Header)
+		}); ok {
+			t.SetMetaData(opts[0])
 		} else {
-			executionOption = types91.ExecutionOptionAsynchronous
-		}
-		addVolumeParam := &types91.AddVolumeParam{
-			CreateNewVolumes: true,
-			Emulation:        "FBA",
-			VolumeAttributes: []types91.VolumeAttributeType{
-				{
-					NumberOfVolumes: 1,
-					VolumeIdentifier: &types91.VolumeIdentifierType{
-						VolumeIdentifierChoice: "identifier_name",
-						IdentifierName:         volumeName,
-					},
-					CapacityUnit: "CYL",
-					VolumeSize:   size,
-				},
-			},
-			RemoteSymmSGInfoParam: types91.RemoteSymmSGInfoParam{
-				Force: true,
-			},
-		}
-		if remoteSymID != "" {
-			addVolumeParam.RemoteSymmSGInfoParam.RemoteSymmetrix1ID = remoteSymID
-			addVolumeParam.RemoteSymmSGInfoParam.RemoteSymmetrix1SGs = []string{remoteStorageGroupID}
-		}
-		payload = &types91.UpdateStorageGroupPayload{
-			EditStorageGroupActionParam: types91.EditStorageGroupActionParam{
-				ExpandStorageGroupParam: &types91.ExpandStorageGroupParam{
-					AddVolumeParam: addVolumeParam,
-				},
-			},
-			ExecutionOption: executionOption,
-		}
-		if opts != nil && len(opts) != 0 {
-			// If the payload has a SetMetaData method, set the metadata headers.
-			if t, ok := interface{}(payload).(interface {
-				SetMetaData(metadata http.Header)
-			}); ok {
-				t.SetMetaData(opts[0])
-			} else {
-				log.Println("warning: gopowermax.UpdateStorageGroupPayload: no SetMetaData method exists, consider updating gopowermax library.")
-			}
+			log.Println("warning: gopowermax.UpdateStorageGroupPayload: no SetMetaData method exists, consider updating gopowermax library.")
 		}
 	}
 	if payload != nil {
@@ -861,47 +790,28 @@ func (c *Client) GetCreateVolInSGPayload(sizeInCylinders int, volumeName string,
 // GetAddVolumeToSGPayload returns payload for adding specific volume/s to SG.
 func (c *Client) GetAddVolumeToSGPayload(isSync, force bool, remoteSymID, remoteStorageGroupID string, volumeIDs ...string) (payload interface{}) {
 	executionOption := ""
-	if c.version == "90" {
-		if isSync {
-			executionOption = types.ExecutionOptionSynchronous
-		} else {
-			executionOption = types.ExecutionOptionAsynchronous
-		}
-		addSpecificVolumeParam := &types.AddSpecificVolumeParam{
-			VolumeIDs: volumeIDs,
-		}
-		payload = &types.UpdateStorageGroupPayload{
-			EditStorageGroupActionParam: types.EditStorageGroupActionParam{
-				ExpandStorageGroupParam: &types.ExpandStorageGroupParam{
-					AddSpecificVolumeParam: addSpecificVolumeParam,
-				},
-			},
-			ExecutionOption: executionOption,
-		}
+	if isSync {
+		executionOption = types.ExecutionOptionSynchronous
 	} else {
-		if isSync {
-			executionOption = types91.ExecutionOptionSynchronous
-		} else {
-			executionOption = types91.ExecutionOptionAsynchronous
-		}
-		addSpecificVolumeParam := &types91.AddSpecificVolumeParam{
-			VolumeIDs: volumeIDs,
-			RemoteSymmSGInfoParam: types91.RemoteSymmSGInfoParam{
-				Force: force,
+		executionOption = types.ExecutionOptionAsynchronous
+	}
+	addSpecificVolumeParam := &types.AddSpecificVolumeParam{
+		VolumeIDs: volumeIDs,
+		RemoteSymmetrixSGInfo: types.RemoteSymmSGInfoParam{
+			Force: force,
+		},
+	}
+	if remoteSymID != "" {
+		addSpecificVolumeParam.RemoteSymmetrixSGInfo.RemoteSymmetrix1ID = remoteSymID
+		addSpecificVolumeParam.RemoteSymmetrixSGInfo.RemoteSymmetrix1SGs = []string{remoteStorageGroupID}
+	}
+	payload = &types.UpdateStorageGroupPayload{
+		EditStorageGroupActionParam: types.EditStorageGroupActionParam{
+			ExpandStorageGroupParam: &types.ExpandStorageGroupParam{
+				AddSpecificVolumeParam: addSpecificVolumeParam,
 			},
-		}
-		if remoteSymID != "" {
-			addSpecificVolumeParam.RemoteSymmSGInfoParam.RemoteSymmetrix1ID = remoteSymID
-			addSpecificVolumeParam.RemoteSymmSGInfoParam.RemoteSymmetrix1SGs = []string{remoteStorageGroupID}
-		}
-		payload = &types91.UpdateStorageGroupPayload{
-			EditStorageGroupActionParam: types91.EditStorageGroupActionParam{
-				ExpandStorageGroupParam: &types91.ExpandStorageGroupParam{
-					AddSpecificVolumeParam: addSpecificVolumeParam,
-				},
-			},
-			ExecutionOption: executionOption,
-		}
+		},
+		ExecutionOption: executionOption,
 	}
 	if payload != nil {
 		ifDebugLogPayload(payload)
@@ -911,33 +821,21 @@ func (c *Client) GetAddVolumeToSGPayload(isSync, force bool, remoteSymID, remote
 
 // GetRemoveVolumeFromSGPayload returns payload for removing volume/s from SG.
 func (c *Client) GetRemoveVolumeFromSGPayload(force bool, remoteSymID, remoteStorageGroupID string, volumeIDs ...string) (payload interface{}) {
-	if c.version == "90" {
-		removeVolumeParam := &types.RemoveVolumeParam{
-			VolumeIDs: volumeIDs,
-		}
-		payload = &types.UpdateStorageGroupPayload{
-			EditStorageGroupActionParam: types.EditStorageGroupActionParam{
-				RemoveVolumeParam: removeVolumeParam,
-			},
-			ExecutionOption: types.ExecutionOptionSynchronous,
-		}
-	} else {
-		removeVolumeParam := &types91.RemoveVolumeParam{
-			VolumeIDs: volumeIDs,
-			RemoteSymmSGInfoParam: types91.RemoteSymmSGInfoParam{
-				Force: force,
-			},
-		}
-		if remoteSymID != "" {
-			removeVolumeParam.RemoteSymmSGInfoParam.RemoteSymmetrix1ID = remoteSymID
-			removeVolumeParam.RemoteSymmSGInfoParam.RemoteSymmetrix1SGs = []string{remoteStorageGroupID}
-		}
-		payload = &types91.UpdateStorageGroupPayload{
-			EditStorageGroupActionParam: types91.EditStorageGroupActionParam{
-				RemoveVolumeParam: removeVolumeParam,
-			},
-			ExecutionOption: types91.ExecutionOptionSynchronous,
-		}
+	removeVolumeParam := &types.RemoveVolumeParam{
+		VolumeIDs: volumeIDs,
+		RemoteSymmSGInfoParam: types.RemoteSymmSGInfoParam{
+			Force: force,
+		},
+	}
+	if remoteSymID != "" {
+		removeVolumeParam.RemoteSymmSGInfoParam.RemoteSymmetrix1ID = remoteSymID
+		removeVolumeParam.RemoteSymmSGInfoParam.RemoteSymmetrix1SGs = []string{remoteStorageGroupID}
+	}
+	payload = &types.UpdateStorageGroupPayload{
+		EditStorageGroupActionParam: types.EditStorageGroupActionParam{
+			RemoveVolumeParam: removeVolumeParam,
+		},
+		ExecutionOption: types.ExecutionOptionSynchronous,
 	}
 	if payload != nil {
 		ifDebugLogPayload(payload)
@@ -1235,6 +1133,7 @@ func (c *Client) CreateHost(ctx context.Context, symID string, hostID string, in
 	return host, nil
 }
 
+
 // UpdateHostInitiators updates a host from a list of InitiatorIDs and returns a types.Host.
 func (c *Client) UpdateHostInitiators(ctx context.Context, symID string, host *types.Host, initiatorIDs []string) (*types.Host, error) {
 	defer c.TimeSpent("UpdateHostInitiators", time.Now())
@@ -1415,7 +1314,7 @@ func (c *Client) GetMaskingViewConnections(ctx context.Context, symID string, ma
 }
 
 // CreatePortGroup - Creates a Port Group
-func (c *Client) CreatePortGroup(ctx context.Context, symID string, portGroupID string, dirPorts []types.PortKey) (*types.PortGroup, error) {
+func (c *Client) CreatePortGroup(ctx context.Context, symID string, portGroupID string, dirPorts []types.PortKey, protocol string) (*types.PortGroup, error) {
 	defer c.TimeSpent("CreatePortGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -1425,6 +1324,7 @@ func (c *Client) CreatePortGroup(ctx context.Context, symID string, portGroupID 
 		PortGroupID:      portGroupID,
 		SymmetrixPortKey: dirPorts,
 		ExecutionOption:  types.ExecutionOptionSynchronous,
+		PortGroupProtocol : protocol,
 	}
 	ifDebugLogPayload(createPortGroupParams)
 	portGroup := &types.PortGroup{}
@@ -1600,6 +1500,5 @@ func (c *Client) UpdatePortGroup(ctx context.Context, symID string, portGroupID 
 			return nil, err
 		}
 	}
-
 	return pg, nil
 }

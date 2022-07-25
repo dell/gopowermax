@@ -12,7 +12,7 @@
  limitations under the License.
 */
 
-package types
+package v100
 
 // RDFGroup contains information about an RDF group
 type RDFGroup struct {
@@ -40,6 +40,7 @@ type RDFGroup struct {
 	LocalOnlinePorts         []string `json:"localOnlinePorts"`
 	RemoteOnlinePorts        []string `json:"remoteOnlinePorts"`
 	DevicePolarity           string   `json:"device_polarity"`
+	Offline                  bool     `json:"offline"`
 }
 
 // Suspend action
@@ -62,7 +63,7 @@ type Resume struct {
 	Hop2         bool `json:"hop2"`
 	Bypass       bool `json:"bypass"`
 	Remote       bool `json:"remote"`
-	RecoverPoint bool `json:"recoverPoint"`
+	RecoverPoint bool `json:"recoverPoint,omitempty"`
 }
 
 // Failover action
@@ -98,7 +99,7 @@ type Failback struct {
 	Hop2         bool `json:"hop2"`
 	Bypass       bool `json:"bypass"`
 	Remote       bool `json:"remote"`
-	RecoverPoint bool `json:"recoverPoint"`
+	RecoverPoint bool `json:"recoverPoint,omitempty"`
 }
 
 // Establish action
@@ -153,6 +154,7 @@ type SGRDFInfo struct {
 	Hop2Modes                 []string `json:"hop2Modes"`
 	LargerRdfSides            []string `json:"largerRdfSides"`
 	TotalTracks               int      `json:"totalTracks"`
+	CapacityMB                float64  `json:"capacity_mb"`
 	LocalR1InvalidTracksHop1  int      `json:"localR1InvalidTracksHop1"`
 	LocalR2InvalidTracksHop1  int      `json:"localR2InvalidTracksHop1"`
 	RemoteR1InvalidTracksHop1 int      `json:"remoteR1InvalidTracksHop1"`
@@ -161,6 +163,9 @@ type SGRDFInfo struct {
 	SrcR2InvalidTracksHop2    int      `json:"srcR2InvalidTracksHop2"`
 	TgtR1InvalidTracksHop2    int      `json:"tgtR1InvalidTracksHop2"`
 	TgtR2InvalidTracksHop2    int      `json:"tgtR2InvalidTracksHop2"`
+	Domino                    []string `json:"domino"`
+	ConsistencyProtection     string   `json:"consistency_protection"`
+	ConsistencyProtectionHop2 string   `json:"consistency_protection_hop2"`
 }
 
 //SGRDFGList contains list of all RDF enabled storage groups {in u4p a.k.a "storageGroupRDFg"}
@@ -170,16 +175,27 @@ type SGRDFGList struct {
 
 //RDFStorageGroup contains information about protected SG {in u4p a.k.a "StorageGroup"}
 type RDFStorageGroup struct {
-	Name               string   `json:"name"`
-	SymmetrixID        string   `json:"symmetrixId"`
-	ParentName         string   `json:"parentName"`
-	ChildNames         []string `json:"childNames"`
-	NumDevicesNonGk    int      `json:"numDevicesNonGk"`
-	CapacityGB         float64  `json:"capacityGB"`
-	NumSnapVXSnapshots int      `json:"numSnapVXSnapshots"`
-	SnapVXSnapshots    []string `json:"snapVXSnapshots"`
-	Rdf                bool     `json:"rdf"`
-	IsLinkTarget       bool     `json:"isLinkTarget"`
+	Name                        string                  `json:"name"`
+	SymmetrixID                 string                  `json:"symmetrixId"`
+	ParentName                  string                  `json:"parentName"`
+	ChildNames                  []string                `json:"childNames"`
+	NumDevicesNonGk             int                     `json:"numDevicesNonGk"`
+	CapacityGB                  float64                 `json:"capacityGB"`
+	NumSnapVXSnapshots          int                     `json:"numSnapVXSnapshots"`
+	SnapVXSnapshots             []string                `json:"snapVXSnapshots"`
+	NumCloudSnapshots           int                     `json:"num_cloud_snapshots"`
+	Rdf                         bool                    `json:"rdf"`
+	IsLinkTarget                bool                    `json:"isLinkTarget"`
+	SnapshotPolicies            []string                `json:"snapshot_policies"`
+	RDFGroups                   []int                   `json:"rdf_groups"`
+	NumCloneTargetStorageGroups int                     `json:"num_clone_target_storage_groups"`
+	RemoteStorageGroups         []RemoteRDFStorageGroup `json:"remote_storage_groups"`
+}
+
+type RemoteRDFStorageGroup struct {
+	SymmetrixID      string `json:"symmetrix_id"`
+	StorageGroupID   string `json:"storage_group_id"`
+	StorageGroupUUID string `json:"storage_group_uuid"`
 }
 
 // LocalDeviceAutoCriteria holds parameters for auto selecting local device parameters
@@ -211,7 +227,7 @@ type CreateRDFPair struct {
 	NoWD                    bool                     `json:"noWD"`
 	Remote                  bool                     `json:"remote"`
 	Bias                    bool                     `json:"bias"`
-	RecoverPoint            bool                     `json:"recoverPoint"`
+	RecoverPoint            bool                     `json:"recoverPoint,omitempty"`
 	LocalDeviceAutoCriteria *LocalDeviceAutoCriteria `json:"localDeviceAutoCriteriaParam"`
 	LocalDeviceListCriteria *LocalDeviceListCriteria `json:"localDeviceListCriteriaParam"`
 	ExecutionOption         string                   `json:"executionOption"`
@@ -231,6 +247,8 @@ type RDFDevicePair struct {
 	RdfMode              string `json:"rdfMode"`
 	RdfpairState         string `json:"rdfpairState"`
 	LargerRdfSide        string `json:"largerRdfSide"`
+	LocalWWNExternal     string `json:"local_wwn_external"`
+	RemoteWWNExternal    string `json:"remote_wwn_external"`
 }
 
 // RDFDevicePairList holds list of newly created RDF volume pair information
@@ -246,4 +264,5 @@ type StorageGroupRDFG struct {
 	VolumeRdfTypes   []string `json:"volumeRdfTypes"`
 	States           []string `json:"states"`
 	Modes            []string `json:"modes"`
+	LargerRdfSides   []string `json:"largerRdfSides"`
 }

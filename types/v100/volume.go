@@ -12,7 +12,7 @@
  limitations under the License.
 */
 
-package types
+package v100
 
 // Following structures are to in/out cast the Unisphere rest payload
 
@@ -30,17 +30,17 @@ type VolumeResultList struct {
 
 // VolumeIterator : holds the iterator of resultant volume list
 type VolumeIterator struct {
-	ResultList VolumeResultList `json:"resultList"`
-	ID         string           `json:"id"`
-	Count      int              `json:"count"`
-	// What units is ExpirationTime in?
-	ExpirationTime int64 `json:"expirationTime"`
-	MaxPageSize    int   `json:"maxPageSize"`
+	ResultList     VolumeResultList `json:"resultList"`
+	ID             string           `json:"id"`
+	Count          int              `json:"count"`
+	ExpirationTime int64            `json:"expirationTime"` // What units is ExpirationTime in?
+	MaxPageSize    int              `json:"maxPageSize"`
+	WarningMessage string           `json:"warningMessage"`
 }
 
 // Volume : information about a volume
 type Volume struct {
-	VolumeID              string       `json:"volumeID"`
+	VolumeID              string       `json:"volumeId"`
 	Type                  string       `json:"type"`
 	Emulation             string       `json:"emulation"`
 	SSID                  string       `json:"ssid"`
@@ -51,7 +51,7 @@ type Volume struct {
 	Status                string       `json:"status"`
 	Reserved              bool         `json:"reserved"`
 	Pinned                bool         `json:"pinned"`
-	PhysicalName          string       `json:"pysical_name"`
+	PhysicalName          string       `json:"physical_name"`
 	VolumeIdentifier      string       `json:"volume_identifier"`
 	WWN                   string       `json:"wwn"`
 	Encapsulated          bool         `json:"encapsulated"`
@@ -60,16 +60,29 @@ type Volume struct {
 	StorageGroupIDList    []string     `json:"storageGroupId"`
 	RDFGroupIDList        []RDFGroupID `json:"rdfGroupId"`
 	// Don't know how to handle symmetrixPortKey for sure
-	SymmetrixPortKey []SymmetrixPortKeyType `json:"symmetrixPortKey"`
-	Success          bool                   `json:"success"`
-	Message          string                 `json:"message"`
-	SnapSource       bool                   `json:"snapvx_source"`
-	SnapTarget       bool                   `json:"snapvx_target"`
+	SymmetrixPortKey   []SymmetrixPortKeyType `json:"symmetrixPortKey"`
+	SnapSource         bool                   `json:"snapvx_source"`
+	SnapTarget         bool                   `json:"snapvx_target"`
+	CUImageBaseAddress string                 `json:"cu_image_base_address"`
+	HasEffectiveWWN    bool                   `json:"has_effective_wwn"`
+	EffectiveWWN       string                 `json:"effective_wwn"`
+	EncapsulatedWWN    string                 `json:"encapsulated_wwn"`
+	OracleInstanceName string                 `json:"oracle_instance_name"`
+	MobilityIDEnabled  bool                   `json:"mobility_id_enabled"`
+	StorageGroups      []StorageGroupName     `json:"storage_groups"`
+	UnreducibleDataGB  float64                `json:"unreducible_data_gb"`
+	NGUID              string                 `json:"nguid"`
+}
+
+type StorageGroupName struct {
+	StorageGroupName       string `json:"storage_group_name"`
+	ParentStorageGroupName string `json:"parent_storage_group_name"`
 }
 
 // RDFGroupID contains the group number
 type RDFGroupID struct {
-	RDFGroupNumber int `json:"rdf_group_number"`
+	RDFGroupNumber int    `json:"rdf_group_number"`
+	Label          string `json:"label"`
 }
 
 // FreeVolumeParam : boolean value representing data to be freed
@@ -88,8 +101,13 @@ type ModifyVolumeIdentifierParam struct {
 	VolumeIdentifier VolumeIdentifierType `json:"volumeIdentifier"`
 }
 
+type EnableMobilityIDParam struct {
+	EnableMobilityID bool `json:"enable_mobility_id"`
+}
+
 // EditVolumeActionParam : action information to edit volume
 type EditVolumeActionParam struct {
+	EnableMobilityIDParam       *EnableMobilityIDParam       `json:"enable_mobility_id_param"`
 	FreeVolumeParam             *FreeVolumeParam             `json:"freeVolumeParam,omitempty"`
 	ExpandVolumeParam           *ExpandVolumeParam           `json:"expandVolumeParam,omitempty"`
 	ModifyVolumeIdentifierParam *ModifyVolumeIdentifierParam `json:"modifyVolumeIdentifierParam,omitempty"`

@@ -10,8 +10,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/dell/gopowermax/api"
-	types "github.com/dell/gopowermax/types/v90"
+	"github.com/dell/gopowermax/v2/api"
+	types "github.com/dell/gopowermax/v2/types/v100"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -62,7 +62,6 @@ func (c *Client) Authenticate(configConnect *ConfigConnect) error {
 		return c.api.ParseJSONError(resp)
 	}
         c.api.SetToken(basicAuthString)
-
         version := &types.Version{}
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(version)

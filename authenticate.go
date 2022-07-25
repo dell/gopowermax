@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dell/gopowermax/api"
+	"github.com/dell/gopowermax/v2/api"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -66,14 +66,7 @@ func (c *Client) Authenticate(ctx context.Context, configConnect *ConfigConnect)
 
 	headers := make(map[string]string, 1)
 	headers["Authorization"] = "Basic " + basicAuthString
-
-	path := "univmax/restapi/" + c.version + "/system/version"
-
-	if c.version != APIVersion90 {
-		// Path for version has been changed from u4p 91 onwards
-		path = "univmax/restapi/" + "version"
-	}
-
+	path := "univmax/restapi/" + "version"
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, path, headers, nil)
@@ -127,7 +120,6 @@ func doLog(
 func NewClient() (client Pmax, err error) {
 	return NewClientWithArgs(
 		os.Getenv("CSI_POWERMAX_ENDPOINT"),
-		os.Getenv("CSI_POWERMAX_VERSION"),
 		os.Getenv("CSI_APPLICATION_NAME"),
 		os.Getenv("CSI_POWERMAX_INSECURE") == "true",
 		os.Getenv("CSI_POWERMAX_USECERTS") == "true")
@@ -137,7 +129,6 @@ func NewClient() (client Pmax, err error) {
 // as direct arguments rather than receiving them from the enviornment. See NewClient().
 func NewClientWithArgs(
 	endpoint string,
-	version string,
 	applicationName string,
 	insecure,
 	useCerts bool) (client Pmax, err error) {
@@ -152,15 +143,12 @@ func NewClientWithArgs(
 		}
 	}
 
-	if version == "" {
-		version = DefaultAPIVersion
-	}
 	fields := map[string]interface{}{
 		"endpoint":         endpoint,
 		"applicationName":  applicationName,
 		"insecure":         insecure,
 		"useCerts":         useCerts,
-		"version":          version,
+		"version":          DefaultAPIVersion,
 		"debug":            debug,
 		"logResponseTimes": logResponseTimes,
 	}
@@ -193,17 +181,15 @@ func NewClientWithArgs(
 	client = &Client{
 		api: ac,
 		configConnect: &ConfigConnect{
-			Version: version,
+			Version: DefaultAPIVersion,
 		},
 		allowedArrays:  []string{},
-		version:        version,
+		version:        DefaultAPIVersion,
 		contextTimeout: contextTimeout,
 	}
 
 	accHeader = api.HeaderValContentTypeJSON
-	if version != "" {
-		accHeader = accHeader + ";version=" + version
-	}
+	accHeader = fmt.Sprintf("%s;version=%s", api.HeaderValContentTypeJSON, DefaultAPIVersion)
 	conHeader = accHeader
 
 	return client, nil

@@ -17,8 +17,7 @@ package pmax
 import (
 	"context"
 	"net/http"
-
-	types "github.com/dell/gopowermax/types/v90"
+	types "github.com/dell/gopowermax/v2/types/v100"
 )
 
 // Debug is a boolean, when enabled, that enables logging of send payloads, and other debug information. Default to false.
@@ -43,9 +42,7 @@ type ISCSITarget struct {
 const (
 	// DefaultAPIVersion is the default API version you will get if not specified to NewClientWithArgs.
 	// The other supported versions are listed here.
-	DefaultAPIVersion = "90"
-	// APIVersion90 is the API version corresponding to  90
-	APIVersion90 = "90"
+	DefaultAPIVersion = "100"
 	// APIVersion91 is the API version corresponding to 91
 	APIVersion91 = "91"
 )
@@ -103,7 +100,6 @@ type Pmax interface {
 	// and returns the storage group object. The storage group can be configured for thick volumes as an option.
 	// This is a blocking call and will only return after the storage group has been created
 	CreateStorageGroup(ctx context.Context, symID string, storageGroupID string, srpID string, serviceLevel string, thickVolumes bool) (*types.StorageGroup, error)
-
 	// UpdateStorageGroup updates a storage group (i.e. a PUT operation) and should support all the defined
 	// operations (but many have not been tested).
 	// This is done asynchronously and returns back a job
@@ -174,7 +170,7 @@ type Pmax interface {
 	CreateMaskingView(ctx context.Context, symID string, maskingViewID string, storageGroupID string, hostOrhostGroupID string, isHost bool, portGroupID string) (*types.MaskingView, error)
 
 	// CreatePortGroup creates a port group given the Port Group id and a list of dir/port ids
-	CreatePortGroup(ctx context.Context, symID string, portGroupID string, dirPorts []types.PortKey) (*types.PortGroup, error)
+	CreatePortGroup(ctx context.Context, symID string, portGroupID string, dirPorts []types.PortKey, protocol string) (*types.PortGroup, error)
 
 	// System
 	GetSymmetrixIDList(ctx context.Context) (*types.SymmetrixIDList, error)

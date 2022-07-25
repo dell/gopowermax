@@ -27,10 +27,9 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
+	types "github.com/dell/gopowermax/v2/types/v100"
 	log "github.com/sirupsen/logrus"
 
-	types "github.com/dell/gopowermax/types/v90"
 )
 
 // constants

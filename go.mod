@@ -1,4 +1,4 @@
-module github.com/dell/gopowermax
+module github.com/dell/gopowermax/v2
 
 go 1.18
 
