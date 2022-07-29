@@ -128,11 +128,11 @@ func (c *Client) ExecuteReplicationActionOnSG(ctx context.Context, symID, action
 		}
 	case "Resume":
 		actionParam := &types.Resume{
-			Force:        force,
-			SymForce:     false,
-			Star:         false,
-			Hop2:         false,
-			Remote:       false,
+			Force:    force,
+			SymForce: false,
+			Star:     false,
+			Hop2:     false,
+			Remote:   false,
 		}
 		modifyParam = &types.ModifySGRDFGroup{
 			Resume:          actionParam,
@@ -141,12 +141,12 @@ func (c *Client) ExecuteReplicationActionOnSG(ctx context.Context, symID, action
 		}
 	case "Failback":
 		actionParam := &types.Failback{
-			Force:        force,
-			SymForce:     false,
-			Star:         false,
-			Hop2:         false,
-			Bypass:       false,
-			Remote:       false,
+			Force:    force,
+			SymForce: false,
+			Star:     false,
+			Hop2:     false,
+			Bypass:   false,
+			Remote:   false,
 		}
 		modifyParam = &types.ModifySGRDFGroup{
 			Failback:        actionParam,

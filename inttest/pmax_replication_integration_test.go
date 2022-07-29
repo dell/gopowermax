@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/dell/gopowermax/v2/types/v100"
 	pmax "github.com/dell/gopowermax/v2"
+	types "github.com/dell/gopowermax/v2/types/v100"
 )
 
 var (

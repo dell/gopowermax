@@ -64,6 +64,7 @@ type Symmetrix struct {
 	SystemSizedProperty  []SystemSizedProperty `json:"system_sized_property"`
 }
 
+// SystemSizedProperty contains information about size data
 type SystemSizedProperty struct {
 	SRPName                    string `json:"srp_name"`
 	SizedFBADataReductionRatio string `json:"sized_fba_data_reduction_ratio"`
@@ -94,25 +95,28 @@ type StoragePool struct {
 	DiskGroupIDs         []string       `json:"diskGroupId"`
 	ExternalCap          float64        `json:"external_capacity_gb"`
 	SrpCap               *SrpCap        `json:"srp_capacity,omitempty"`
-        FbaCap               *FbaCap        `json:"fba_srp_capacity,omitempty"`
-        CkdCap               *CkdCap        `json:"ckd_srp_capacity,omitempty"`
+	FbaCap               *FbaCap        `json:"fba_srp_capacity,omitempty"`
+	CkdCap               *CkdCap        `json:"ckd_srp_capacity,omitempty"`
 	SrpEfficiency        *SrpEfficiency `json:"srp_efficiency"`
 	ServiceLevels        []string       `json:"service_levels"`
 }
 
-type FbaCap struct{
-	Provisioned       *provisioned       `json:"provisioned"`
+// FbaCap FBA storage pool capacity
+type FbaCap struct {
+	Provisioned *provisioned `json:"provisioned"`
 }
 
-type CkdCap struct{
-	Provisioned       *provisioned       `json:"provisioned"`
+// CkdCap CKD storage pool capacity
+type CkdCap struct {
+	Provisioned *provisioned `json:"provisioned"`
 }
 
 type provisioned struct {
-	UsableUsedInTB               float64 `json:"used_tb"`
-	UsableTotInTB                float64 `json:"effective_capacity_tb"`
-//	EffectiveUsedCapacityPercent float64 `json:"provisioned_percent"`
+	UsableUsedInTB float64 `json:"used_tb"`
+	UsableTotInTB  float64 `json:"effective_capacity_tb"`
+	//	EffectiveUsedCapacityPercent float64 `json:"provisioned_percent"`
 }
+
 // SrpCap : capacity of an SRP
 type SrpCap struct {
 	SubAllocCapInTB              float64 `json:"subscribed_allocated_tb"`
@@ -178,7 +182,7 @@ type JobIDList struct {
 type Job struct {
 	JobID                        string `json:"jobId"`
 	Name                         string `json:"name"`
-	SymmetrixId                  string `json:"symmetrixId"`
+	SymmetrixID                  string `json:"symmetrixId"`
 	Status                       string `json:"status"`
 	Username                     string `json:"username"`
 	LastModifiedDate             string `json:"last_modified_date"`
@@ -255,7 +259,7 @@ type Initiator struct {
 	FCIDLockdown         string    `json:"fcid_lockdown"`
 	IPAddress            string    `json:"ip_address,omitempty"`
 	Host                 string    `json:"host,omitempty"`
-	HostGroupIDs           []string  `json:"hostGroup,omitempty"`
+	HostGroupIDs         []string  `json:"hostGroup,omitempty"`
 	LoggedIn             bool      `json:"logged_in"`
 	OnFabric             bool      `json:"on_fabric"`
 	FabricName           string    `json:"fabric_name"`

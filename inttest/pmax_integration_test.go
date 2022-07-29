@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dell/gopowermax/types/v90"
 	"os"
 	"os/exec"
 	"strings"

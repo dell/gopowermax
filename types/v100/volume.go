@@ -40,40 +40,40 @@ type VolumeIterator struct {
 
 // Volume : information about a volume
 type Volume struct {
-	VolumeID              string       `json:"volumeId"`
-	Type                  string       `json:"type"`
-	Emulation             string       `json:"emulation"`
-	SSID                  string       `json:"ssid"`
-	AllocatedPercent      int          `json:"allocated_percent"`
-	CapacityGB            float64      `json:"cap_gb"`
-	FloatCapacityMB       float64      `json:"cap_mb"`
-	CapacityCYL           int          `json:"cap_cyl"`
-	Status                string       `json:"status"`
-	Reserved              bool         `json:"reserved"`
-	Pinned                bool         `json:"pinned"`
-	PhysicalName          string       `json:"physical_name"`
-	VolumeIdentifier      string       `json:"volume_identifier"`
-	WWN                   string       `json:"wwn"`
-	Encapsulated          bool         `json:"encapsulated"`
-	NumberOfStorageGroups int          `json:"num_of_storage_groups"`
-	NumberOfFrontEndPaths int          `json:"num_of_front_end_paths"`
-	StorageGroupIDList    []string     `json:"storageGroupId"`
-	RDFGroupIDList        []RDFGroupID `json:"rdfGroupId"`
-	// Don't know how to handle symmetrixPortKey for sure
-	SymmetrixPortKey   []SymmetrixPortKeyType `json:"symmetrixPortKey"`
-	SnapSource         bool                   `json:"snapvx_source"`
-	SnapTarget         bool                   `json:"snapvx_target"`
-	CUImageBaseAddress string                 `json:"cu_image_base_address"`
-	HasEffectiveWWN    bool                   `json:"has_effective_wwn"`
-	EffectiveWWN       string                 `json:"effective_wwn"`
-	EncapsulatedWWN    string                 `json:"encapsulated_wwn"`
-	OracleInstanceName string                 `json:"oracle_instance_name"`
-	MobilityIDEnabled  bool                   `json:"mobility_id_enabled"`
-	StorageGroups      []StorageGroupName     `json:"storage_groups"`
-	UnreducibleDataGB  float64                `json:"unreducible_data_gb"`
-	NGUID              string                 `json:"nguid"`
+	VolumeID              string                 `json:"volumeId"`
+	Type                  string                 `json:"type"`
+	Emulation             string                 `json:"emulation"`
+	SSID                  string                 `json:"ssid"`
+	AllocatedPercent      int                    `json:"allocated_percent"`
+	CapacityGB            float64                `json:"cap_gb"`
+	FloatCapacityMB       float64                `json:"cap_mb"`
+	CapacityCYL           int                    `json:"cap_cyl"`
+	Status                string                 `json:"status"`
+	Reserved              bool                   `json:"reserved"`
+	Pinned                bool                   `json:"pinned"`
+	PhysicalName          string                 `json:"physical_name"`
+	VolumeIdentifier      string                 `json:"volume_identifier"`
+	WWN                   string                 `json:"wwn"`
+	Encapsulated          bool                   `json:"encapsulated"`
+	NumberOfStorageGroups int                    `json:"num_of_storage_groups"`
+	NumberOfFrontEndPaths int                    `json:"num_of_front_end_paths"`
+	StorageGroupIDList    []string               `json:"storageGroupId"`
+	RDFGroupIDList        []RDFGroupID           `json:"rdfGroupId"`
+	SymmetrixPortKey      []SymmetrixPortKeyType `json:"symmetrixPortKey"`
+	SnapSource            bool                   `json:"snapvx_source"`
+	SnapTarget            bool                   `json:"snapvx_target"`
+	CUImageBaseAddress    string                 `json:"cu_image_base_address"`
+	HasEffectiveWWN       bool                   `json:"has_effective_wwn"`
+	EffectiveWWN          string                 `json:"effective_wwn"`
+	EncapsulatedWWN       string                 `json:"encapsulated_wwn"`
+	OracleInstanceName    string                 `json:"oracle_instance_name"`
+	MobilityIDEnabled     bool                   `json:"mobility_id_enabled"`
+	StorageGroups         []StorageGroupName     `json:"storage_groups"`
+	UnreducibleDataGB     float64                `json:"unreducible_data_gb"`
+	NGUID                 string                 `json:"nguid"`
 }
 
+// StorageGroupName holds group name in which volume exists
 type StorageGroupName struct {
 	StorageGroupName       string `json:"storage_group_name"`
 	ParentStorageGroupName string `json:"parent_storage_group_name"`
@@ -101,6 +101,7 @@ type ModifyVolumeIdentifierParam struct {
 	VolumeIdentifier VolumeIdentifierType `json:"volumeIdentifier"`
 }
 
+// EnableMobilityIDParam has mobility ID for a volume
 type EnableMobilityIDParam struct {
 	EnableMobilityID bool `json:"enable_mobility_id"`
 }

@@ -11,6 +11,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 */
+
 package v100
 
 // StorageGroupIDList : list of sg's
@@ -46,7 +47,7 @@ type StorageGroup struct {
 	CompressionRatio      string                `json:"compressionRatio"`
 	CompressionRatioToOne float64               `json:"compression_ratio_to_one"`
 	VPSavedPercent        float64               `json:"vp_saved_percent"`
-	tags                  string                `json:"tags"`
+	Tags                  string                `json:"tags"`
 	UUID                  string                `json:"uuid"`
 	UnreducibleDataGB     float64               `json:"unreducible_data_gb"`
 }
@@ -130,7 +131,7 @@ type VolumeAttributeType struct {
 
 // SLOBasedStorageGroupParam holds parameters related to an SG and SLO
 type SLOBasedStorageGroupParam struct {
-	CustomCascadedStorageGroupId                   string                `json:"custom_cascaded_storageGroupId"`
+	CustomCascadedStorageGroupID                   string                `json:"custom_cascaded_storageGroupId"`
 	SnapshotPolicies                               []string              `json:"snapshot_policies"`
 	SLOID                                          string                `json:"sloId,omitempty"`
 	WorkloadSelection                              string                `json:"workloadSelection,omitempty"`
@@ -182,7 +183,7 @@ type AddVolumeParam struct {
 	CreateNewVolumes      bool                  `json:"create_new_volumes"`
 	Emulation             string                `json:"emulation,omitempty"`
 	EnableMobilityID      bool                  `json:"enable_mobility_id"`
-	VolumeIdentifier      *VolumeIdentifierType  `json:"volumeIdentifier,omitempty"`
+	VolumeIdentifier      *VolumeIdentifierType `json:"volumeIdentifier,omitempty"`
 	RemoteSymmetrixSGInfo RemoteSymmSGInfoParam `json:"remoteSymmSGInfoParam"`
 }
 

@@ -28,8 +28,8 @@ import (
 	"time"
 
 	types "github.com/dell/gopowermax/v2/types/v100"
-	"github.com/jinzhu/copier"
 	"github.com/gorilla/mux"
+	"github.com/jinzhu/copier"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -927,10 +927,9 @@ func returnVolume(w http.ResponseWriter, volID string, remote bool) {
 				if !strings.Contains(vol.Type, "RDF") {
 					writeError(w, "Volume not found", http.StatusNotFound)
 					return
-				} else {
-					newVol.Type = strings.ReplaceAll(newVol.Type, "RDF1", "RDF2")
-					newVol.VolumeIdentifier = ""
 				}
+				newVol.Type = strings.ReplaceAll(newVol.Type, "RDF1", "RDF2")
+				newVol.VolumeIdentifier = ""
 			}
 			writeJSON(w, newVol)
 			return
@@ -1835,7 +1834,6 @@ func removeHost(hostID string) error {
 	return nil
 }
 
-
 func newPortGroup(portGroupID string, portGroupType string, portKeys []types.PortKey) {
 	portGroup := &types.PortGroup{
 		PortGroupID:        portGroupID,
@@ -1919,10 +1917,10 @@ func removePortKey(slice []types.PortKey, keyToRemove types.PortKey) []types.Por
 		// Found the index with matching port
 		copy(slice[index:], slice[index+1:])
 		return slice[:len(slice)-1]
-	} else {
-		// No match was found, return unchanged slice
-		return slice
 	}
+	// No match was found, return unchanged slice
+	return slice
+
 }
 
 // UpdatePortGroupFromParams - Updates PortGroup given an EditPortGroup payload
@@ -1981,7 +1979,7 @@ func AddStorageGroupFromCreateParams(createParams *types.CreateStorageGroupParam
 	} else {
 		srpID = ""
 	}
-	AddStorageGroup(sgID, srpID, serviceLevel)  // #nosec G20
+	AddStorageGroup(sgID, srpID, serviceLevel) // #nosec G20
 }
 
 // keys - Return keys of the given map

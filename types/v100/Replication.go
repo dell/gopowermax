@@ -192,6 +192,7 @@ type RDFStorageGroup struct {
 	RemoteStorageGroups         []RemoteRDFStorageGroup `json:"remote_storage_groups"`
 }
 
+// RemoteRDFStorageGroup holds information about remote storage groups
 type RemoteRDFStorageGroup struct {
 	SymmetrixID      string `json:"symmetrix_id"`
 	StorageGroupID   string `json:"storage_group_id"`

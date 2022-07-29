@@ -1133,7 +1133,6 @@ func (c *Client) CreateHost(ctx context.Context, symID string, hostID string, in
 	return host, nil
 }
 
-
 // UpdateHostInitiators updates a host from a list of InitiatorIDs and returns a types.Host.
 func (c *Client) UpdateHostInitiators(ctx context.Context, symID string, host *types.Host, initiatorIDs []string) (*types.Host, error) {
 	defer c.TimeSpent("UpdateHostInitiators", time.Now())
@@ -1321,10 +1320,10 @@ func (c *Client) CreatePortGroup(ctx context.Context, symID string, portGroupID 
 	}
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XPortGroup
 	createPortGroupParams := &types.CreatePortGroupParams{
-		PortGroupID:      portGroupID,
-		SymmetrixPortKey: dirPorts,
-		ExecutionOption:  types.ExecutionOptionSynchronous,
-		PortGroupProtocol : protocol,
+		PortGroupID:       portGroupID,
+		SymmetrixPortKey:  dirPorts,
+		ExecutionOption:   types.ExecutionOptionSynchronous,
+		PortGroupProtocol: protocol,
 	}
 	ifDebugLogPayload(createPortGroupParams)
 	portGroup := &types.PortGroup{}

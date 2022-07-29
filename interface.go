@@ -16,8 +16,8 @@ package pmax
 
 import (
 	"context"
-	"net/http"
 	types "github.com/dell/gopowermax/v2/types/v100"
+	"net/http"
 )
 
 // Debug is a boolean, when enabled, that enables logging of send payloads, and other debug information. Default to false.
