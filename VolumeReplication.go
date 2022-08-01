@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"time"
 
-	types "github.com/dell/gopowermax/types/v90"
+	types "github.com/dell/gopowermax/v2/types/v100"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -128,12 +128,11 @@ func (c *Client) ExecuteReplicationActionOnSG(ctx context.Context, symID, action
 		}
 	case "Resume":
 		actionParam := &types.Resume{
-			Force:        force,
-			SymForce:     false,
-			Star:         false,
-			Hop2:         false,
-			Remote:       false,
-			RecoverPoint: false,
+			Force:    force,
+			SymForce: false,
+			Star:     false,
+			Hop2:     false,
+			Remote:   false,
 		}
 		modifyParam = &types.ModifySGRDFGroup{
 			Resume:          actionParam,
@@ -142,13 +141,12 @@ func (c *Client) ExecuteReplicationActionOnSG(ctx context.Context, symID, action
 		}
 	case "Failback":
 		actionParam := &types.Failback{
-			Force:        force,
-			SymForce:     false,
-			Star:         false,
-			Hop2:         false,
-			Bypass:       false,
-			Remote:       false,
-			RecoverPoint: false,
+			Force:    force,
+			SymForce: false,
+			Star:     false,
+			Hop2:     false,
+			Bypass:   false,
+			Remote:   false,
 		}
 		modifyParam = &types.ModifySGRDFGroup{
 			Failback:        actionParam,

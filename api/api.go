@@ -22,15 +22,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	types "github.com/dell/gopowermax/v2/types/v100"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
-
-	log "github.com/sirupsen/logrus"
-
-	types "github.com/dell/gopowermax/types/v90"
 )
 
 // constants

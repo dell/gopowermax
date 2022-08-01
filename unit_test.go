@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
-	"github.com/dell/gopowermax/mock"
+	"github.com/dell/gopowermax/v2/mock"
 )
 
 var mockServer *httptest.Server

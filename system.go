@@ -18,11 +18,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	types "github.com/dell/gopowermax/v2/types/v100"
 	"net/http"
 	"strings"
 	"time"
 
-	types "github.com/dell/gopowermax/types/v90"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -61,7 +61,6 @@ func (c *Client) checkResponse(resp *http.Response) error {
 
 // GetSymmetrixIDList returns a list of all the symmetrix systems known to the connected Unisphere instance.
 func (c *Client) GetSymmetrixIDList(ctx context.Context) (*types.SymmetrixIDList, error) {
-
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(

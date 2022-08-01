@@ -24,8 +24,8 @@ import (
 	"strings"
 
 	"github.com/cucumber/godog"
-	"github.com/dell/gopowermax/mock"
-	types "github.com/dell/gopowermax/types/v90"
+	"github.com/dell/gopowermax/v2/mock"
+	types "github.com/dell/gopowermax/v2/types/v100"
 )
 
 const (
@@ -45,6 +45,7 @@ const (
 	mvID                   = "12se0042_mv"
 	testFCInitiatorWWN     = "10000090fa66060a"
 	testFCInitiator        = "FA-1D:4:10000090fa66060a"
+	protocol               = "SCSI_FC"
 )
 
 type uMV struct {
@@ -91,7 +92,7 @@ type unitContext struct {
 	hostGroupID        string
 	sgID               string
 
-	symRepCapibilities    *types.SymReplicationCapabilities
+	symRepCapabilities    *types.SymReplicationCapabilities
 	sourceVolumeList      []types.VolumeList
 	symVolumeList         *types.SymVolumeList
 	volSnapList           *types.SnapshotVolumeGeneration
@@ -136,7 +137,7 @@ func (c *unitContext) reset() {
 	c.hostGroupID = ""
 	c.sgID = ""
 
-	c.symRepCapibilities = nil
+	c.symRepCapabilities = nil
 	c.sourceVolumeList = make([]types.VolumeList, 0)
 	c.symVolumeList = nil
 	c.volSnapList = nil
@@ -342,7 +343,7 @@ func (c *unitContext) iCallAuthenticateWithEndpointCredentials(endpoint, credent
 		URL = ""
 	}
 	fmt.Printf("apiVersion: %s\n", apiVersion)
-	client, err := NewClientWithArgs(URL, apiVersion, "", true, false)
+	client, err := NewClientWithArgs(URL, "", true, false)
 	if err != nil {
 		c.err = err
 		return nil
@@ -823,7 +824,7 @@ func (c *unitContext) iCallCreatePortGroup(groupName string, strSliceOfPorts str
 	}
 
 	initialPorts := convertStringSliceOfPortsToPortKeys(strSliceOfPorts)
-	c.portGroup, c.err = c.client.CreatePortGroup(context.TODO(), symID, groupName, initialPorts)
+	c.portGroup, c.err = c.client.CreatePortGroup(context.TODO(), symID, groupName, initialPorts, protocol)
 	return nil
 }
 
@@ -1220,7 +1221,7 @@ func convertStringToSlice(input string) []string {
 }
 
 func (c *unitContext) iExcuteTheCapabilitiesOnTheSymmetrixArray() error {
-	c.symRepCapibilities, c.err = c.client.GetReplicationCapabilities(context.TODO())
+	c.symRepCapabilities, c.err = c.client.GetReplicationCapabilities(context.TODO())
 	return nil
 }
 

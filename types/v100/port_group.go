@@ -12,7 +12,7 @@
  limitations under the License.
 */
 
-package types
+package v100
 
 // AddPortParam ...
 type AddPortParam struct {
@@ -24,13 +24,20 @@ type RemovePortParam struct {
 	Ports []SymmetrixPortKeyType `json:"port"`
 }
 
+// RenamePortGroupParam ...
+type RenamePortGroupParam struct {
+	NewPortGroupName string `json:"new_port_group_name"`
+}
+
 // EditPortGroupActionParam ...
 type EditPortGroupActionParam struct {
-	AddPortParam    *AddPortParam    `json:"addPortParam,omitempty"`
-	RemovePortParam *RemovePortParam `json:"removePortParam,omitempty"`
+	AddPortParam         *AddPortParam         `json:"addPortParam,omitempty"`
+	RemovePortParam      *RemovePortParam      `json:"removePortParam,omitempty"`
+	RenamePortGroupParam *RenamePortGroupParam `json:"renamePortGroupParam,omitempty"`
 }
 
 // EditPortGroup ...
 type EditPortGroup struct {
+	ExecutionOption          string                    `json:"executionOption"`
 	EditPortGroupActionParam *EditPortGroupActionParam `json:"editPortGroupActionParam"`
 }

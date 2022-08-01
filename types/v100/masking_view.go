@@ -12,7 +12,7 @@
  limitations under the License.
 */
 
-package types
+package v100
 
 // MaskingViewList contains list of masking views
 type MaskingViewList struct {
@@ -50,10 +50,11 @@ type HostFlags struct {
 // CreateHostGroupParam contains parameters required
 // to create host group
 type CreateHostGroupParam struct {
-	HostGroupID     string     `json:"hostGroupId"`
-	HostIDs         []string   `json:"hostId"`
-	HostFlags       *HostFlags `json:"hostFlags,omitempty"`
-	ExecutionOption string     `json:"executionOption"`
+	HostGroupID     string            `json:"hostGroupId"`
+	HostIDs         []string          `json:"hostId"`
+	HostFlags       *HostFlags        `json:"hostFlags,omitempty"`
+	ExecutionOption string            `json:"executionOption"`
+	NewHosts        []CreateHostParam `json:"new_hosts"`
 }
 
 // UseExistingHostGroupParam contains ID of the
@@ -132,7 +133,7 @@ type UseExistingHostParam struct {
 type HostOrHostGroupSelection struct {
 	CreateHostGroupParam      *CreateHostGroupParam      `json:"createHostGroupParam,omitempty"`
 	UseExistingHostGroupParam *UseExistingHostGroupParam `json:"useExistingHostGroupParam,omitempty"`
-	CreateHostParam           *CreateHostGroupParam      `json:"createHostParam,omitempty"`
+	CreateHostParam           *CreateHostParam           `json:"createHostParam,omitempty"`
 	UseExistingHostParam      *UseExistingHostParam      `json:"useExistingHostParam,omitempty"`
 }
 
@@ -179,7 +180,7 @@ type MaskingViewCreateParam struct {
 // a volume with the HostLUNAddress, the InitiatID and DirectorPort used for the
 // path, and other attributes.
 type MaskingViewConnection struct {
-	VolumeID       string `json:"volumeID"`
+	VolumeID       string `json:"volumeId"`
 	HostLUNAddress string `json:"host_lun_address"`
 	CapacityGB     string `json:"cap_gb"`
 	InitiatorID    string `json:"initiatorId"`

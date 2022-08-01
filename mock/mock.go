@@ -27,11 +27,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jinzhu/copier"
-
-	types "github.com/dell/gopowermax/types/v90"
-	types91 "github.com/dell/gopowermax/types/v91"
+	types "github.com/dell/gopowermax/v2/types/v100"
 	"github.com/gorilla/mux"
+	"github.com/jinzhu/copier"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -358,7 +356,6 @@ func initMockCache() {
 	initNode1List = append(initNode1List, iqnNode1)
 	AddInitiator(initNode1, iqnNode1, "GigE", []string{iscsidir1PortKey1}, "") // #nosec G20
 	AddHost("CSI-Test-Node-1", "iSCSI", initNode1List)                         // #nosec G20
-
 	initNode2List := make([]string, 0)
 	iqn1Node2 := "iqn.1993-08.org.centos:01:5ae577b352a1"
 	iqn2Node2 := "iqn.1993-08.org.centos:01:5ae577b352a2"
@@ -931,7 +928,6 @@ func returnVolume(w http.ResponseWriter, volID string, remote bool) {
 					writeError(w, "Volume not found", http.StatusNotFound)
 					return
 				}
-
 				newVol.Type = strings.ReplaceAll(newVol.Type, "RDF1", "RDF2")
 				newVol.VolumeIdentifier = ""
 			}
@@ -1121,7 +1117,6 @@ func handleIterator(w http.ResponseWriter, r *http.Request) {
 		from := queryParams.Get("from")
 		to := queryParams.Get("to")
 		fmt.Printf("mux iterId %s from %s to %s\n", vars["iterId"], from, to)
-
 		result := &types.VolumeResultList{}
 		result.From, err = strconv.Atoi(from)
 		if err != nil {
@@ -1192,7 +1187,11 @@ func handleStorageGroup(w http.ResponseWriter, r *http.Request) {
 				addVolumeParam := expandPayload.AddVolumeParam
 				if addVolumeParam != nil {
 					name := addVolumeParam.VolumeIdentifier.IdentifierName
-					size := addVolumeParam.VolumeAttribute.VolumeSize
+					var size string
+					if len(addVolumeParam.VolumeAttributes) > 0 {
+						size = addVolumeParam.VolumeAttributes[0].VolumeSize
+					}
+					size = addVolumeParam.VolumeAttributes[0].VolumeSize
 					AddVolumeToStorageGroupTest(w, name, size, sgID)
 				}
 				addSpecificVolumeParam := expandPayload.AddSpecificVolumeParam
@@ -1206,7 +1205,7 @@ func handleStorageGroup(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			// for apiVersion 91
-			updateSGPayload := &types91.UpdateStorageGroupPayload{}
+			updateSGPayload := &types.UpdateStorageGroupPayload{}
 			err := decoder.Decode(updateSGPayload)
 			if err != nil {
 				writeError(w, "problem decoding PUT StorageGroup payload: "+err.Error(), http.StatusBadRequest)
@@ -1651,8 +1650,6 @@ func newVolume(volumeID, volumeIdentifier string, size int, sgList []string) {
 		NumberOfStorageGroups: 1,
 		NumberOfFrontEndPaths: 0,
 		StorageGroupIDList:    sgList,
-		Success:               true,
-		Message:               "message",
 	}
 	if _, ok := Data.StorageGroupIDToRDFStorageGroup[sgList[0]]; ok {
 		volume.Type = "RDF1+TDEV"
@@ -1923,6 +1920,7 @@ func removePortKey(slice []types.PortKey, keyToRemove types.PortKey) []types.Por
 	}
 	// No match was found, return unchanged slice
 	return slice
+
 }
 
 // UpdatePortGroupFromParams - Updates PortGroup given an EditPortGroup payload
@@ -1936,7 +1934,6 @@ func DeletePortGroup(portGroupID string) (*types.PortGroup, error) {
 	if !ok {
 		return nil, fmt.Errorf("error! PortGroup %s does not exist", portGroupID)
 	}
-
 	delete(Data.PortGroupIDToPortGroup, portGroupID)
 	return pg, nil
 }
@@ -2375,7 +2372,6 @@ func handlePort(w http.ResponseWriter, r *http.Request) {
 		}
 		// return a list of Ports
 		returnPortIDList(w, dID)
-
 	default:
 		writeError(w, "Invalid Method", http.StatusBadRequest)
 	}
@@ -2530,7 +2526,6 @@ func handleHost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		RemoveHost(hostID) // #nosec G20
-
 	default:
 		writeError(w, "Invalid Method", http.StatusBadRequest)
 	}
@@ -2887,6 +2882,8 @@ func renameSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []t
 			for _, snap := range Data.VolIDToSnapshots[volID.Name] {
 				if snap.Name == oldSnapID {
 					snap.Name = newSnapID
+					Data.VolIDToSnapshots[volID.Name] = map[string]*types.Snapshot{newSnapID: snap}
+					newMockJob(jobID, types.JobStatusRunning, types.JobStatusSucceeded, resourceLink)
 					Data.VolIDToSnapshots[volID.Name] = map[string]*types.Snapshot{newSnapID: snap}
 					newMockJob(jobID, types.JobStatusRunning, types.JobStatusSucceeded, resourceLink)
 				}

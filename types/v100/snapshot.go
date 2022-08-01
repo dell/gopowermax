@@ -12,7 +12,7 @@
  limitations under the License.
 */
 
-package types
+package v100
 
 // QueryParams is a map of key value pairs that can be
 // appended to any url as query parameters.

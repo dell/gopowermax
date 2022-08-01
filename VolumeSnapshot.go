@@ -23,7 +23,8 @@ import (
 	"strings"
 	"time"
 
-	types "github.com/dell/gopowermax/types/v90"
+	types "github.com/dell/gopowermax/v2/types/v100"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -255,7 +256,6 @@ func (c *Client) ModifySnapshot(ctx context.Context, symID string, sourceVol []t
 	targetVol []types.VolumeList, snapID string, action string,
 	newSnapID string, generation int64) error {
 	defer c.TimeSpent("ModifySnapshot", time.Now())
-
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return err
 	}
