@@ -43,6 +43,71 @@ type RDFGroup struct {
 	Offline                  bool     `json:"offline"`
 }
 
+// RDFGroupIDL contains the RDF group when we list RDF groups
+type RDFGroupIDL struct {
+	RDFGNumber  int    `json:"rdfgNumber"`
+	Label       string `json:"label"`
+	RemoteSymID string `json:"remote_symmetrix_id"`
+	GroupType   string `json:"group_type"`
+}
+
+// RDFGroupList has list of RDF group
+type RDFGroupList struct {
+	RDFGroupCount int           `json:"rdfg_count"`
+	RDFGroupIDs   []RDFGroupIDL `json:"rdfGroupID"`
+}
+
+// RDFPortDetails has RDF ports details
+type RDFPortDetails struct {
+	SymmID     string `json:"symmetrixID"`
+	DirNum     int    `json:"directorNumber"`
+	DirID      string `json:"directorId"`
+	PortNum    int    `json:"portNumber"`
+	PortOnline bool   `json:"online"`
+	PortWWN    string `json:"wwn"`
+}
+
+// RDFGroupCreate RDF Group Create Action
+type RDFGroupCreate struct {
+	Label        string           `json:"label"`
+	LocalRDFNum  int              `json:"local_rdfg_number"`
+	LocalPorts   []RDFPortDetails `json:"local_ports"`
+	RemoteRDFNum int              `json:"remote_rdfg_number"`
+	RemotePorts  []RDFPortDetails `json:"remote_ports"`
+}
+
+// RDFDirList gets a List of RDF Directors
+type RDFDirList struct {
+	RdfDirs []string `json:"directorID"`
+}
+
+// RDFDirDetails gets details of a given RDF Director
+type RDFDirDetails struct {
+	SymID           string `json:"symmetrixID"`
+	DirNum          int    `json:"directorNumber"`
+	DirID           string `json:"directorId"`
+	DirOnline       string `json:"online"`
+	DirProtocolFC   bool   `json:"fiber"`
+	DirProtocolGigE bool   `json:"gige"`
+	DirHWCompress   bool   `json:"hwCompressionSupported"`
+}
+
+// RDFPortList gets a List of RDF Ports
+type RDFPortList struct {
+	RdfPorts []string `json:"portNumber"`
+}
+
+// RemoteRDFPortDetails gets a list of Remote Directors:Port that are zoned to a given Local RDF Port.
+type RemoteRDFPortDetails struct {
+	RemotePorts []RDFPortDetails `json:"remotePort"`
+}
+
+// NextFreeRDFGroup - Free RDFg contains information about the Next free RDFg in R1 and R2
+type NextFreeRDFGroup struct {
+	LocalRdfGroup  []int `json:"rdfg_number"`
+	RemoteRdfGroup []int `json:"remote_rdfg_number"`
+}
+
 // Suspend action
 type Suspend struct {
 	Force      bool `json:"force"`

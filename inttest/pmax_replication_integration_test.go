@@ -442,7 +442,7 @@ func TestGetRDFGroup(t *testing.T) {
 		}
 	}
 
-	rdfGrpInfo, err := client.GetRDFGroup(context.TODO(), symmetrixID, localRDFGrpNo)
+	rdfGrpInfo, err := client.GetRDFGroupByID(context.TODO(), symmetrixID, localRDFGrpNo)
 	if err != nil {
 		t.Errorf("Error fetching RDF Group Information : %s", err.Error())
 		return
@@ -757,4 +757,38 @@ func cleanupRDFPair(volumeID string, volumeName string, storageGroup string, t *
 	}
 	fmt.Printf("Received expected error: %s\n", err.Error())
 
+}
+
+func TestGetFreeLocalAndRemoteRDFg(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	rdfGrpInfo, err := client.GetFreeLocalAndRemoteRDFg(context.TODO(), symmetrixID, remoteSymmetrixID)
+	if err != nil {
+		t.Errorf("Error fetching Free RDF Group Information : %s", err.Error())
+		return
+	}
+	fmt.Printf(" Free RDF Information fetched successfully: %v\n", rdfGrpInfo)
+}
+
+func TestGetLocalOnlineRDFDirs(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	rdfGrpInfo, err := client.GetLocalOnlineRDFDirs(context.TODO(), symmetrixID)
+	if err != nil {
+		t.Errorf("Error fetching local Online RDF Dirs Information : %s", err.Error())
+		return
+	}
+	fmt.Printf("Local Online RDF Dirs fetched successfully: %v\n", rdfGrpInfo)
 }

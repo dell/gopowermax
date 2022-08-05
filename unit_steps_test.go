@@ -1508,7 +1508,7 @@ func (c *unitContext) iCallGetProtectedStorageGroup() error {
 
 func (c *unitContext) iCallGetRDFGroup() error {
 	var rdfGroup *types.RDFGroup
-	rdfGroup, c.err = c.client.GetRDFGroup(context.TODO(), symID, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo))
+	rdfGroup, c.err = c.client.GetRDFGroupByID(context.TODO(), symID, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo))
 	if c.err == nil {
 		if !rdfGroup.Async || rdfGroup.RemoteSymmetrix != mock.DefaultRemoteSymID || rdfGroup.RdfgNumber != mock.DefaultRemoteRDFGNo {
 			c.err = fmt.Errorf("rdf group with incorrect details returned")

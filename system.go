@@ -43,6 +43,13 @@ var (
 func (c *Client) urlPrefix() string {
 	return RESTPrefix + c.version + "/"
 }
+
+// There are many internal REST APIs provided by U4P, Defining the internal RESTAPI signature
+func (c *Client) urlInternalPrefix() string {
+	// unable to find c.version hence setting the value to 100
+	return RESTPrefix + "internal" + "/100/file" + "/"
+}
+
 func (c *Client) getSymmetrixIDListURL() string {
 	return c.urlPrefix() + "system/symmetrix"
 }

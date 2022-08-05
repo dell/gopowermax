@@ -262,28 +262,48 @@ type Pmax interface {
 	// GetPrivVolumeByID returns a Volume structure given the symmetrix and volume ID (volume ID is in WWN format)
 	GetPrivVolumeByID(ctx context.Context, symID string, volumeID string) (*types.VolumeResultPrivate, error)
 
-	// Delete PortGroup
+	// DeletePortGroup deletes a port group
 	DeletePortGroup(ctx context.Context, symID string, portGroupID string) error
-	// Update PortGroup
+	// UpdatePortGroup updates a port group
 	UpdatePortGroup(ctx context.Context, symID string, portGroupID string, ports []types.PortKey) (*types.PortGroup, error)
 
-	// Expand the size of an existing volume
+	// ExpandVolume expands the size of an existing volume
 	ExpandVolume(ctx context.Context, symID string, volumeID string, rdfGNo int, newSizeCYL int) (*types.Volume, error)
 	GetCreateVolInSGPayload(sizeInCylinders int, volumeName string, isSync bool, remoteSymID, storageGroupID string, opts ...http.Header) (payload interface{})
 	//GetCreateVolInSGPayloadWithMetaDataHeaders(sizeInCylinders int, volumeName string, isSync bool, remoteSymID, remoteStorageGroupID string, metadata http.Header) (payload interface{})
 
-	// Fetches RDF group information
-	GetRDFGroup(ctx context.Context, symID, rdfGroup string) (*types.RDFGroup, error)
+	// GetRDFGroupList GetRDFGroupList fetches all RDF group
+	GetRDFGroupList(ctx context.Context, symID string, queryParams types.QueryParams) (*types.RDFGroupList, error)
+	// GetRDFGroupByID fetches RDF group information
+	GetRDFGroupByID(ctx context.Context, symID, rdfGroup string) (*types.RDFGroup, error)
 	// GetProtectedStorageGroup returns protected storage group given the storage group ID
 	GetProtectedStorageGroup(ctx context.Context, symID, storageGroup string) (*types.RDFStorageGroup, error)
 	// CreateSGReplica creates a storage group on remote array and protect them with given RDF Mode and a given source storage group
 	CreateSGReplica(ctx context.Context, symID, remoteSymID, rdfMode, rdfGroupNo, sourceSG, remoteSGName, remoteServiceLevel string, bias bool) (*types.SGRDFInfo, error)
 	// ExecuteReplicationActionOnSG executes supported replication based actions on the protected SG
 	ExecuteReplicationActionOnSG(ctx context.Context, symID, action, storageGroup, rdfGroup string, force, exemptConsistency, bias bool) error
-	// Creates a volume replication pair
+	// CreateRDFPair Creates a volume replication pair
 	CreateRDFPair(ctx context.Context, symID, rdfGroupNo, deviceID, rdfMode, rdfType string, establish, exemptConsistency bool) (*types.RDFDevicePairList, error)
-	/// GetRDFDevicePairInfo returns RDF volume information
+	// GetRDFDevicePairInfo returns RDF volume information
 	GetRDFDevicePairInfo(ctx context.Context, symID, rdfGroup, volumeID string) (*types.RDFDevicePair, error)
 	// GetStorageGroupRDFInfo returns the of RDF info of protected storage group
 	GetStorageGroupRDFInfo(ctx context.Context, symID, sgName, rdfGroupNo string) (*types.StorageGroupRDFG, error)
+
+	//GetFreeLocalAndRemoteRDFg returns list of Local and Remote Free RDFg in the array
+	GetFreeLocalAndRemoteRDFg(ctx context.Context, localSymmID string, remoteSymmID string) (*types.NextFreeRDFGroup, error)
+
+	// ExecuteCreateRDFGroup fetches Next Free RDFGroup across the arrays. Returns Free RDFGroup from R1 and R2
+	ExecuteCreateRDFGroup(ctx context.Context, symID string, CreateRDFPayload *types.RDFGroupCreate) bool
+
+	//GetLocalOnlineRDFDirs returs a List of ONLINE RDF Directors for a given array
+	GetLocalOnlineRDFDirs(ctx context.Context, localSymID string) (*types.RDFDirList, error)
+
+	//GetLocalOnlineRDFPorts returs List of ONLINE RDF Ports associated for a given ONLINE RDF Director
+	GetLocalOnlineRDFPorts(ctx context.Context, rdfDir string, localSymID string) (*types.RDFPortList, error)
+
+	//GetRemoteRDFPortOnSAN returns an array of Remote RDF Ports on the SAN that are connected to given local RDF Dir:Port
+	GetRemoteRDFPortOnSAN(ctx context.Context, localSymID string, rdfDir string, rdfPort string) (*types.RemoteRDFPortDetails, error)
+
+	//GetLocalRDFPortDetails returns details about the local RDFDir:port
+	GetLocalRDFPortDetails(ctx context.Context, localSymID string, rdfDir string, rdfPort int) (*types.RDFPortDetails, error)
 }
