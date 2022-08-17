@@ -42,6 +42,7 @@ const (
 	XMaskingView           = "/maskingview"
 	Emulation              = "FBA"
 	MaxVolIdentifierLength = 64
+	Migration			   = "migration/"
 )
 
 //TimeSpent - Calculates and prints time spent for a caller function
@@ -332,6 +333,33 @@ func (c *Client) CreateStorageGroup(ctx context.Context, symID, storageGroupID, 
 		return nil, err
 	}
 	log.Info(fmt.Sprintf("Successfully created SG: %s", storageGroupID))
+	return storageGroup, nil
+}
+
+
+// CreateStorageGroup creates a Storage Group given the storageGroupID (name), srpID (storage resource pool), service level, and boolean for thick volumes.
+// If srpID is "None" then serviceLevel and thickVolumes settings are ignored
+func (c *Client) MigrateStorageGroup(ctx context.Context, symID, storageGroupID, srpID, serviceLevel string, thickVolumes bool) (*v100.StorageGroup, error) {
+	defer c.TimeSpent("MigrateStorageGroup", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	URL := c.urlPrefix() + Migration + SymmetrixX + symID + XStorageGroup
+	payload := c.GetCreateStorageGroupPayload(storageGroupID, srpID, serviceLevel, thickVolumes)
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	resp, err := c.api.DoAndGetResponseBody(
+		ctx, http.MethodPost, URL, c.getDefaultHeaders(), payload)
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	storageGroup := &v100.StorageGroup{}
+	decoder := json.NewDecoder(resp.Body)
+	if err = decoder.Decode(storageGroup); err != nil {
+		return nil, err
+	}
+	log.Info(fmt.Sprintf("Successfully Migrated SG: %s", storageGroupID))
 	return storageGroup, nil
 }
 
