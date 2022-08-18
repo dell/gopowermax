@@ -28,14 +28,164 @@ import (
 
 // The following constants are for internal use within the pmax library.
 const (
-	XRDFGroup = "/rdf_group"
-	ASYNC     = "ASYNC"
-	METRO     = "METRO"
-	SYNC      = "SYNC"
+	XRDFGroup      = "/rdf_group"
+	XFREERDFG      = "/rdf_group_numbers_free?remote_symmetrix_id="
+	XRDFDIR        = "/rdf_director/"
+	XRDFONLINEDIR  = "/rdf_director?online=true"
+	XRDFPORT       = "/port/"
+	XRDFPORTONLINE = "/port?online=true"
+	XREMOTEPORT    = "/remote_port"
+	ASYNC          = "ASYNC"
+	METRO          = "METRO"
+	SYNC           = "SYNC"
 )
 
-// GetRDFGroup returns RDF group information given the RDF group number
-func (c *Client) GetRDFGroup(ctx context.Context, symID, rdfGroupNo string) (*types.RDFGroup, error) {
+// GetFreeLocalAndRemoteRDFg  gets the next free RDFg available
+// This API is only available in 10.x
+func (c *Client) GetFreeLocalAndRemoteRDFg(ctx context.Context, localSymID string, remoteSymID string) (*types.NextFreeRDFGroup, error) {
+	defer c.TimeSpent("GetFreeLocalAndRemoteRDFg", time.Now())
+	if _, err := c.IsAllowedArray(localSymID); err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+
+	//Eg: univmax/restapi/internal/100/file/symmetrix/<LocalSID>/rdf_group_numbers_free?remote_symmetrix_id=<remoteSID>
+	URL := c.urlInternalPrefix() + SymmetrixX + localSymID + XFREERDFG + remoteSymID
+	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	if err != nil {
+		log.Error("GetFreeLocalAndRemoteRDFg failed: " + err.Error())
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+
+	freeRdfGroups := new(types.NextFreeRDFGroup)
+	if err := json.NewDecoder(resp.Body).Decode(freeRdfGroups); err != nil {
+		return nil, err
+	}
+	return freeRdfGroups, nil
+
+}
+
+// GetLocalOnlineRDFDirs gets all Online Directors for the given SYMM
+func (c *Client) GetLocalOnlineRDFDirs(ctx context.Context, localSymID string) (*types.RDFDirList, error) {
+	defer c.TimeSpent("GetLocalOnlineRDFDirs", time.Now())
+	if _, err := c.IsAllowedArray(localSymID); err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+
+	URL := c.urlPrefix() + ReplicationX + SymmetrixX + localSymID + XRDFONLINEDIR
+	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	if err != nil {
+		log.Error("GetLocalOnlineRDFDirs failed: " + err.Error())
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+
+	rdfDirList := new(types.RDFDirList)
+	if err := json.NewDecoder(resp.Body).Decode(rdfDirList); err != nil {
+		return nil, err
+	}
+	return rdfDirList, nil
+
+}
+
+// GetLocalOnlineRDFPorts gets all Online Ports for the given ONLINE RDF Director
+func (c *Client) GetLocalOnlineRDFPorts(ctx context.Context, rdfDir string, localSymID string) (*types.RDFPortList, error) {
+	defer c.TimeSpent("GetLocalOnlineRDFPorts", time.Now())
+	if _, err := c.IsAllowedArray(localSymID); err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+
+	URL := c.urlPrefix() + ReplicationX + SymmetrixX + localSymID + XRDFDIR + rdfDir + XRDFPORTONLINE
+
+	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	if err != nil {
+		log.Error("GetLocalOnlineRDFPorts failed: " + err.Error())
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+
+	rdfPortList := new(types.RDFPortList)
+	if err := json.NewDecoder(resp.Body).Decode(rdfPortList); err != nil {
+		return nil, err
+	}
+	return rdfPortList, nil
+
+}
+
+// GetRemoteRDFPortOnSAN gets Remote RDF Port on the SAN connected to this Local Array.
+func (c *Client) GetRemoteRDFPortOnSAN(ctx context.Context, localSymID string, rdfDir string, rdfPort string) (*types.RemoteRDFPortDetails, error) {
+	defer c.TimeSpent("GetRemoteRDFPortOnSAN", time.Now())
+	if _, err := c.IsAllowedArray(localSymID); err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+
+	URL := c.urlPrefix() + ReplicationX + SymmetrixX + localSymID + XRDFDIR + rdfDir + XRDFPORT + rdfPort + XREMOTEPORT
+
+	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	if err != nil {
+		log.Error("GetRemoteRDFPortOnSAN failed: " + err.Error())
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+
+	remoteRDFPortDetails := new(types.RemoteRDFPortDetails)
+	if err := json.NewDecoder(resp.Body).Decode(remoteRDFPortDetails); err != nil {
+		return nil, err
+	}
+	return remoteRDFPortDetails, nil
+
+}
+
+// GetLocalRDFPortDetails gets Local RDF Port Details which are Live on SAN.
+func (c *Client) GetLocalRDFPortDetails(ctx context.Context, localSymID string, rdfDir string, rdfPort int) (*types.RDFPortDetails, error) {
+	defer c.TimeSpent("GetLocalRDFPortDetails", time.Now())
+	if _, err := c.IsAllowedArray(localSymID); err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+
+	URL := c.urlPrefix() + ReplicationX + SymmetrixX + localSymID + XRDFDIR + rdfDir + XRDFPORT + strconv.Itoa(rdfPort)
+
+	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	if err != nil {
+		log.Error("GetLocalRDFportDetails failed: " + err.Error())
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+
+	LocalRDFPortDetails := new(types.RDFPortDetails)
+	if err := json.NewDecoder(resp.Body).Decode(LocalRDFPortDetails); err != nil {
+		return nil, err
+	}
+	return LocalRDFPortDetails, nil
+}
+
+// GetRDFGroupByID returns RDF group information given the RDF group number
+func (c *Client) GetRDFGroupByID(ctx context.Context, symID, rdfGroupNo string) (*types.RDFGroup, error) {
 	defer c.TimeSpent("GetRdfGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -58,6 +208,45 @@ func (c *Client) GetRDFGroup(ctx context.Context, symID, rdfGroupNo string) (*ty
 		return nil, err
 	}
 	return rdfGrpInfo, nil
+}
+
+// GetRDFGroupList fetches all RDF group
+func (c *Client) GetRDFGroupList(ctx context.Context, symID string, queryParams types.QueryParams) (*types.RDFGroupList, error) {
+	defer c.TimeSpent("GetRdfGroupList", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	URL := c.urlPrefix() + ReplicationX + SymmetrixX + symID + XRDFGroup
+	if queryParams != nil {
+		URL += "?"
+		for key, val := range queryParams {
+			switch val := val.(type) {
+			case bool:
+				URL += fmt.Sprintf("%s=%s", key, strconv.FormatBool(val))
+			case string:
+				URL += fmt.Sprintf("%s=%s", key, val)
+			}
+			URL += "&"
+		}
+		URL = URL[:len(URL)-1]
+	}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	if err != nil {
+		log.Error("GetRdfGroupList failed: " + err.Error())
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+
+	rdfGrpList := new(types.RDFGroupList)
+	if err := json.NewDecoder(resp.Body).Decode(rdfGrpList); err != nil {
+		return nil, err
+	}
+	return rdfGrpList, nil
 }
 
 // GetProtectedStorageGroup returns protected storage group given the storage group ID
@@ -84,6 +273,29 @@ func (c *Client) GetProtectedStorageGroup(ctx context.Context, symID, storageGro
 		return nil, err
 	}
 	return rdfSgInfo, nil
+}
+
+// ExecuteCreateRDFGroup creates the RDF Group
+func (c *Client) ExecuteCreateRDFGroup(ctx context.Context, symID string, CreateRDFPayload *types.RDFGroupCreate) bool {
+	defer c.TimeSpent("ExecuteCreateRDFGroup", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return false
+	}
+	URL := c.urlPrefix() + ReplicationX + SymmetrixX + symID + XRDFGroup
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	resp, err := c.api.DoAndGetResponseBody(
+		ctx, http.MethodPost, URL, c.getDefaultHeaders(), CreateRDFPayload)
+	if err = c.checkResponse(resp); err != nil {
+		return false
+	}
+	// Is there any CSI spec to say we need to parse the output and send it instead of just bool
+	//defer resp.Body.Close()
+	//decoder := json.NewDecoder(resp.Body)
+	//if err = decoder.Decode(rdfSG); err != nil {
+	//	return nil, err
+	//}
+	return true
 }
 
 // ExecuteReplicationActionOnSG executes supported replication based actions on the protected SG

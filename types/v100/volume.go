@@ -79,7 +79,7 @@ type StorageGroupName struct {
 	ParentStorageGroupName string `json:"parent_storage_group_name"`
 }
 
-// RDFGroupID contains the group number
+// RDFGroupID contains the group number and label
 type RDFGroupID struct {
 	RDFGroupNumber int    `json:"rdf_group_number"`
 	Label          string `json:"label"`
