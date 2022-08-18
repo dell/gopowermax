@@ -16,8 +16,9 @@ package pmax
 
 import (
 	"context"
-	types "github.com/dell/gopowermax/v2/types/v100"
 	"net/http"
+
+	types "github.com/dell/gopowermax/v2/types/v100"
 )
 
 // Debug is a boolean, when enabled, that enables logging of send payloads, and other debug information. Default to false.
@@ -84,11 +85,11 @@ type Pmax interface {
 	// GetVolumeIDListInStorageGroup returns a list of volume IDs that are associated with the StorageGroup
 	GetVolumeIDListInStorageGroup(ctx context.Context, symID string, storageGroupID string) ([]string, error)
 
-	// GetVolumeById returns a Volume given the volumeID.
+	// GetVolumeByID returns a Volume given the volumeID.
 	GetVolumeByID(ctx context.Context, symID string, volumeID string) (*types.Volume, error)
 
 	// GetStorageGroupIDList returns a list of all the StorageGroup ids.
-	GetStorageGroupIDList(ctx context.Context, symID string) (*types.StorageGroupIDList, error)
+	GetStorageGroupIDList(ctx context.Context, symID, storageGroupIDMatch string, like bool) (*types.StorageGroupIDList, error)
 
 	// GetStorageGroup returns a storage group given the StorageGroup id.
 	GetStorageGroup(ctx context.Context, symID string, storageGroupID string) (*types.StorageGroup, error)
@@ -262,17 +263,17 @@ type Pmax interface {
 	// GetPrivVolumeByID returns a Volume structure given the symmetrix and volume ID (volume ID is in WWN format)
 	GetPrivVolumeByID(ctx context.Context, symID string, volumeID string) (*types.VolumeResultPrivate, error)
 
-	// Delete PortGroup
+	// DeletePortGroup deletes port group
 	DeletePortGroup(ctx context.Context, symID string, portGroupID string) error
-	// Update PortGroup
+	// UpdatePortGroup updates port group
 	UpdatePortGroup(ctx context.Context, symID string, portGroupID string, ports []types.PortKey) (*types.PortGroup, error)
 
-	// Expand the size of an existing volume
+	//ExpandVolume expands the size of an existing volume
 	ExpandVolume(ctx context.Context, symID string, volumeID string, rdfGNo int, newSizeCYL int) (*types.Volume, error)
 	GetCreateVolInSGPayload(sizeInCylinders int, volumeName string, isSync bool, remoteSymID, storageGroupID string, opts ...http.Header) (payload interface{})
 	//GetCreateVolInSGPayloadWithMetaDataHeaders(sizeInCylinders int, volumeName string, isSync bool, remoteSymID, remoteStorageGroupID string, metadata http.Header) (payload interface{})
 
-	// Fetches RDF group information
+	//GetRDFGroup fetches RDF group information
 	GetRDFGroup(ctx context.Context, symID, rdfGroup string) (*types.RDFGroup, error)
 	// GetProtectedStorageGroup returns protected storage group given the storage group ID
 	GetProtectedStorageGroup(ctx context.Context, symID, storageGroup string) (*types.RDFStorageGroup, error)
@@ -280,10 +281,19 @@ type Pmax interface {
 	CreateSGReplica(ctx context.Context, symID, remoteSymID, rdfMode, rdfGroupNo, sourceSG, remoteSGName, remoteServiceLevel string, bias bool) (*types.SGRDFInfo, error)
 	// ExecuteReplicationActionOnSG executes supported replication based actions on the protected SG
 	ExecuteReplicationActionOnSG(ctx context.Context, symID, action, storageGroup, rdfGroup string, force, exemptConsistency, bias bool) error
-	// Creates a volume replication pair
+	//CreateRDFPair  Creates a volume replication pair
 	CreateRDFPair(ctx context.Context, symID, rdfGroupNo, deviceID, rdfMode, rdfType string, establish, exemptConsistency bool) (*types.RDFDevicePairList, error)
-	/// GetRDFDevicePairInfo returns RDF volume information
+	// GetRDFDevicePairInfo returns RDF volume information
 	GetRDFDevicePairInfo(ctx context.Context, symID, rdfGroup, volumeID string) (*types.RDFDevicePair, error)
 	// GetStorageGroupRDFInfo returns the of RDF info of protected storage group
 	GetStorageGroupRDFInfo(ctx context.Context, symID, sgName, rdfGroupNo string) (*types.StorageGroupRDFG, error)
+
+	//CreateMigrationEnvironment
+	CreateMigrationEnvironment(ctx context.Context, sourceSymId, remoteSymId string) (*types.MigrationEnv, error)
+	//CreateSGMigration
+	CreateSGMigration(ctx context.Context, localSymID, remoteSymID, storageGroup string) (*types.MigrationSession, error)
+	//ModifyMigrationSession
+	ModifyMigrationSession(ctx context.Context, localSymID, action, storageGroup string) (*types.MigrationSession, error)
+	//DeleteMigrationEnvironment
+	DeleteMigrationEnvironment(ctx context.Context, localSymID, remoteSymID string) error
 }
