@@ -63,7 +63,7 @@ func (c *Client) ModifyMigrationSession(ctx context.Context, localSymID, action,
 
 //CreateMigrationEnvironment validates existence of or creates migration environment between local and remote arrays
 func (c *Client) CreateMigrationEnvironment(ctx context.Context, localSymID, remoteSymID string) (*types.MigrationEnv, error) {
-	defer c.TimeSpent("GetOrCreateMigrationEnvironment", time.Now())
+	defer c.TimeSpent("CreateMigrationEnvironment", time.Now())
 	if _, err := c.IsAllowedArray(localSymID); err != nil {
 		return nil, err
 	}
@@ -171,4 +171,64 @@ func (c *Client) MigrateStorageGroup(ctx context.Context, symID, storageGroupID,
 	}
 	log.Info(fmt.Sprintf("Successfully Migrated SG: %s", storageGroupID))
 	return storageGroup, nil
+}
+
+
+func (c *Client) GetStorageGroupMigration(ctx context.Context, localSymID, remoteSymID, storageGroup string) (*types.MigrationSession, error) {
+	defer c.TimeSpent("GetStorageGroupMigration", time.Now())
+	if _, err := c.IsAllowedArray(localSymID); err != nil {
+		return nil, err
+	}
+	URL := c.urlPrefix() + XMigration + SymmetrixX + localSymID + "/" + storageGroup
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	resp, err := c.api.DoAndGetResponseBody(
+		ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	if err != nil {
+		log.Error("GetStorageGroupMigration failed: " + err.Error())
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+	decoder := json.NewDecoder(resp.Body)
+	sgMig := new(types.MigrationSession)
+	if err = decoder.Decode(sgMig); err != nil {
+		return nil, err
+	}
+	log.Info(fmt.Sprintf("Migration Environment is successfully done"))
+	return sgMig, nil
+}
+
+
+
+//GetMigrationEnvironment validates existence of or creates migration environment between local and remote arrays
+func (c *Client) GetMigrationEnvironment(ctx context.Context, localSymID, remoteSymID string) (*types.MigrationEnv, error) {
+	defer c.TimeSpent("GetMigrationEnvironment", time.Now())
+	if _, err := c.IsAllowedArray(localSymID); err != nil {
+		return nil, err
+	}
+
+	URL := c.urlPrefix() + XMigration + SymmetrixX + localSymID
+
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+
+	resp, err := c.api.DoAndGetResponseBody(
+		ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+
+	migEnv := new(types.MigrationEnv)
+	if err = decoder.Decode(migEnv); err != nil {
+		return nil, err
+	}
+	log.Info(fmt.Sprintf("Successfully get migration environment"))
+
+	return migEnv, nil
 }

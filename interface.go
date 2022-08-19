@@ -296,4 +296,8 @@ type Pmax interface {
 	ModifyMigrationSession(ctx context.Context, localSymID, action, storageGroup string) (*types.MigrationSession, error)
 	//DeleteMigrationEnvironment
 	DeleteMigrationEnvironment(ctx context.Context, localSymID, remoteSymID string) error
+	//GetMigrationEnvironment
+	GetMigrationEnvironment(ctx context.Context, localSymID, remoteSymID string) (*types.MigrationEnv, error)
+	//GetStorageGroupMigration
+	GetStorageGroupMigration(ctx context.Context, localSymID, remoteSymID, storageGroup string) (*types.MigrationSession, error) 
 }
