@@ -114,6 +114,9 @@ type LinkedVolumes struct {
 	Copy             bool   `json:"copy"`
 	Destage          bool   `json:"destage"`
 	Modified         bool   `json:"modified"`
+	LinkSource       string `json:"linkSourceName"`
+	SnapshotName     string `json:"snapshot_name"`
+	Generation       int64  `json:"generation"`
 }
 
 // VolumeSnapshotLink contains information about linked snapshots
@@ -131,6 +134,8 @@ type VolumeSnapshotLink struct {
 	Destage          bool   `json:"destage"`
 	Modified         bool   `json:"modified"`
 	LinkSource       string `json:"linkSourceName"`
+	SnapshotName     string `json:"snapshot_name"`
+	Generation       int64  `json:"generation"`
 }
 
 // VolumeSnapshot contains list of volume snapshots
@@ -174,7 +179,7 @@ type SymDevice struct {
 	RdfgNumbers []int64    `json:"rdfgNumbers"`
 }
 
-//Snapshot contains information for a snapshot
+// Snapshot contains information for a snapshot
 type Snapshot struct {
 	Name       string `json:"name"`
 	Generation int64  `json:"generation"`
@@ -360,7 +365,7 @@ type MirrorSession struct {
 	TargetVolume string `json:"targetVolume"`
 }
 
-//SnapTarget contains target information
+// SnapTarget contains target information
 type SnapTarget struct {
 	Target  string
 	Defined bool

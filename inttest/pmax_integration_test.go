@@ -471,7 +471,7 @@ func TestGetStorageGroupIDs(t *testing.T) {
 			return
 		}
 	}
-	sgIDList, err := client.GetStorageGroupIDList(context.TODO(), symmetrixID)
+	sgIDList, err := client.GetStorageGroupIDList(context.TODO(), symmetrixID, "", false)
 	if err != nil || sgIDList == nil {
 		t.Error("cannot get StorageGroupIDList: ", err.Error())
 		return

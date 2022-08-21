@@ -46,6 +46,7 @@ const (
 	XMaskingView           = "/maskingview"
 	Emulation              = "FBA"
 	MaxVolIdentifierLength = 64
+	Migration              = "migration/"
 )
 
 // TimeSpent - Calculates and prints time spent for a caller function
@@ -265,13 +266,21 @@ func (c *Client) GetVolumeByID(ctx context.Context, symID string, volumeID strin
 }
 
 // GetStorageGroupIDList returns a list of StorageGroupIds in a StorageGroupIDList type.
-func (c *Client) GetStorageGroupIDList(ctx context.Context, symID string) (*types.StorageGroupIDList, error) {
+func (c *Client) GetStorageGroupIDList(ctx context.Context, symID, storageGroupIDMatch string, like bool) (*types.StorageGroupIDList, error) {
 	defer c.TimeSpent("GetStorageGroupIDList", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
+	var query string
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XStorageGroup
-
+	if storageGroupIDMatch != "" {
+		if like {
+			query = fmt.Sprintf("?storageGroupId=%%3Clike%%3E%s", storageGroupIDMatch)
+		} else {
+			query = fmt.Sprintf("?storageGroupId=%s", storageGroupIDMatch)
+		}
+		URL = fmt.Sprintf("%s%s", URL, query)
+	}
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(
