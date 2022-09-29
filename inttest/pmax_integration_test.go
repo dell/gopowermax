@@ -52,6 +52,7 @@ var (
 	defaultFCInitiatorID    string
 	fcInitiator1            = "00000000abcd000f"
 	fcInitiator2            = "00000000abcd000g"
+	fcInitiator3            = "10000000c9959b8e"
 	defaultiSCSIInitiator   = "SE-1E:000:iqn.1993-08.org.debian:01:012a34b5cd6"
 	defaultiSCSIInitiatorID string
 	iscsiInitiator1         = "iqn.1993-08.org.centos:01:012a34b5cd7"
@@ -153,13 +154,13 @@ func setenvVariable(key, defaultValue string) string {
 func createDefaultSGAndHost() error {
 	fmt.Println("Creating default SG and host...")
 	// Create default SG with SRP
-	_, err := createStorageGroup(symmetrixID, defaultStorageGroup, defaultSRP, defaultServiceLevel, false)
+	_, err := createStorageGroup(symmetrixID, defaultStorageGroup, defaultSRP, defaultServiceLevel, false, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create SG: (%s)", err.Error())
 	}
 
 	// Create default SG without srp
-	_, err = createStorageGroup(symmetrixID, nonFASTManagedSG, "none", "none", false)
+	_, err = createStorageGroup(symmetrixID, nonFASTManagedSG, "none", "none", false, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create non fast SG: (%s)", err.Error())
 	}
@@ -185,7 +186,7 @@ func createRDFSetup() error {
 
 	//Creating default Protected SG
 
-	_, err := createStorageGroup(symmetrixID, defaultProtectedStorageGroup, defaultSRP, defaultServiceLevel, false)
+	_, err := createStorageGroup(symmetrixID, defaultProtectedStorageGroup, defaultSRP, defaultServiceLevel, false, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create SG: (%s)", err.Error())
 	}
@@ -493,7 +494,7 @@ func TestGetStoragePool(t *testing.T) {
 	fmt.Printf("%#v\n", storagePool)
 }
 
-func createStorageGroup(symmetrixID, storageGroupID, srp, serviceLevel string, isThick bool) (*types.StorageGroup, error) {
+func createStorageGroup(symmetrixID, storageGroupID, srp, serviceLevel string, isThick bool, hostLimits *types.SetHostIOLimitsParam) (*types.StorageGroup, error) {
 	if client == nil {
 		err := getClient()
 		if err != nil {
@@ -508,7 +509,9 @@ func createStorageGroup(symmetrixID, storageGroupID, srp, serviceLevel string, i
 	}
 	// Create a new storege group
 	fmt.Println("Creating a new storage group...")
-	return client.CreateStorageGroup(context.TODO(), symmetrixID, storageGroupID, srp, serviceLevel, isThick)
+	optionalPayload := make(map[string]interface{})
+	optionalPayload["hostLimits"] = hostLimits
+	return client.CreateStorageGroup(context.TODO(), symmetrixID, storageGroupID, srp, serviceLevel, isThick, optionalPayload)
 }
 
 func deleteStorageGroup(symmetrixID, storageGroupID string) error {
@@ -526,7 +529,51 @@ func TestCreateStorageGroup(t *testing.T) {
 	now := time.Now()
 	storageGroupID := fmt.Sprintf("csi-%s-Int%d-SG", sgPrefix, now.Nanosecond())
 	storageGroup, err := createStorageGroup(symmetrixID, storageGroupID,
-		defaultSRP, defaultServiceLevel, false)
+		defaultSRP, defaultServiceLevel, false, nil)
+	if err != nil || storageGroup == nil {
+		t.Error("Failed to create " + storageGroupID + " " + err.Error())
+		return
+	}
+	fmt.Println("Fetching the newly create storage group from array")
+	//Check if the SG exists on array
+	storageGroup, err = client.GetStorageGroup(context.TODO(), symmetrixID, storageGroupID)
+	if err != nil || storageGroup == nil {
+		t.Error("Expected to find " + storageGroupID + " but didn't")
+		return
+	}
+	fmt.Printf("%#v\n", storageGroup)
+	fmt.Println("Cleaning up the storage group: " + storageGroupID)
+	err = deleteStorageGroup(symmetrixID, storageGroupID)
+	if err != nil {
+		t.Error("Failed to delete " + storageGroupID)
+		return
+	}
+	//Check if the SG exists on array
+	storageGroup, err = client.GetStorageGroup(context.TODO(), symmetrixID, storageGroupID)
+	if err == nil || storageGroup != nil {
+		t.Error("Expected a failure in fetching " + storageGroupID + " but didn't")
+		return
+	}
+	fmt.Println(fmt.Sprintf("Error received while fetching %s: %s", storageGroupID, err.Error()))
+}
+
+func TestCreateStorageGroupWithHostIOLimits(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+	now := time.Now()
+	limits := types.SetHostIOLimitsParam{
+		HostIOLimitMBSec:    "1",
+		HostIOLimitIOSec:    "100",
+		DynamicDistribution: "Never",
+	}
+	storageGroupID := fmt.Sprintf("csi-%s-Int%d-SG", sgPrefix, now.Nanosecond())
+	storageGroup, err := createStorageGroup(symmetrixID, storageGroupID,
+		defaultSRP, defaultServiceLevel, false, &limits)
 	if err != nil || storageGroup == nil {
 		t.Error("Failed to create " + storageGroupID + " " + err.Error())
 		return
@@ -565,7 +612,7 @@ func TestCreateStorageGroupNonFASTManaged(t *testing.T) {
 	now := time.Now()
 	storageGroupID := fmt.Sprintf("csi-%s-Int%d-SG-No-FAST", sgPrefix, now.Nanosecond())
 	storageGroup, err := createStorageGroup(symmetrixID, storageGroupID,
-		"None", "None", false)
+		"None", "None", false, nil)
 	if err != nil || storageGroup == nil {
 		t.Error("Failed to create " + storageGroupID)
 		return
@@ -697,7 +744,7 @@ func TestCreateVolumeInStorageGroup1(t *testing.T) {
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	payload := client.GetCreateVolInSGPayload(1, volumeName, false, "", "")
+	payload := client.GetCreateVolInSGPayload(1, "CYL", volumeName, false, "", "", nil)
 
 	payloadBytes, err := json.Marshal(&payload)
 	if err != nil {
@@ -734,7 +781,28 @@ func TestCreateVolumeInStorageGroup2(t *testing.T) {
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
+	vol, err := client.CreateVolumeInStorageGroupS(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Printf("volume:\n%#v\n", vol)
+	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
+}
+
+func TestCreateVolumeInStorageGroup2withUnit(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+	now := time.Now()
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
+	capUnit := "TB"
+	fmt.Printf("volumeName: %s\n", volumeName)
+	vol, err := client.CreateVolumeInStorageGroupS(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1, capUnit)
 	if err != nil {
 		t.Error(err)
 		return
@@ -830,7 +898,7 @@ func CreateVolumesInParallel(nVols int, t *testing.T) {
 	now := time.Now()
 	storageGroupName := fmt.Sprintf("pmax-%s-Int%d-SG", sgPrefix, now.Nanosecond())
 	_, err := createStorageGroup(symmetrixID, storageGroupName,
-		defaultSRP, defaultServiceLevel, false)
+		defaultSRP, defaultServiceLevel, false, nil)
 	if err != nil {
 		t.Errorf("Unable to create temporary Storage Group: %s", storageGroupName)
 	}
@@ -1199,6 +1267,57 @@ func TestCreateFCHost(t *testing.T) {
 	}
 }
 
+func TestUpdateHostFlags(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			return
+		}
+	}
+
+	hostID := "IntTestHostFlags"
+	initiatorKeys := make([]string, 0)
+	initiatorKeys = append(initiatorKeys, fcInitiator1)
+	host, err := createHost(symmetrixID, hostID, initiatorKeys, nil)
+	if err != nil || host == nil {
+		t.Error("Expected to create FC host but didn't: " + err.Error())
+		return
+	}
+
+	hostFlags := &types.HostFlags{
+		VolumeSetAddressing: &types.HostFlag{
+			Enabled:  true,
+			Override: true,
+		},
+		DisableQResetOnUA:   &types.HostFlag{},
+		EnvironSet:          &types.HostFlag{},
+		AvoidResetBroadcast: &types.HostFlag{},
+		OpenVMS: &types.HostFlag{
+			Override: true,
+		},
+		SCSI3:               &types.HostFlag{},
+		Spc2ProtocolVersion: &types.HostFlag{},
+		SCSISupport1:        &types.HostFlag{},
+	}
+
+	host, err = client.UpdateHostFlags(context.TODO(), symmetrixID, hostID, hostFlags)
+	if err != nil || host == nil {
+		t.Error("Failed to Update FC hostflags " + err.Error())
+		return
+	}
+
+	if !strings.Contains(host.EnabledFlags, "Volume_Set_Addressing") {
+		t.Error("Expected to Update FC hostflags but didn't: " + err.Error())
+		return
+	}
+
+	fmt.Printf("%#v\n, FC host", host)
+	err = deleteHost(symmetrixID, hostID)
+	if err != nil {
+		t.Error("Could not delete FC Host: " + err.Error())
+	}
+}
+
 func TestCreateiSCSIHost(t *testing.T) {
 	if client == nil {
 		err := getClient()
@@ -1291,6 +1410,93 @@ func TestCreateFCMaskingView(t *testing.T) {
 	cleanupHost(symmetrixID, hostID, t)
 }
 
+func TestRenameMaskingView(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping this test in short mode")
+	}
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+	hostID := "IntTestFCMV-Host"
+	// In case a prior test left the Host in the system...
+	client.DeleteHost(context.TODO(), symmetrixID, hostID)
+
+	// create a Host with some initiators
+	initiatorKeys := make([]string, 0)
+	initiatorKeys = append(initiatorKeys, fcInitiator2)
+	fmt.Println("Setting up a host before creation of masking view")
+	host, err := createHost(symmetrixID, hostID, initiatorKeys, nil)
+	if err != nil || host == nil {
+		t.Error("Expected to create host but didn't: " + err.Error())
+		return
+	}
+	fmt.Printf("%#v\n, host", host)
+	// add a volume in defaultStorageGroup
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, time.Now().Nanosecond())
+	fmt.Printf("volumeName: %s\n", volumeName)
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
+	if err != nil {
+		t.Error("Expected to create a volume but didn't" + err.Error())
+		return
+	}
+	fmt.Printf("volume:\n%#v\n", vol)
+	maskingViewID := "IntTestFCMV"
+	maskingView, err := client.CreateMaskingView(context.TODO(), symmetrixID, maskingViewID, defaultStorageGroup,
+		hostID, true, defaultFCPortGroup)
+	if err != nil {
+		t.Error("Expected to create MV with FC initiator and port but didn't: " + err.Error())
+		cleanupHost(symmetrixID, hostID, t)
+		return
+	}
+	fmt.Println("Fetching the newly created masking view from array")
+	//Check if the MV exists on array
+	maskingView, err = client.GetMaskingViewByID(context.TODO(), symmetrixID, maskingViewID)
+	if err != nil || maskingView == nil {
+		t.Error("Expected to find " + maskingViewID + " but didn't")
+		cleanupHost(symmetrixID, hostID, t)
+		return
+	}
+	fmt.Printf("%#v\n", maskingView)
+	newMaskingViewID := "IntTestFCMV_new"
+	fmt.Println("Renaming Masking view")
+	renamedMaskingView, err1 := client.RenameMaskingView(context.TODO(), symmetrixID, maskingViewID, newMaskingViewID)
+	if err1 != nil || renamedMaskingView == nil {
+		t.Error("Error While Renaming Masking View")
+		cleanupHost(symmetrixID, hostID, t)
+	} else {
+		fmt.Println("Successfully renamed Masking View!")
+		fmt.Printf("%#v\n", renamedMaskingView)
+	}
+	maskingView, err = client.GetMaskingViewByID(context.TODO(), symmetrixID, maskingViewID)
+	if err == nil {
+		t.Error("Expected a failure in fetching MV: " + maskingViewID + "but didn't")
+		fmt.Printf("%#v\n", maskingView)
+		return
+	}
+	fmt.Println("Cleaning up the masking view")
+	err = client.DeleteMaskingView(context.TODO(), symmetrixID, newMaskingViewID)
+	if err != nil {
+		t.Error("Failed to delete " + maskingViewID)
+		return
+	}
+	fmt.Println("Sleeping for 20 seconds")
+	time.Sleep(20 * time.Second)
+	// Confirm if the masking view got deleted
+	maskingView, err = client.GetMaskingViewByID(context.TODO(), symmetrixID, newMaskingViewID)
+	if err == nil {
+		t.Error("Expected a failure in fetching MV: " + newMaskingViewID + "but didn't")
+		fmt.Printf("%#v\n", maskingView)
+		return
+	}
+	fmt.Println(fmt.Sprintf("Error in fetching %s: %s", maskingViewID, err.Error()))
+	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
+	cleanupHost(symmetrixID, hostID, t)
+}
+
 func TestCreatePortGroup(t *testing.T) {
 	t.Skip("Skipping this test until Delete Port Group is implemented")
 	if client == nil {
@@ -1303,8 +1509,8 @@ func TestCreatePortGroup(t *testing.T) {
 	portGroupID := "IntTestPG"
 	portKeys := make([]types.PortKey, 0)
 	portKey := types.PortKey{
-		DirectorID: "FA-1D",
-		PortID:     "4",
+		DirectorID: "OR-1C",
+		PortID:     "0",
 	}
 	portKeys = append(portKeys, portKey)
 	portGroup, err := client.CreatePortGroup(context.TODO(), symmetrixID, portGroupID, portKeys, "SCSI_FC")
@@ -1313,6 +1519,53 @@ func TestCreatePortGroup(t *testing.T) {
 		return
 	}
 	fmt.Println(portGroup.PortGroupID)
+}
+
+func TestRenamePortGroup(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+
+	portGroupID := "IntTestPG1"
+	newPortGroupID := "test_rename_portgroup"
+	portKeys := make([]types.PortKey, 0)
+	portKey := types.PortKey{
+		DirectorID: "OR-1C",
+		PortID:     "0",
+	}
+	portKeys = append(portKeys, portKey)
+	_, err := client.CreatePortGroup(context.TODO(), symmetrixID, portGroupID, portKeys, "SCSI_FC")
+	if err != nil {
+		t.Error("Couldn't create port group")
+		return
+	}
+
+	_, err = client.GetPortGroupByID(context.TODO(), symmetrixID, portGroupID)
+	if err != nil {
+		t.Error("Couldn't get port group")
+		return
+	}
+
+	portGroup, err := client.RenamePortGroup(context.TODO(), symmetrixID, portGroupID, newPortGroupID)
+	if err != nil {
+		t.Error("Couldn't rename port group")
+		return
+	}
+
+	if portGroup.PortGroupID != newPortGroupID {
+		t.Error("Couldn't rename port group")
+		return
+	}
+
+	err = client.DeletePortGroup(context.TODO(), symmetrixID, newPortGroupID)
+	if err != nil {
+		t.Error("Couldn't delete port group")
+		return
+	}
 }
 
 func TestCreateiSCSIMaskingView(t *testing.T) {
@@ -1502,6 +1755,44 @@ func TestExpandVolume(t *testing.T) {
 	}
 	//check expand size
 	if expandedVol.CapacityCYL != expandedSize {
+		t.Error("Size mismatch after Expansion: " + err.Error())
+		return
+	}
+	fmt.Printf("volume:\n%#v\n", expandedVol)
+	fmt.Printf("Expanded Volume Size:\n%d\n", expandedVol.CapacityCYL)
+	//all ok delete Volume
+	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
+}
+
+func TestExpandVolumeWithUnit(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+	}
+	//create a volume
+	now := time.Now()
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
+	fmt.Printf("volumeName: %s\n", volumeName)
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 26)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Printf("volume:\n%#v\n", vol)
+	//expand Volume
+	expandedSize := 30
+	capUnit := "GB"
+	fmt.Println("Doing VolumeExpansion")
+	expandedVol, err := client.ExpandVolume(context.TODO(), symmetrixID, vol.VolumeID, 0, expandedSize, capUnit)
+	if err != nil {
+		t.Error("Error in Volume Expansion: " + err.Error())
+		return
+	}
+	//check expand size
+	if expandedVol.CapacityGB != float64(expandedSize) {
 		t.Error("Size mismatch after Expansion: " + err.Error())
 		return
 	}

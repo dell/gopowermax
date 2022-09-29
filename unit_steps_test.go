@@ -175,6 +175,7 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.MaskingViewAlreadyExists = false
 	mock.InducedErrors.DeleteMaskingViewError = false
 	mock.InducedErrors.CreateMaskingViewError = false
+	mock.InducedErrors.UpdateMaskingViewError = false
 	mock.InducedErrors.PortGroupNotFoundError = false
 	mock.InducedErrors.InitiatorGroupNotFoundError = false
 	mock.InducedErrors.StorageGroupNotFoundError = false
@@ -189,6 +190,7 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.GetDirectorError = false
 	mock.InducedErrors.GetStoragePoolError = false
 	mock.InducedErrors.ExpandVolumeError = false
+	mock.InducedErrors.UpdatePortGroupError = false
 	switch errorType {
 	case "InvalidJSON":
 		mock.InducedErrors.InvalidJSON = true
@@ -238,6 +240,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.GetHostError = true
 	case "CreateMaskingViewError":
 		mock.InducedErrors.CreateMaskingViewError = true
+	case "UpdateMaskingViewError":
+		mock.InducedErrors.UpdateMaskingViewError = true
 	case "MaskingViewAlreadyExists":
 		mock.InducedErrors.MaskingViewAlreadyExists = true
 	case "DeleteMaskingViewError":
@@ -482,6 +486,21 @@ func (c *unitContext) iExpandVolumeToSize(volumeID string, sizeStr string) error
 	return nil
 }
 
+func (c *unitContext) iExpandVolumeToSizeWithUnit(volumeID string, sizeStr string, capUnits string) error {
+	if c.err != nil {
+		return nil
+	}
+
+	if size, err := strconv.Atoi(sizeStr); err == nil {
+		c.vol, c.err = c.client.ExpandVolume(context.TODO(), symID, volumeID, 0, size, capUnits)
+	} else {
+		return err
+	}
+
+	return nil
+
+}
+
 func (c *unitContext) iValidateVolumeSize(volumeID string, sizeStr string) error {
 	if c.err != nil {
 		return nil
@@ -602,11 +621,29 @@ func (c *unitContext) iCallCreateVolumeInStorageGroupWithNameAndSize(volumeName 
 	return nil
 }
 
+func (c *unitContext) iCallCreateVolumeInStorageGroupWithNameAndSizeAndUnit(volumeName string, sizeInCylinders int, capUnit string) error {
+	if !c.flag91 {
+		c.vol, c.err = c.client.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit)
+	} else {
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit)
+	}
+	return nil
+}
+
 func (c *unitContext) iCallCreateVolumeInStorageGroupSWithNameAndSize(volumeName string, sizeInCylinders int) error {
 	if !c.flag91 {
 		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
 	} else {
 		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+	}
+	return nil
+}
+
+func (c *unitContext) iCallCreateVolumeInStorageGroupSWithNameAndSizeAndUnit(volumeName string, sizeInCylinders int, capUnit string) error {
+	if !c.flag91 {
+		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit)
+	} else {
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit)
 	}
 	return nil
 }
@@ -636,9 +673,19 @@ func (c *unitContext) iGetAValidVolumeWithNameIfNoError(volumeName string) error
 
 func (c *unitContext) iCallCreateStorageGroupWithNameAndSrpAndSl(sgName, srp, serviceLevel string) error {
 	if !c.flag91 {
-		c.storageGroup, c.err = c.client.CreateStorageGroup(context.TODO(), symID, sgName, srp, serviceLevel, false)
+		c.storageGroup, c.err = c.client.CreateStorageGroup(context.TODO(), symID, sgName, srp, serviceLevel, false, nil)
 	} else {
-		c.storageGroup, c.err = c.client91.CreateStorageGroup(context.TODO(), symID, sgName, srp, serviceLevel, false)
+		c.storageGroup, c.err = c.client91.CreateStorageGroup(context.TODO(), symID, sgName, srp, serviceLevel, false, nil)
+	}
+	return nil
+}
+
+func (c *unitContext) iCallCreateStorageGroupWithNameAndSrpAndSlAndHostLimits(sgName, srp, serviceLevel string, hl string) error {
+	limits := convertStringSliceOfHostLimitsToHostLimitParams(hl)
+	if !c.flag91 {
+		c.storageGroup, c.err = c.client.CreateStorageGroup(context.TODO(), symID, sgName, srp, serviceLevel, false, *limits)
+	} else {
+		c.storageGroup, c.err = c.client91.CreateStorageGroup(context.TODO(), symID, sgName, srp, serviceLevel, false, *limits)
 	}
 	return nil
 }
@@ -793,6 +840,11 @@ func (c *unitContext) iCallDeleteMaskingView() error {
 	return nil
 }
 
+func (c *unitContext) iCallRenameMaskingViewWith(newName string) error {
+	c.maskingView, c.err = c.client.RenameMaskingView(context.TODO(), symID, c.uMaskingView.maskingViewID, newName)
+	return nil
+}
+
 func (c *unitContext) iHaveAPortGroup() error {
 	mock.AddPortGroup(testPortGroup, "ISCSI", []string{"SE-1E:000"})
 	return nil
@@ -825,6 +877,11 @@ func (c *unitContext) iCallCreatePortGroup(groupName string, strSliceOfPorts str
 
 	initialPorts := convertStringSliceOfPortsToPortKeys(strSliceOfPorts)
 	c.portGroup, c.err = c.client.CreatePortGroup(context.TODO(), symID, groupName, initialPorts, protocol)
+	return nil
+}
+
+func (c *unitContext) iCallRenamePortGroupWith(newName string) error {
+	c.portGroup, c.err = c.client.RenamePortGroup(context.TODO(), symID, c.portGroup.PortGroupID, newName)
 	return nil
 }
 
@@ -984,6 +1041,26 @@ func (c *unitContext) iCallUpdateHost() error {
 	initiatorList[0] = testUpdateInitiatorIQN
 	mock.AddInitiator(testUpdateInitiator, testUpdateInitiatorIQN, "GigE", []string{"SE-1E:000"}, "")
 	c.host, c.err = c.client.UpdateHostInitiators(context.TODO(), symID, c.host, initiatorList)
+	return nil
+}
+
+func (c *unitContext) iCallUpdateHostFlags() error {
+	hostFlags := &types.HostFlags{
+		VolumeSetAddressing: &types.HostFlag{
+			Enabled:  true,
+			Override: true,
+		},
+		DisableQResetOnUA:   &types.HostFlag{},
+		EnvironSet:          &types.HostFlag{},
+		AvoidResetBroadcast: &types.HostFlag{},
+		OpenVMS: &types.HostFlag{
+			Override: true,
+		},
+		SCSI3:               &types.HostFlag{},
+		Spc2ProtocolVersion: &types.HostFlag{},
+		SCSISupport1:        &types.HostFlag{},
+	}
+	c.host, c.err = c.client.UpdateHostFlags(context.TODO(), symID, c.hostID, hostFlags)
 	return nil
 }
 
@@ -1405,6 +1482,19 @@ func convertStringSliceOfPortsToPortKeys(strListOfPorts string) []types.PortKey 
 	return initialPorts
 }
 
+func convertStringSliceOfHostLimitsToHostLimitParams(strListOfHostLimts string) *map[string]interface{} {
+	hostLimitValues := strings.Split(strListOfHostLimts, ":")
+	hostLimits := types.SetHostIOLimitsParam{
+		HostIOLimitMBSec:    hostLimitValues[0],
+		HostIOLimitIOSec:    hostLimitValues[1],
+		DynamicDistribution: hostLimitValues[2],
+	}
+
+	optionalPayload := make(map[string]interface{})
+	optionalPayload["hostLimits"] = &hostLimits
+	return &optionalPayload
+}
+
 func (c *unitContext) iCallGetISCSITargets() error {
 	c.targetList, c.err = c.client.GetISCSITargets(context.TODO(), symID)
 	return nil
@@ -1567,9 +1657,12 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call WaitOnJobCompletion$`, c.iCallWaitOnJobCompletion)
 	// Volumes
 	s.Step(`^I call CreateVolumeInStorageGroup with name "([^"]*)" and size (\d+)$`, c.iCallCreateVolumeInStorageGroupWithNameAndSize)
+	s.Step(`^I call CreateVolumeInStorageGroup with name "([^"]*)" and size (\d+) and unit "([^"]*)"$`, c.iCallCreateVolumeInStorageGroupWithNameAndSizeAndUnit)
 	s.Step(`^I call CreateVolumeInStorageGroupS with name "([^"]*)" and size (\d+)$`, c.iCallCreateVolumeInStorageGroupSWithNameAndSize)
+	s.Step(`^I call CreateVolumeInStorageGroupS with name "([^"]*)" and size (\d+) and unit "([^"]*)"$`, c.iCallCreateVolumeInStorageGroupSWithNameAndSizeAndUnit)
 	s.Step(`^I call CreateVolumeInStorageGroupSWithMetaDataHeaders with name "([^"]*)" and size (\d+)$`, c.iCallCreateVolumeInStorageGroupSWithNameAndSizeWithMetaDataHeaders)
 	s.Step(`^I get a valid Volume with name "([^"]*)" if no error$`, c.iGetAValidVolumeWithNameIfNoError)
+	s.Step(`^I call CreateStorageGroup with name "([^"]*)" and srp "([^"]*)" and sl "([^"]*)" and hostlimits "([^"]*)"$`, c.iCallCreateStorageGroupWithNameAndSrpAndSlAndHostLimits)
 	s.Step(`^I call CreateStorageGroup with name "([^"]*)" and srp "([^"]*)" and sl "([^"]*)"$`, c.iCallCreateStorageGroupWithNameAndSrpAndSl)
 	s.Step(`^I call DeleteStorageGroup "([^"]*)"$`, c.iCallDeleteStorageGroup)
 	s.Step(`^I get a valid StorageGroup with name "([^"]*)" if no error$`, c.iGetAValidStorageGroupWithNameIfNoError)
@@ -1582,12 +1675,14 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call DeleteVolume$`, c.iCallDeleteVolume)
 	s.Step(`^I expand volume "([^"]*)" to "([^"]*)" in GB$`, c.iExpandVolumeToSize)
 	s.Step(`^I validate that volume "([^"]*)" has has size "([^"]*)" in GB$`, c.iValidateVolumeSize)
+	s.Step(`^I expand volume "([^"]*)" to "([^"]*)" in "([^"]*)"$`, c.iExpandVolumeToSizeWithUnit)
 	// Masking View
 	s.Step(`^I have a MaskingView "([^"]*)"$`, c.iHaveAMaskingView)
 	s.Step(`^I call GetMaskingViewList$`, c.iCallGetMaskingViewList)
 	s.Step(`^I get a valid MaskingViewList if no error$`, c.iGetAValidMaskingViewListIfNoError)
 	s.Step(`^I call GetMaskingViewByID "([^"]*)"$`, c.iCallGetMaskingViewByID)
 	s.Step(`^I get a valid MaskingView if no error$`, c.iGetAValidMaskingViewIfNoError)
+	s.Step(`^I call RenameMaskingView with "([^"]*)"$`, c.iCallRenameMaskingViewWith)
 	s.Step(`^I call CreateMaskingViewWithHost "([^"]*)"$`, c.iCallCreateMaskingViewWithHost)
 	s.Step(`^I call CreateMaskingViewWithHostGroup "([^"]*)"$`, c.iCallCreateMaskingViewWithHostGroup)
 	s.Step(`^I call DeleteMaskingView$`, c.iCallDeleteMaskingView)
@@ -1599,6 +1694,7 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I get a valid PortGroup if no error$`, c.iGetAValidPortGroupIfNoError)
 	s.Step(`^I get PortGroup "([^"]*)" if no error$`, c.iGetPortGroupIfNoError)
 	s.Step(`^I call CreatePortGroup "([^"]*)" with ports "([^"]*)"$`, c.iCallCreatePortGroup)
+	s.Step(`^I call RenamePortGroup with "([^"]*)"$`, c.iCallRenamePortGroupWith)
 	s.Step(`^I call UpdatePortGroup "([^"]*)" with ports "([^"]*)"$`, c.iCallUpdatePortGroup)
 	s.Step(`^I call DeletePortGroup "([^"]*)"$`, c.iCallDeletePortGroup)
 	s.Step(`^I expect PortGroup to have these ports "([^"]*)"$`, c.iExpectedThesePortsInPortGroup)
@@ -1625,6 +1721,7 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call AddVolumesToStorageGroupS "([^"]*)"$`, c.iCallAddVolumesToStorageGroupS)
 	s.Step(`^then the Volumes are part of StorageGroup if no error$`, c.thenTheVolumesArePartOfStorageGroupIfNoError)
 	s.Step(`^I call UpdateHost$`, c.iCallUpdateHost)
+	s.Step(`^I call UpdateHostFlags$`, c.iCallUpdateHostFlags)
 	// GetListOftargetAddresses
 	s.Step(`^I call GetListOfTargetAddresses$`, c.iCallGetListOfTargetAddresses)
 	s.Step(`^I recieve (\d+) IP addresses$`, c.iRecieveIPAddresses)

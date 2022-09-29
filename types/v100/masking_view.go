@@ -28,6 +28,22 @@ type MaskingView struct {
 	StorageGroupID string `json:"storageGroupId"`
 }
 
+// EditMaskingViewParam holds values to modify for masking view with execution option
+type EditMaskingViewParam struct {
+	EditMaskingViewActionParam EditMaskingViewActionParam `json:"editMaskingViewActionParam"`
+	ExecutionOption            string                     `json:"executionOption"`
+}
+
+// EditMaskingViewActionParam holds values to modify for masking view
+type EditMaskingViewActionParam struct {
+	RenameMaskingViewParam RenameMaskingViewParam `json:"renameMaskingViewParam"`
+}
+
+// RenameMaskingViewParam holds the new name of masking view
+type RenameMaskingViewParam struct {
+	NewMaskingViewName string `json:"new_masking_view_name"`
+}
+
 // HostFlag holds the host flags
 type HostFlag struct {
 	Enabled  bool `json:"enabled"`
