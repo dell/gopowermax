@@ -144,6 +144,7 @@ var InducedErrors struct {
 	UpdateHostError                bool
 	GetMaskingViewError            bool
 	CreateMaskingViewError         bool
+	UpdateMaskingViewError         bool
 	MaskingViewAlreadyExists       bool
 	DeleteMaskingViewError         bool
 	PortGroupNotFoundError         bool
@@ -239,6 +240,7 @@ func Reset() {
 	InducedErrors.UpdateHostError = false
 	InducedErrors.GetMaskingViewError = false
 	InducedErrors.CreateMaskingViewError = false
+	InducedErrors.UpdateMaskingViewError = false
 	InducedErrors.MaskingViewAlreadyExists = false
 	InducedErrors.DeleteMaskingViewError = false
 	InducedErrors.PortGroupNotFoundError = false
@@ -1358,6 +1360,29 @@ func handleMaskingView(w http.ResponseWriter, r *http.Request) {
 		addMaskingViewFromCreateParams(createMVPayload)
 		returnMaskingView(w, mvID)
 
+	case http.MethodPut:
+		if InducedErrors.UpdateMaskingViewError {
+			writeError(w, "Error updating Masking View: induced error", http.StatusRequestTimeout)
+			return
+		}
+		// if mvID == "" {
+		// 	writeError(w, "Masking View ID must be supplied", http.StatusBadRequest)
+		// 	return
+		// }
+		decoder := json.NewDecoder(r.Body)
+		updateMaskingViewPayload := &types.EditMaskingViewParam{}
+		err := decoder.Decode(updateMaskingViewPayload)
+		if err != nil {
+			writeError(w, "problem decoding PUT Masking View payload: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		fmt.Printf("PUT masking view payload: %#v\n", updateMaskingViewPayload)
+		executionOption := updateMaskingViewPayload.ExecutionOption
+		if &updateMaskingViewPayload.EditMaskingViewActionParam.RenameMaskingViewParam != nil {
+			RenameMaskingView(w, &updateMaskingViewPayload.EditMaskingViewActionParam.RenameMaskingViewParam, mvID, executionOption)
+			return
+		}
+
 	case http.MethodDelete:
 		if InducedErrors.DeleteMaskingViewError {
 			writeError(w, "Error deleting Masking view: induced error", http.StatusRequestTimeout)
@@ -1533,6 +1558,22 @@ func addMaskingView(maskingViewID string, storageGroupID string, hostID string, 
 		Data.VolumeIDToVolume[volumeID].NumberOfFrontEndPaths = 1
 	}
 	return Data.MaskingViewIDToMaskingView[maskingViewID], nil
+}
+
+// RenameMaskingView - Renames masking view
+func RenameMaskingView(w http.ResponseWriter, param *types.RenameMaskingViewParam, maskingViewID string, executionOption string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	renameMaskingView(w, param, maskingViewID, executionOption)
+}
+
+func renameMaskingView(w http.ResponseWriter, param *types.RenameMaskingViewParam, maskingViewID string, executionOption string) {
+	if executionOption != types.ExecutionOptionSynchronous {
+		writeError(w, "expected SYNCHRONOUS", http.StatusBadRequest)
+		return
+	}
+	Data.MaskingViewIDToMaskingView[maskingViewID].MaskingViewID = param.NewMaskingViewName
+	returnMaskingView(w, maskingViewID)
 }
 
 // RemoveMaskingView - Removes a masking view from the mock data cache
@@ -1879,6 +1920,11 @@ func updatePortGroup(portGroupID string, editPayload *types.EditPortGroupActionP
 	// Remove from the list of ports in the PortGroup
 	for _, key := range removeKeys {
 		pg.SymmetrixPortKey = removePortKey(pg.SymmetrixPortKey, key)
+	}
+
+	if editPayload.RenamePortGroupParam != nil && editPayload.RenamePortGroupParam.NewPortGroupName != "" {
+		portGroupID = editPayload.RenamePortGroupParam.NewPortGroupName
+		pg.PortGroupID = portGroupID
 	}
 
 	// Update the PortGroup mapping with the update PortGroup

@@ -108,6 +108,20 @@ Feature: PMAX Client library
       | "00002" | "10" | "GetVolumeError"    | "induced error" |
       | "00001" | "10" | "ExpandVolumeError" | "induced error" |
 
+  Scenario Outline: Test cases for volume expand with units
+    Given a valid connection
+    And I have 2 volumes
+    And I induce error <induced>
+    Then I expand volume <id> to <size> in <units>
+    And the error message contains <errormsg>
+    And I validate that volume <id> has has size <size> in GB
+
+    Examples:
+      | id      | size | units |   induced             | errormsg        |
+      | "00001" | "10" | "GB"  |   "none"              | "none"          |
+      | "00002" | "10" | "GB"  |   "GetVolumeError"    | "induced error" |
+      | "00001" | "10" | "GB"  |   "ExpandVolumeError" | "induced error" |
+
   Scenario Outline: Test cases for GetStorageGroupIDList
     Given a valid connection
     And I have an allowed list of <arrays>
@@ -239,6 +253,29 @@ Feature: PMAX Client library
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
 
+  Scenario Outline: Test cases for CreateVolumeInStorageGroup for v90 with capacity unit
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    When I call CreateVolumeInStorageGroup with name <volname> and size <size> and unit <capUnit>
+    Then the error message contains <errormsg>
+    And I get a valid Volume with name <volname> if no error
+
+    Examples:
+    | volname                                                                        | size     | capUnit   | induced                   | errormsg                                               | arrays    |
+    | "IntgA"                                                                        | 1        | "CYL"     | "none"                    | "none"                                                 | ""        |
+    | "IntgB"                                                                        | 5        | "CYL"     | "none"                    | "none"                                                 | ""        |
+    | "IntgC"                                                                        | 1        | "GB"      | "UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"       | ""        |
+    | "IntgD"                                                                        | 1        | "GB"      | "httpStatus500"           | "A job was not returned from UpdateStorageGroup"       | ""        |
+    | "IntgE"                                                                        | 1        | "GB"      | "GetJobError"             | "induced error"                                        | ""        |
+    | "IntgF"                                                                        | 1        | "GB"      | "JobFailedError"          | "The UpdateStorageGroup job failed"                    | ""        |
+    | "IntgG"                                                                        | 1        | "GB"      | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
+    | "IntgH"                                                                        | 1        | "GB"      | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
+    | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "GB"      | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
+    | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "CYL"     | "none"                    | "none"                                                 | ""        |
+    | "IntgA"                                                                        | 1        | "GB"      | "none"                    | "ignored as it is not managed"                         | "ignored" |
+
+
 Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup for v90
     Given a valid connection
     And I have an allowed list of <arrays>
@@ -256,6 +293,24 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup for v90
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
+
+Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup for v90 with capacity unit
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    When I call CreateVolumeInStorageGroupS with name <volname> and size <size> and unit <capUnit>
+    Then the error message contains <errormsg>
+    And I get a valid Volume with name <volname> if no error
+
+    Examples:
+    | volname                                                                        | size     |capUnit  | induced                   | errormsg                                               | arrays    |
+    | "IntgA"                                                                        | 1        | "CYL"   | "none"                    | "none"                                                 | ""        |
+    | "IntgB"                                                                        | 5        | "CYL"   | "none"                    | "none"                                                 | ""        |
+    | "IntgG"                                                                        | 1        | "CYL"   | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
+    | "IntgH"                                                                        | 1        | "CYL"   | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
+    | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "CYL"   | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
+    | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "CYL"   | "none"                    | "none"                                                 | ""        |
+    | "IntgA"                                                                        | 1        | "CYL"   | "none"                    | "ignored as it is not managed"                         | "ignored" |
 
 Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with metadata headers for v90
     Given a valid connection
@@ -445,6 +500,25 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with met
     | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "none"                     | "ignored as it is not managed"                        | "ignored" |
     | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "InvalidResponse"          | "EOF"                                                 | ""        |
 
+  Scenario Outline: Test cases for CreateStorageGroupWithHostLimits for v91
+    Given a valid v91 connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    When I call CreateStorageGroup with name <sgname> and srp <srp> and sl <sl> and hostlimits <hl>
+    Then the error message contains <errormsg>
+    And I get a valid StorageGroup with name <sgname> if no error
+
+    Examples:
+    | sgname               | srp      | sl           | hl             |   induced                    | errormsg                                              | arrays    |
+    | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "1:100:Never"  |   "none"                     | "none"                                                | ""        |
+    | "CSI-Test-New-SG1"   | "None"   | "Diamond"    | "1:100:Never"  |   "none"                     | "none"                                                | ""        |
+    | "CSI-Test-New-SG2"   | "SRP_1"  | "Optimized"  | "1:100:Never"  |   "none"                     | "none"                                                | ""        |
+    | "CSI-Test-New-SG2"   | "SRP_1"  | "Optimized"  | "1:100:Never"  |   "StorageGroupAlreadyExists"| "The requested storage group resource already exists" | ""        |
+    | "CSI-Test-New-SG3"   | "SRP_1"  | "Diamond"    | "1:100:Never"  |   "CreateStorageGroupError"  | "induced error"                                       | ""        |
+    | "CSI-Test-New-SG4"   | "SRP_1"  | "Diamond"    | "1:100:Never"  |   "httpStatus500"            | "Internal Error"                                      | ""        |
+    | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "1:100:Never"  |   "none"                     | "ignored as it is not managed"                        | "ignored" |
+    | "CSI-Test-New-SG1"   | "SRP_1"  | "Diamond"    | "1:100:Never"  |   "InvalidResponse"          | "EOF"                                                 | ""        |
+
   Scenario Outline: Test DeleteStorageGroup
     Given a valid connection
     And I have an allowed list of <arrays>
@@ -501,6 +575,21 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with met
     | "Test-MV"             | "none"                         | "none"                                                | ""        |
     | "Test-MV"             | "GetMaskingViewError"          | "induced error"                                       | ""        |
     | "Test-MV"             | "none"                         | "ignored as it is not managed"                        | "ignored" |
+
+  Scenario Outline: Test Rename Masking View
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I have a MaskingView <mvname>
+    And I induce error <induced>
+    When I call RenameMaskingView with <newname>
+    Then the error message contains <errormsg>
+    And I get a valid MaskingView if no error
+
+    Examples:
+    | mvname            | newname              | induced                    | errormsg                             | arrays    |
+    | "CSI-Test-MV"     | "Renamed"            | "none"                     | "none"                               | ""        |
+    | "CSI-Test-MV"     | "Renamed"            | "UpdateMaskingViewError"   | "induced error"                      | ""        |
+    | "CSI-Test-MV"     | "Renamed"            | "none"                     | "ignored as it is not managed"       | "ignored" |
 
   Scenario Outline: Test DeleteMaskingView
     Given a valid connection
@@ -559,6 +648,7 @@ Scenario Outline: Test CreatePortGroup
     | "Test-CreatePG"       | "SE-1E:000,SE-2E:001" | "SE-1E:000,SE-2E:001" | "none"                 | "none"          |
     | "Test-CreatePG-error" | "SE-1E:000,SE-2E:001" | ""                    | "CreatePortGroupError" | "induced error" |
 
+
 Scenario Outline: Test UpdatePortGroup
   Given a valid connection
   And I induce error <induced>
@@ -577,6 +667,20 @@ Scenario Outline: Test UpdatePortGroup
     | "Test-UpdatePG5"      | "SE-1E:000,SE-2E:001"                     | "SE-1E:000,SE-2E:001,SE-4E:000,SE-3E:000" | "SE-1E:000,SE-2E:001,SE-4E:000,SE-3E:000" | "none"                 | "none"          |
     | "Test-UpdatePG-error" | "SE-1E:000,SE-2E:001"                     | "SE-1E:000,SE-2A:002"                     | ""                                        | "UpdatePortGroupError" | "induced error" |
 
+Scenario Outline: Test RenamePortGroup
+    Given a valid connection
+    And I induce error <induced>
+    And I call CreatePortGroup <groupname> with ports <initialPorts>
+    And I get PortGroup <groupname> if no error
+    And I call RenamePortGroup with <newname>
+    Then the error message contains <errormsg>
+    And I get PortGroup <newname> if no error    
+
+    Examples:
+    | groupname                | initialPorts            | newname                       | induced                    | errormsg                 |           
+    | "Test-UpdatePG11"        | "SE-1E:000,SE-2E:001"   | "Renamed1"                    | "none"                     | "none"                   |
+    | "Test-UpdatePG21-error"  | "SE-1E:000,SE-2E:001"   | "Renamed1"                    | "UpdatePortGroupError"     | "induced error"          |
+                               
 Scenario Outline: Test DeletePortGroup
   Given a valid connection
   And I induce error <induced>
@@ -651,6 +755,21 @@ Scenario Outline: Test GetHostList
     | "Test-Host"    | "none"                         | "none"                                                | ""        |
     | "Test-Host"    | "UpdateHostError"              | "induced error"                                       | ""        |
     | "Test-Host"    | "none"                         | "ignored as it is not managed"                        | "ignored" |
+
+  Scenario Outline: Test UpdateHostFlags
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    When I call CreateHost <hostname>
+    And I get a valid Host if no error
+    When I call UpdateHostFlags
+    Then the error message contains <errormsg>
+    And I get a valid Host if no error
+
+    Examples:
+    | hostname       | induced                        | errormsg                                              | arrays    |
+    | "Test-Host"    | "none"                         | "none"                                                | ""        |
+    | "Test-Host"    | "UpdateHostError"              | "induced error"                                       | ""        |
 
   Scenario Outline: Test DeleteHost
     Given a valid connection

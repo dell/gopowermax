@@ -16,8 +16,9 @@ package pmax
 
 import (
 	"context"
-	types "github.com/dell/gopowermax/v2/types/v100"
 	"net/http"
+
+	types "github.com/dell/gopowermax/v2/types/v100"
 )
 
 // Debug is a boolean, when enabled, that enables logging of send payloads, and other debug information. Default to false.
@@ -99,7 +100,7 @@ type Pmax interface {
 	// CreateStorageGroup creates a storage group given the Storage group id
 	// and returns the storage group object. The storage group can be configured for thick volumes as an option.
 	// This is a blocking call and will only return after the storage group has been created
-	CreateStorageGroup(ctx context.Context, symID string, storageGroupID string, srpID string, serviceLevel string, thickVolumes bool) (*types.StorageGroup, error)
+	CreateStorageGroup(ctx context.Context, symID string, storageGroupID string, srpID string, serviceLevel string, thickVolumes bool, optionalPayload map[string]interface{}) (*types.StorageGroup, error)
 	// UpdateStorageGroup updates a storage group (i.e. a PUT operation) and should support all the defined
 	// operations (but many have not been tested).
 	// This is done asynchronously and returns back a job
@@ -112,22 +113,25 @@ type Pmax interface {
 
 	// CreateVolumeInStorageGroup takes simplified input arguments to create a volume of a give name and size in a particular storage group.
 	// This method creates a job and waits on the job to complete.
-	CreateVolumeInStorageGroup(ctx context.Context, symID string, storageGroupID string, volumeName string, sizeInCylinders int) (*types.Volume, error)
+	CreateVolumeInStorageGroup(ctx context.Context, symID string, storageGroupID string, volumeName string, sizeInCylinders int, capUnits ...string) (*types.Volume, error)
 
 	// CreateVolumeInStorageGroup takes simplified input arguments to create a volume of a give name and size in a particular storage group.
 	// This is done synchronously and no jobs are created. HTTP header argument is optional
-	CreateVolumeInStorageGroupS(ctx context.Context, symID, storageGroupID string, volumeName string, sizeInCylinders int, opts ...http.Header) (*types.Volume, error)
+	CreateVolumeInStorageGroupS(ctx context.Context, symID, storageGroupID string, volumeName string, sizeInCylinders int, opts ...interface{}) (*types.Volume, error)
 
 	// CreateVolumeInProtectedStorageGroup takes simplified input arguments to create a volume of a give name and size in a protected storage group.
 	// This will add volume in both Local and Remote Storage group
 	// This is done synchronously and no jobs are created. HTTP header argument is optional
-	CreateVolumeInProtectedStorageGroupS(ctx context.Context, symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, sizeInCylinders int, opts ...http.Header) (*types.Volume, error)
+	CreateVolumeInProtectedStorageGroupS(ctx context.Context, symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, sizeInCylinders int, opts ...interface{}) (*types.Volume, error)
 
 	// DeleteStorageGroup deletes a storage group given a storage group id
 	DeleteStorageGroup(ctx context.Context, symID string, storageGroupID string) error
 
 	// DeleteMaskingView deletes a masking view given a masking view id
 	DeleteMaskingView(ctx context.Context, symID string, maskingViewID string) error
+
+	// RenameMaskingView renames masking view given it's identifier (which is the name)
+	RenameMaskingView(ctx context.Context, symID string, maskingViewID string, newName string) (*types.MaskingView, error)
 
 	// Get the list of Storage Pools
 	GetStoragePoolList(ctx context.Context, symID string) (*types.StoragePoolList, error)
@@ -172,6 +176,9 @@ type Pmax interface {
 	// CreatePortGroup creates a port group given the Port Group id and a list of dir/port ids
 	CreatePortGroup(ctx context.Context, symID string, portGroupID string, dirPorts []types.PortKey, protocol string) (*types.PortGroup, error)
 
+	// RenamePortGroup renames port group given it's identifier (which is the name)
+	RenamePortGroup(ctx context.Context, symID string, portGroupID string, newName string) (*types.PortGroup, error)
+
 	// System
 	GetSymmetrixIDList(ctx context.Context) (*types.SymmetrixIDList, error)
 	GetSymmetrixByID(ctx context.Context, id string) (*types.Symmetrix, error)
@@ -207,6 +214,7 @@ type Pmax interface {
 	// UpdateHostInitiators will update the inititators
 	UpdateHostInitiators(ctx context.Context, symID string, host *types.Host, initiatorIDs []string) (*types.Host, error)
 	UpdateHostName(ctx context.Context, symID, oldHostID, newHostID string) (*types.Host, error)
+	UpdateHostFlags(ctx context.Context, symID string, hostID string, hostFlags *types.HostFlags) (*types.Host, error)
 	// GetDirectorIDList returns a list of directors
 	GetDirectorIDList(ctx context.Context, symID string) (*types.DirectorIDList, error)
 	// GetPortList returns a list of all the ports on a specified director/array.
@@ -268,8 +276,8 @@ type Pmax interface {
 	UpdatePortGroup(ctx context.Context, symID string, portGroupID string, ports []types.PortKey) (*types.PortGroup, error)
 
 	// ExpandVolume expands the size of an existing volume
-	ExpandVolume(ctx context.Context, symID string, volumeID string, rdfGNo int, newSizeCYL int) (*types.Volume, error)
-	GetCreateVolInSGPayload(sizeInCylinders int, volumeName string, isSync bool, remoteSymID, storageGroupID string, opts ...http.Header) (payload interface{})
+	ExpandVolume(ctx context.Context, symID string, volumeID string, rdfGNo int, newSizeCYL int, capUnits ...string) (*types.Volume, error)
+	GetCreateVolInSGPayload(sizeInCylinders int, capUnit string, volumeName string, isSync bool, remoteSymID, storageGroupID string, opts ...http.Header) (payload interface{})
 	//GetCreateVolInSGPayloadWithMetaDataHeaders(sizeInCylinders int, volumeName string, isSync bool, remoteSymID, remoteStorageGroupID string, metadata http.Header) (payload interface{})
 
 	// GetRDFGroupList GetRDFGroupList fetches all RDF group
