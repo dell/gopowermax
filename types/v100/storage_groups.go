@@ -222,6 +222,19 @@ type RenameStorageGroupParam struct {
 	NewStorageGroupName string `json:"new_storage_Group_name,omitempty"`
 }
 
+// EditSnapshotPoliciesParam holds the updates for snapshotpolicies of the storageGroup
+type EditSnapshotPoliciesParam struct {
+	ResumeSnapshotPolicyParam       *SnapshotPolicies `json:"resume_snapshot_policy_param,omitempty"`
+	SuspendSnapshotPolicyParam      *SnapshotPolicies `json:"suspend_snapshot_policy_param,omitempty"`
+	DisassociateSnapshotPolicyParam *SnapshotPolicies `json:"disassociate_snapshot_policy_param,omitempty"`
+	AssociateSnapshotPolicyParam    *SnapshotPolicies `json:"associate_snapshot_policy_param,omitempty"`
+}
+
+// SnapshotPolicies holds the list of snapshot policy names
+type SnapshotPolicies struct {
+	SnapshotPolicies []string `json:"snapshot_policies,omitempty"`
+}
+
 // EditStorageGroupActionParam holds parameters to modify an SG
 type EditStorageGroupActionParam struct {
 	MergeStorageGroupParam        *MergeStorageGroupParam        `json:"mergeStorageGroupParam,omitempty"`
@@ -237,6 +250,7 @@ type EditStorageGroupActionParam struct {
 	EditStorageGroupSRPParam      *EditStorageGroupSRPParam      `json:"editStorageGroupSRPParam,omitempty"`
 	RemoveStorageGroupParam       *RemoveStorageGroupParam       `json:"removeStorageGroupParam,omitempty"`
 	RenameStorageGroupParam       *RenameStorageGroupParam       `json:"renameStorageGroupParam,omitempty"`
+	EditSnapshotPoliciesParam     *EditSnapshotPoliciesParam     `json:"edit_snapshot_policies_param,omitempty"`
 }
 
 // ExecutionOptionSynchronous : execute tasks synchronously
@@ -273,11 +287,22 @@ type TagManagementParam struct {
 	AddTagsParam    *AddTagsParam    `json:"addTagsParam,omitempty"`
 }
 
-// RemoteSymmSGInfoParam have info abput remote symmetrix Id's and storage groups
+// RemoteSymmSGInfoParam have info about remote symmetrix Id's and storage groups
 type RemoteSymmSGInfoParam struct {
 	RemoteSymmetrix1ID  string   `json:"remote_symmetrix_1_id,omitempty"`
 	RemoteSymmetrix1SGs []string `json:"remote_symmetrix_1_sgs,omitempty"`
 	RemoteSymmetrix2ID  string   `json:"remote_symmetrix_2_id,omitempty"`
 	RemoteSymmetrix2SGs []string `json:"remote_symmetrix_2_sgs,omitempty"`
 	Force               bool     `json:"force,omitempty"`
+}
+
+// StorageGroupSnapshotPolicy holds storage group snapshot policy
+type StorageGroupSnapshotPolicy struct {
+	SymmetrixID           string `json:"symmetrixID,omitempty"`
+	SnapshotPolicyID      string `json:"snapshot_policy_id,omitempty"`
+	StorageGroupID        string `json:"storage_group_id,omitempty"`
+	Compliance            string `json:"compliance,omitempty"`
+	SnapshotsInTimeWindow int    `json:"snapshots_in_time_window,omitempty"`
+	TotalSnapshots        int    `json:"total_snapshots,omitempty"`
+	Suspended             bool   `json:"suspended,omitempty"`
 }

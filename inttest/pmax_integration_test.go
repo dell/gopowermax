@@ -67,6 +67,8 @@ var (
 	defaultStorageGroup          = "csi-Integration-Test"
 	defaultProtectedStorageGroup = "csi-Integration-Test-Protected-SG"
 	nonFASTManagedSG             = "csi-Integration-No-FAST"
+	defaultSGWithSnapshotPolicy  = "csi-Integration-Test-With-Snapshot-Policy"
+	defaultSnapshotPolicy        = "csi-Integration-Tes-snapshot-policy"
 	defaultFCHost                = "IntegrationFCHost"
 	defaultiSCSIHost             = "IntegrationiSCSIHost"
 	localVol, remoteVol          *types.Volume
@@ -165,6 +167,14 @@ func createDefaultSGAndHost() error {
 		return fmt.Errorf("failed to create non fast SG: (%s)", err.Error())
 	}
 
+	// Create default SG with snapshot policy
+	optionalPayload := make(map[string]interface{})
+	optionalPayload["snapshotPolicies"] = []string{defaultSGWithSnapshotPolicy}
+	_, err = client.CreateStorageGroup(context.TODO(), symmetrixID, defaultSGWithSnapshotPolicy, "none", "none", false, optionalPayload)
+	if err != nil {
+		return fmt.Errorf("failed to create SG with snapshot policy: (%s)", err.Error())
+	}
+
 	// Create default FC Host
 	initiators := []string{defaultFCInitiatorID}
 	_, err = createHost(symmetrixID, defaultFCHost, initiators, nil)
@@ -236,6 +246,19 @@ func cleanupDefaultSGAndHOST(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to delete default non fast SG (%s) : (%s)", nonFASTManagedSG, err.Error())
 	}
+
+	// remove snapshot policy from SG
+	_, err = client.UpdateStorageGroup(context.TODO(), symmetrixID, defaultSGWithSnapshotPolicy, nil)
+	if err != nil {
+		t.Errorf("failed to remove snapshot policy from SG (%s) : (%s)", defaultSGWithSnapshotPolicy, err.Error())
+	} else {
+		// delete SG after snapshot policy is removed
+		err = deleteStorageGroup(symmetrixID, defaultSGWithSnapshotPolicy)
+		if err != nil {
+			t.Errorf("failed to delete default SG with snapshot policy (%s) : (%s)", defaultSGWithSnapshotPolicy, err.Error())
+		}
+	}
+
 	// delete default FC host
 	err = deleteHost(symmetrixID, defaultFCHost)
 	if err != nil {
@@ -476,6 +499,22 @@ func TestGetStorageGroup(t *testing.T) {
 		return
 	}
 	fmt.Printf("%#v\n", storageGroup)
+}
+
+func TestGetStorageGroupSnapshotPolicy(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+	storageGroupSnapshotPolicy, err := client.GetStorageGroupSnapshotPolicy(context.TODO(), symmetrixID, defaultSnapshotPolicy, defaultSGWithSnapshotPolicy)
+	if err != nil || storageGroupSnapshotPolicy == nil {
+		t.Error("Expected to find " + defaultSGWithSnapshotPolicy + " but didn't")
+		return
+	}
+	fmt.Printf("%#v\n", storageGroupSnapshotPolicy)
 }
 
 func TestGetStoragePool(t *testing.T) {

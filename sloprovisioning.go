@@ -32,6 +32,8 @@ import (
 // The follow constants are for internal use within the pmax library.
 const (
 	SLOProvisioningX       = "sloprovisioning/"
+	Replication            = "replication/"
+	SnapshotPolicy         = "/snapshot_policy"
 	SymmetrixX             = "symmetrix/"
 	IteratorX              = "common/Iterator/"
 	XPage                  = "/page"
@@ -408,6 +410,27 @@ func (c *Client) GetStorageGroup(ctx context.Context, symID string, storageGroup
 		return nil, err
 	}
 	return storageGroup, nil
+}
+
+// GetStorageGroupSnapshotPolicy returns a StorageGroup snapshotPolicy given the Symmetrix ID, Storage Group ID (which is really a name) and Snapshot Policy ID (which is really a name).
+func (c *Client) GetStorageGroupSnapshotPolicy(ctx context.Context, symID, snapshotPolicyID, storageGroupID string) (*types.StorageGroupSnapshotPolicy, error) {
+	defer c.TimeSpent("GetStorageGroupSnapshotPolicy", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+
+	URL := c.urlPrefix() + Replication + SymmetrixX + symID + SnapshotPolicy + "/" + snapshotPolicyID + XStorageGroup + "/" + storageGroupID
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+
+	storageGroupSnapshotPolicy := &types.StorageGroupSnapshotPolicy{}
+	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), storageGroupSnapshotPolicy)
+	if err != nil {
+		log.Error("GetStorageGroupSnapshotPolicy failed: " + err.Error())
+		return nil, err
+	}
+
+	return storageGroupSnapshotPolicy, nil
 }
 
 // GetStoragePool returns a StoragePool given the Symmetrix ID and Storage Pool ID

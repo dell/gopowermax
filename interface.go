@@ -94,6 +94,9 @@ type Pmax interface {
 	// GetStorageGroup returns a storage group given the StorageGroup id.
 	GetStorageGroup(ctx context.Context, symID string, storageGroupID string) (*types.StorageGroup, error)
 
+	// GetStorageGroupSnapshotPolicy returns a storage group snapshot policy details.
+	GetStorageGroupSnapshotPolicy(ctx context.Context, symID, snapshotPolicyID, storageGroupID string) (*types.StorageGroupSnapshotPolicy, error)
+
 	// GetStoragePool returns a storage pool given the GetStoragePoolID and SymID.
 	GetStoragePool(ctx context.Context, symID string, storagePoolID string) (*types.StoragePool, error)
 
