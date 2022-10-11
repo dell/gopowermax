@@ -68,7 +68,7 @@ var (
 	defaultProtectedStorageGroup = "csi-Integration-Test-Protected-SG"
 	nonFASTManagedSG             = "csi-Integration-No-FAST"
 	defaultSGWithSnapshotPolicy  = "csi-Integration-Test-With-Snapshot-Policy"
-	defaultSnapshotPolicy        = "csi-Integration-Tes-snapshot-policy"
+	defaultSnapshotPolicy        = "DailyDefault"
 	defaultFCHost                = "IntegrationFCHost"
 	defaultiSCSIHost             = "IntegrationiSCSIHost"
 	localVol, remoteVol          *types.Volume
@@ -169,8 +169,8 @@ func createDefaultSGAndHost() error {
 
 	// Create default SG with snapshot policy
 	optionalPayload := make(map[string]interface{})
-	optionalPayload["snapshotPolicies"] = []string{defaultSGWithSnapshotPolicy}
-	_, err = client.CreateStorageGroup(context.TODO(), symmetrixID, defaultSGWithSnapshotPolicy, "none", "none", false, optionalPayload)
+	optionalPayload["snapshotPolicies"] = []string{defaultSnapshotPolicy}
+	_, err = client.CreateStorageGroup(context.TODO(), symmetrixID, defaultSGWithSnapshotPolicy, defaultSRP, defaultServiceLevel, false, optionalPayload)
 	if err != nil {
 		return fmt.Errorf("failed to create SG with snapshot policy: (%s)", err.Error())
 	}
@@ -245,18 +245,6 @@ func cleanupDefaultSGAndHOST(t *testing.T) {
 	err = deleteStorageGroup(symmetrixID, nonFASTManagedSG)
 	if err != nil {
 		t.Errorf("failed to delete default non fast SG (%s) : (%s)", nonFASTManagedSG, err.Error())
-	}
-
-	// remove snapshot policy from SG
-	_, err = client.UpdateStorageGroup(context.TODO(), symmetrixID, defaultSGWithSnapshotPolicy, nil)
-	if err != nil {
-		t.Errorf("failed to remove snapshot policy from SG (%s) : (%s)", defaultSGWithSnapshotPolicy, err.Error())
-	} else {
-		// delete SG after snapshot policy is removed
-		err = deleteStorageGroup(symmetrixID, defaultSGWithSnapshotPolicy)
-		if err != nil {
-			t.Errorf("failed to delete default SG with snapshot policy (%s) : (%s)", defaultSGWithSnapshotPolicy, err.Error())
-		}
 	}
 
 	// delete default FC host
@@ -515,6 +503,26 @@ func TestGetStorageGroupSnapshotPolicy(t *testing.T) {
 		return
 	}
 	fmt.Printf("%#v\n", storageGroupSnapshotPolicy)
+
+	// Cleanup -  remove snapshot policy from SG
+	optionalPayload := make(map[string]interface{})
+	optionalPayload["editStorageGroupActionParam"] = types.EditStorageGroupActionParam{
+		EditSnapshotPoliciesParam: &types.EditSnapshotPoliciesParam{
+			DisassociateSnapshotPolicyParam: &types.SnapshotPolicies{
+				SnapshotPolicies: []string{defaultSnapshotPolicy},
+			},
+		},
+	}
+	_, err = client.UpdateStorageGroup(context.TODO(), symmetrixID, defaultSGWithSnapshotPolicy, optionalPayload)
+	if err != nil {
+		t.Errorf("failed to remove snapshot policy from SG (%s) : (%s)", defaultSGWithSnapshotPolicy, err.Error())
+	} else {
+		// Cleanup - delete SG after snapshot policy is removed
+		err = deleteStorageGroup(symmetrixID, defaultSGWithSnapshotPolicy)
+		if err != nil {
+			t.Errorf("failed to delete default SG with snapshot policy (%s) : (%s)", defaultSGWithSnapshotPolicy, err.Error())
+		}
+	}
 }
 
 func TestGetStoragePool(t *testing.T) {
