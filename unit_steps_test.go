@@ -66,31 +66,32 @@ type unitContext struct {
 	err         error // First error observed
 	flag91      bool
 
-	symIDList          *types.SymmetrixIDList
-	sym                *types.Symmetrix
-	vol                *types.Volume
-	volList            []string
-	storageGroup       *types.StorageGroup
-	storageGroupIDList *types.StorageGroupIDList
-	jobIDList          []string
-	job                *types.Job
-	storagePoolList    *types.StoragePoolList
-	portGroupList      *types.PortGroupList
-	portGroup          *types.PortGroup
-	initiatorList      *types.InitiatorList
-	initiator          *types.Initiator
-	hostList           *types.HostList
-	host               *types.Host
-	maskingViewList    *types.MaskingViewList
-	maskingView        *types.MaskingView
-	uMaskingView       *uMV
-	addressList        []string
-	targetList         []ISCSITarget
-	storagePool        *types.StoragePool
-	volIDList          []string
-	hostID             string
-	hostGroupID        string
-	sgID               string
+	symIDList                  *types.SymmetrixIDList
+	sym                        *types.Symmetrix
+	vol                        *types.Volume
+	volList                    []string
+	storageGroup               *types.StorageGroup
+	storageGroupSnapshotPolicy *types.StorageGroupSnapshotPolicy
+	storageGroupIDList         *types.StorageGroupIDList
+	jobIDList                  []string
+	job                        *types.Job
+	storagePoolList            *types.StoragePoolList
+	portGroupList              *types.PortGroupList
+	portGroup                  *types.PortGroup
+	initiatorList              *types.InitiatorList
+	initiator                  *types.Initiator
+	hostList                   *types.HostList
+	host                       *types.Host
+	maskingViewList            *types.MaskingViewList
+	maskingView                *types.MaskingView
+	uMaskingView               *uMV
+	addressList                []string
+	targetList                 []ISCSITarget
+	storagePool                *types.StoragePool
+	volIDList                  []string
+	hostID                     string
+	hostGroupID                string
+	sgID                       string
 
 	symRepCapabilities    *types.SymReplicationCapabilities
 	sourceVolumeList      []types.VolumeList
@@ -158,6 +159,7 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.DeleteVolumeError = false
 	mock.InducedErrors.DeviceInSGError = false
 	mock.InducedErrors.GetStorageGroupError = false
+	mock.InducedErrors.GetStorageGroupSnapshotPolicyError = false
 	mock.InducedErrors.InvalidResponse = false
 	mock.InducedErrors.UpdateStorageGroupError = false
 	mock.InducedErrors.GetJobError = false
@@ -210,6 +212,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.DeviceInSGError = true
 	case "GetStorageGroupError":
 		mock.InducedErrors.GetStorageGroupError = true
+	case "GetStorageGroupSnapshotPolicyError":
+		mock.InducedErrors.GetStorageGroupSnapshotPolicyError = true
 	case "InvalidResponse":
 		mock.InducedErrors.InvalidResponse = true
 	case "UpdateStorageGroupError":
@@ -539,12 +543,27 @@ func (c *unitContext) iCallGetStorageGroup(sgID string) error {
 	return nil
 }
 
+func (c *unitContext) iCallGetStorageGroupSnapshotPolicy(symID, snapshotPolicyID, storageGroupID string) error {
+	c.storageGroupSnapshotPolicy, c.err = c.client.GetStorageGroupSnapshotPolicy(context.TODO(), symID, snapshotPolicyID, storageGroupID)
+	return nil
+}
+
 func (c *unitContext) iGetAValidStorageGroupIfNoErrors() error {
 	if c.err != nil {
 		return nil
 	}
 	if c.storageGroup.StorageGroupID == "" || c.storageGroup.Type == "" {
 		return fmt.Errorf("Expected StorageGroup to have StorageGroupID and Type but didn't")
+	}
+	return nil
+}
+
+func (c *unitContext) iGetAValidStorageGroupSnapshotPolicyObjectIfNoError() error {
+	if c.err != nil {
+		return nil
+	}
+	if c.storageGroupSnapshotPolicy.StorageGroupID == "IntSGB" {
+		return fmt.Errorf("Storage Group [IntSGB] on Symmetrix [000000000002] cannot be found")
 	}
 	return nil
 }
@@ -1646,8 +1665,10 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call GetStorageGroupIDList$`, c.iCallGetStorageGroupIDList)
 	s.Step(`^I get a valid StorageGroupIDList if no errors$`, c.iGetAValidStorageGroupIDListIfNoErrors)
 	s.Step(`^I call GetStorageGroup "([^"]*)"$`, c.iCallGetStorageGroup)
+	s.Step(`^I call GetStorageGroupSnapshotPolicy with "([^"]*)" "([^"]*)" "([^"]*)"$`, c.iCallGetStorageGroupSnapshotPolicy)
 	s.Step(`^I have a StorageGroup "([^"]*)"$`, c.iHaveAStorageGroup)
 	s.Step(`^I get a valid StorageGroup if no errors$`, c.iGetAValidStorageGroupIfNoErrors)
+	s.Step(`^I get a valid StorageGroupSnapshotPolicy Object if no error$`, c.iGetAValidStorageGroupSnapshotPolicyObjectIfNoError)
 	s.Step(`^I have (\d+) jobs$`, c.iHaveJobs)
 	s.Step(`^I call GetJobIDList with "([^"]*)"$`, c.iCallGetJobIDListWith)
 	s.Step(`^I get a valid JobsIDList with (\d+) if no errors$`, c.iGetAValidJobsIDListWithIfNoErrors)

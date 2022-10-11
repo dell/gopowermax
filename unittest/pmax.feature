@@ -253,6 +253,19 @@ Feature: PMAX Client library
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
 
+  Scenario Outline: Test cases for GetStorageGroupSnapshotPolicy
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    When I call GetStorageGroupSnapshotPolicy with <symID> <snapshotPolicyID> <storageGroupID>
+    Then the error message contains <errormsg>
+    And I get a valid StorageGroupSnapshotPolicy Object if no error
+
+    Examples:
+    | symID              | snapshotPolicyID     | storageGroupID   | induced                                        | errormsg                                                                | arrays    |
+    | "000000000001"     | "IntSPA"             | "IntSGA"         | "none"                                         | "none"                                                                  | ""        |
+    | "000000000002"     | "IntSPB"             | "IntSGB"         | "GetStorageGroupSnapshotPolicyError"           | "Error retrieving storage group snapshot policy: induced error"    | ""        |
+
   Scenario Outline: Test cases for CreateVolumeInStorageGroup for v90 with capacity unit
     Given a valid connection
     And I have an allowed list of <arrays>
