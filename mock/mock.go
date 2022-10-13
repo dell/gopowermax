@@ -187,6 +187,7 @@ var InducedErrors struct {
 	InvalidRemoteVolumeError           bool
 	FetchResponseError                 bool
 	RemoveVolumesFromSG                bool
+	ModifyMobilityError                bool
 }
 
 // hasError checks to see if the specified error (via pointer)
@@ -219,6 +220,7 @@ func Reset() {
 	InducedErrors.GetStorageGroupSnapshotPolicyError = false
 	InducedErrors.InvalidResponse = false
 	InducedErrors.UpdateStorageGroupError = false
+	InducedErrors.ModifyMobilityError = false
 	InducedErrors.GetJobError = false
 	InducedErrors.JobFailedError = false
 	InducedErrors.VolumeNotCreatedError = false
@@ -859,6 +861,10 @@ func handleVolume(w http.ResponseWriter, r *http.Request) {
 			FreeVolume(w, updateVolumePayload.EditVolumeActionParam.FreeVolumeParam, volID, executionOption)
 			return
 		}
+		if updateVolumePayload.EditVolumeActionParam.EnableMobilityIDParam != nil {
+			ModifyMobility(w, updateVolumePayload.EditVolumeActionParam.EnableMobilityIDParam, volID, executionOption)
+			return
+		}
 		if updateVolumePayload.EditVolumeActionParam.ModifyVolumeIdentifierParam != nil {
 			if vars["symid"] == Data.RDFGroup.RemoteSymmetrix {
 				RenameVolume(w, updateVolumePayload.EditVolumeActionParam.ModifyVolumeIdentifierParam, volID, executionOption, true)
@@ -981,6 +987,22 @@ func renameVolume(w http.ResponseWriter, param *types.ModifyVolumeIdentifierPara
 	}
 	Data.VolumeIDToVolume[volID].VolumeIdentifier = param.VolumeIdentifier.IdentifierName
 	returnVolume(w, volID, remote)
+}
+
+// ModifyMobility modifes the mobility-id-enabled parameter of volume
+func ModifyMobility(w http.ResponseWriter, param *types.EnableMobilityIDParam, volID string, executionOption string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	modifyMobility(w, param, volID, executionOption)
+}
+
+func modifyMobility(w http.ResponseWriter, param *types.EnableMobilityIDParam, volID string, executionOption string) {
+	if InducedErrors.ModifyMobilityError {
+		writeError(w, "Error modifying mobility for volume: induced error", http.StatusRequestTimeout)
+		return
+	}
+	Data.VolumeIDToVolume[volID].MobilityIDEnabled = param.EnableMobilityID
+	returnVolume(w, volID, false)
 }
 
 // ExpandVolume - Expands volume size in cache

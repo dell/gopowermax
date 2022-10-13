@@ -193,6 +193,7 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.GetStoragePoolError = false
 	mock.InducedErrors.ExpandVolumeError = false
 	mock.InducedErrors.UpdatePortGroupError = false
+	mock.InducedErrors.ModifyMobilityError = false
 	switch errorType {
 	case "InvalidJSON":
 		mock.InducedErrors.InvalidJSON = true
@@ -296,6 +297,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.DeletePortGroupError = true
 	case "ExpandVolumeError":
 		mock.InducedErrors.ExpandVolumeError = true
+	case "ModifyMobilityError":
+		mock.InducedErrors.ModifyMobilityError = true
 	case "none":
 	default:
 		return fmt.Errorf("unknown errorType: %s", errorType)
@@ -505,6 +508,15 @@ func (c *unitContext) iExpandVolumeToSizeWithUnit(volumeID string, sizeStr strin
 
 }
 
+func (c *unitContext) iCallModifyMobilityForVolume(volumeID string, mobility string) error {
+	if c.err != nil {
+		return nil
+	}
+	mobilityBool, _ := strconv.ParseBool(mobility)
+	c.vol, c.err = c.client.ModifyMobilityForVolume(context.TODO(), symID, volumeID, mobilityBool)
+	return nil
+}
+
 func (c *unitContext) iValidateVolumeSize(volumeID string, sizeStr string) error {
 	if c.err != nil {
 		return nil
@@ -642,9 +654,9 @@ func (c *unitContext) iCallCreateVolumeInStorageGroupWithNameAndSize(volumeName 
 
 func (c *unitContext) iCallCreateVolumeInStorageGroupWithNameAndSizeAndUnit(volumeName string, sizeInCylinders int, capUnit string) error {
 	if !c.flag91 {
-		c.vol, c.err = c.client.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit)
+		c.vol, c.err = c.client.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit, false)
 	} else {
-		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit)
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit, false)
 	}
 	return nil
 }
@@ -659,10 +671,16 @@ func (c *unitContext) iCallCreateVolumeInStorageGroupSWithNameAndSize(volumeName
 }
 
 func (c *unitContext) iCallCreateVolumeInStorageGroupSWithNameAndSizeAndUnit(volumeName string, sizeInCylinders int, capUnit string) error {
-	if !c.flag91 {
-		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit)
+	var size interface{}
+	if capUnit != "CYL" {
+		size = strconv.Itoa(sizeInCylinders)
 	} else {
-		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit)
+		size = sizeInCylinders
+	}
+	if !c.flag91 {
+		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, size, capUnit, false)
+	} else {
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, size, capUnit, false)
 	}
 	return nil
 }
@@ -686,6 +704,17 @@ func (c *unitContext) iGetAValidVolumeWithNameIfNoError(volumeName string) error
 	}
 	if c.vol.VolumeIdentifier != volumeName {
 		return fmt.Errorf("Expected volume named %s but got %s", volumeName, c.vol.VolumeIdentifier)
+	}
+	return nil
+}
+
+func (c *unitContext) iGetAValidVolumeWithMobilityModified(mobility string) error {
+	if c.err != nil {
+		return nil
+	}
+	mobilityBool, _ := strconv.ParseBool(mobility)
+	if c.vol.MobilityIDEnabled != mobilityBool {
+		return fmt.Errorf("Expected volume mobility-enabled: %v but %v ", mobilityBool, c.vol.MobilityIDEnabled)
 	}
 	return nil
 }
@@ -1683,6 +1712,7 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call CreateVolumeInStorageGroupS with name "([^"]*)" and size (\d+) and unit "([^"]*)"$`, c.iCallCreateVolumeInStorageGroupSWithNameAndSizeAndUnit)
 	s.Step(`^I call CreateVolumeInStorageGroupSWithMetaDataHeaders with name "([^"]*)" and size (\d+)$`, c.iCallCreateVolumeInStorageGroupSWithNameAndSizeWithMetaDataHeaders)
 	s.Step(`^I get a valid Volume with name "([^"]*)" if no error$`, c.iGetAValidVolumeWithNameIfNoError)
+	s.Step(`^I validate that volume has mobility modified to "([^"]*)"$`, c.iGetAValidVolumeWithMobilityModified)
 	s.Step(`^I call CreateStorageGroup with name "([^"]*)" and srp "([^"]*)" and sl "([^"]*)" and hostlimits "([^"]*)"$`, c.iCallCreateStorageGroupWithNameAndSrpAndSlAndHostLimits)
 	s.Step(`^I call CreateStorageGroup with name "([^"]*)" and srp "([^"]*)" and sl "([^"]*)"$`, c.iCallCreateStorageGroupWithNameAndSrpAndSl)
 	s.Step(`^I call DeleteStorageGroup "([^"]*)"$`, c.iCallDeleteStorageGroup)
@@ -1692,6 +1722,7 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call RemoveVolumeFromStorageGroup$`, c.iCallRemoveVolumeFromStorageGroup)
 	s.Step(`^the volume is no longer a member of the Storage Group if no error$`, c.theVolumeIsNoLongerAMemberOfTheStorageGroupIfNoError)
 	s.Step(`^I call RenameVolume with "([^"]*)"$`, c.iCallRenameVolumeWith)
+	s.Step(`^I call ModifyMobility for Volume with id "([^"]*)" to mobility "([^"]*)"$`, c.iCallModifyMobilityForVolume)
 	s.Step(`^I call InitiateDeallocationOfTracksFromVolume$`, c.iCallInitiateDeallocationOfTracksFromVolume)
 	s.Step(`^I call DeleteVolume$`, c.iCallDeleteVolume)
 	s.Step(`^I expand volume "([^"]*)" to "([^"]*)" in GB$`, c.iExpandVolumeToSize)

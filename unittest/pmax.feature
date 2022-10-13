@@ -253,6 +253,23 @@ Feature: PMAX Client library
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
 
+
+Scenario Outline: Test cases for modifyMobility for volume
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I have 2 volumes
+    And I induce error <induced>
+    Then I call ModifyMobility for Volume with id <id> to mobility <mobilityenabled>
+    And the error message contains <errormsg>
+    And I validate that volume has mobility modified to <mobilityenabled>
+    
+
+    Examples:
+    | id                                                                             | induced                   | errormsg                               | mobilityenabled  | arrays    |
+    | "00001"                                                                        | "none"                    | "none"                                 | "true"           | ""        |
+    | "00002"                                                                        | "ModifyMobilityError"     | "Error modifying mobility for volume:" | "false"          | ""        |
+    | "00002"                                                                        | "none"                    | "ignored as it is not managed"         | "false"          | "ignored" |
+
   Scenario Outline: Test cases for GetStorageGroupSnapshotPolicy
     Given a valid connection
     And I have an allowed list of <arrays>
@@ -266,6 +283,7 @@ Feature: PMAX Client library
     | "000000000001"     | "IntSPA"             | "IntSGA"         | "none"                                         | "none"                                                                  | ""        |
     | "000000000002"     | "IntSPB"             | "IntSGB"         | "GetStorageGroupSnapshotPolicyError"           | "Error retrieving storage group snapshot policy: induced error"    | ""        |
 
+
   Scenario Outline: Test cases for CreateVolumeInStorageGroup for v90 with capacity unit
     Given a valid connection
     And I have an allowed list of <arrays>
@@ -278,15 +296,16 @@ Feature: PMAX Client library
     | volname                                                                        | size     | capUnit   | induced                   | errormsg                                               | arrays    |
     | "IntgA"                                                                        | 1        | "CYL"     | "none"                    | "none"                                                 | ""        |
     | "IntgB"                                                                        | 5        | "CYL"     | "none"                    | "none"                                                 | ""        |
-    | "IntgC"                                                                        | 1        | "GB"      | "UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"       | ""        |
+    | "IntgC"                                                                        | 1       | "GB"      | "UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"       | ""        |
     | "IntgD"                                                                        | 1        | "GB"      | "httpStatus500"           | "A job was not returned from UpdateStorageGroup"       | ""        |
-    | "IntgE"                                                                        | 1        | "GB"      | "GetJobError"             | "induced error"                                        | ""        |
+    | "IntgE"                                                                        | 1       | "GB"      | "GetJobError"             | "induced error"                                        | ""        |
     | "IntgF"                                                                        | 1        | "GB"      | "JobFailedError"          | "The UpdateStorageGroup job failed"                    | ""        |
     | "IntgG"                                                                        | 1        | "GB"      | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
     | "IntgH"                                                                        | 1        | "GB"      | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "GB"      | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "CYL"     | "none"                    | "none"                                                 | ""        |
     | "IntgA"                                                                        | 1        | "GB"      | "none"                    | "ignored as it is not managed"                         | "ignored" |
+    | "IntgI"                                                                        | 2        | "GB"      | "none"                    | "none"                                                 | ""        |           
 
 
 Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup for v90

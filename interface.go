@@ -116,16 +116,16 @@ type Pmax interface {
 
 	// CreateVolumeInStorageGroup takes simplified input arguments to create a volume of a give name and size in a particular storage group.
 	// This method creates a job and waits on the job to complete.
-	CreateVolumeInStorageGroup(ctx context.Context, symID string, storageGroupID string, volumeName string, sizeInCylinders int, capUnits ...string) (*types.Volume, error)
+	CreateVolumeInStorageGroup(ctx context.Context, symID string, storageGroupID string, volumeName string, volumeSize interface{}, volOpts ...interface{}) (*types.Volume, error)
 
 	// CreateVolumeInStorageGroup takes simplified input arguments to create a volume of a give name and size in a particular storage group.
 	// This is done synchronously and no jobs are created. HTTP header argument is optional
-	CreateVolumeInStorageGroupS(ctx context.Context, symID, storageGroupID string, volumeName string, sizeInCylinders int, opts ...interface{}) (*types.Volume, error)
+	CreateVolumeInStorageGroupS(ctx context.Context, symID, storageGroupID string, volumeName string, volumeSize interface{}, opts ...interface{}) (*types.Volume, error)
 
 	// CreateVolumeInProtectedStorageGroup takes simplified input arguments to create a volume of a give name and size in a protected storage group.
 	// This will add volume in both Local and Remote Storage group
 	// This is done synchronously and no jobs are created. HTTP header argument is optional
-	CreateVolumeInProtectedStorageGroupS(ctx context.Context, symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, sizeInCylinders int, opts ...interface{}) (*types.Volume, error)
+	CreateVolumeInProtectedStorageGroupS(ctx context.Context, symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, volumeSize interface{}, opts ...interface{}) (*types.Volume, error)
 
 	// DeleteStorageGroup deletes a storage group given a storage group id
 	DeleteStorageGroup(ctx context.Context, symID string, storageGroupID string) error
@@ -278,9 +278,11 @@ type Pmax interface {
 	// UpdatePortGroup updates a port group
 	UpdatePortGroup(ctx context.Context, symID string, portGroupID string, ports []types.PortKey) (*types.PortGroup, error)
 
+	// ModifyMobilityForVolume allows enabling/disabling mobility id for the volume
+	ModifyMobilityForVolume(ctx context.Context, symID string, volumeID string, mobility bool) (*types.Volume, error)
 	// ExpandVolume expands the size of an existing volume
-	ExpandVolume(ctx context.Context, symID string, volumeID string, rdfGNo int, newSizeCYL int, capUnits ...string) (*types.Volume, error)
-	GetCreateVolInSGPayload(sizeInCylinders int, capUnit string, volumeName string, isSync bool, remoteSymID, storageGroupID string, opts ...http.Header) (payload interface{})
+	ExpandVolume(ctx context.Context, symID string, volumeID string, rdfGNo int, volumeSize interface{}, capUnits ...string) (*types.Volume, error)
+	GetCreateVolInSGPayload(volumeSize interface{}, capUnit string, volumeName string, isSync, enableMobility bool, remoteSymID, storageGroupID string, opts ...http.Header) (payload interface{})
 	//GetCreateVolInSGPayloadWithMetaDataHeaders(sizeInCylinders int, volumeName string, isSync bool, remoteSymID, remoteStorageGroupID string, metadata http.Header) (payload interface{})
 
 	// GetRDFGroupList GetRDFGroupList fetches all RDF group

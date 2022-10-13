@@ -791,7 +791,7 @@ func TestCreateVolumeInStorageGroup1(t *testing.T) {
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	payload := client.GetCreateVolInSGPayload(1, "CYL", volumeName, false, "", "", nil)
+	payload := client.GetCreateVolInSGPayload(1, "CYL", volumeName, false, false, "", "", nil)
 
 	payloadBytes, err := json.Marshal(&payload)
 	if err != nil {
@@ -837,6 +837,34 @@ func TestCreateVolumeInStorageGroup2(t *testing.T) {
 	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
 }
 
+func TestModifyMobilityForVolume(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+	now := time.Now()
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
+	fmt.Printf("volumeName: %s\n", volumeName)
+	vol, err := client.CreateVolumeInStorageGroupS(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Printf("volume:\n%#v\n", vol)
+	vol, err = client.ModifyMobilityForVolume(context.TODO(), symmetrixID, vol.VolumeID, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if !vol.MobilityIDEnabled{
+		t.Errorf("Failed to modify mobilityID")
+	}
+	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
+}
+
 func TestCreateVolumeInStorageGroup2withUnit(t *testing.T) {
 	if client == nil {
 		err := getClient()
@@ -849,7 +877,7 @@ func TestCreateVolumeInStorageGroup2withUnit(t *testing.T) {
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	capUnit := "TB"
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroupS(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1, capUnit)
+	vol, err := client.CreateVolumeInStorageGroupS(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, "1", capUnit)
 	if err != nil {
 		t.Error(err)
 		return
