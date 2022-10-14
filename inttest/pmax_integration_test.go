@@ -859,7 +859,7 @@ func TestModifyMobilityForVolume(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if !vol.MobilityIDEnabled{
+	if !vol.MobilityIDEnabled {
 		t.Errorf("Failed to modify mobilityID")
 	}
 	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)

@@ -280,7 +280,7 @@ func (c *Client) GetStorageGroupIDList(ctx context.Context, symID string) (*type
 	return sgIDList, nil
 }
 
-//GetCreateStorageGroupPayload returns U4P payload for creating storage group
+// GetCreateStorageGroupPayload returns U4P payload for creating storage group
 func (c *Client) GetCreateStorageGroupPayload(storageGroupID, srpID, serviceLevel string, thickVolumes bool, optionalPayload map[string]interface{}) (payload interface{}) {
 	workload := "None"
 	sloParams := []types.SLOBasedStorageGroupParam{}

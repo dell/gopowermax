@@ -135,10 +135,10 @@ func (c *Client) GetSnapshotInfo(ctx context.Context, symID, volumeID, snapID st
 }
 
 // CreateSnapshot creates a snapVx snapshot of a volume or on the list of volumes passed as sourceVolumeList
-// BothSides flag is used in SRDF usecases to create snapshots on both R1 and R2 side
-// Star flag is used if the source device is participating in SRDF star mode
-// Use the Force flag to automate some scenarios to succeed
-// TimeToLive value ins hour is set on the snapshot to automatically delete the snapshot after target is unlinked
+//  BothSides flag is used in SRDF usecases to create snapshots on both R1 and R2 side
+//  Star flag is used if the source device is participating in SRDF star mode
+//  Use the Force flag to automate some scenarios to succeed
+//  TimeToLive value ins hour is set on the snapshot to automatically delete the snapshot after target is unlinked
 func (c *Client) CreateSnapshot(ctx context.Context, symID string, snapID string, sourceVolumeList []types.VolumeList, ttl int64) error {
 	defer c.TimeSpent("CreateSnapshot", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
@@ -166,10 +166,10 @@ func (c *Client) CreateSnapshot(ctx context.Context, symID string, snapID string
 // DeleteSnapshot deletes a snapshot from a volume
 // DeviceNameListSource is a list which contains the names of source volumes
 // Symforce flag is used to automate some internal establish scenarios
-// Star mode is used for devices in SRDF relations
-// Use the Force flag in acceptable error conditions
+//  Star mode is used for devices in SRDF relations
+//  Use the Force flag in acceptable error conditions
 // Restore, when set to true will terminate the Restore and the Snapshot as well
-// Generation is used to tell which generation of snapshot needs to be deleted and is passed as int64
+//  Generation is used to tell which generation of snapshot needs to be deleted and is passed as int64
 // ExecutionOption tells the Unisphere to perform the operation either in Synchronous mode or Asynchronous mode
 func (c *Client) DeleteSnapshot(ctx context.Context, symID, snapID string, sourceVolumes []types.VolumeList, generation int64) error {
 	defer c.TimeSpent("DeleteSnapshot", time.Now())
@@ -242,13 +242,13 @@ func (c *Client) DeleteSnapshotS(ctx context.Context, symID, snapID string, sour
 // VolumeNameListSource is a list which contains the names of source volumes
 // VolumeNameListTarget is a list which contains the names of target volumes to which the snapshot is linked or going to be linked
 // Symforce flag is used to automate some internal establish scenarios
-// Star mode is used for devices in SRDF relations
-// Use the Force flag in acceptable error conditions
+//  Star mode is used for devices in SRDF relations
+//  Use the Force flag in acceptable error conditions
 // Restore, when set to true will terminate the Restore and the Snapshot as well
 // Exact when specified, pairs source and link devices in their ordinal positions within the selection. When not set uses the source and link device selections as a pool that pairs by best match
 // Copy when specified creates an exact copy of the source device, otherwise copies the references
 // Remote when specified propagates the data to the remote mirror of the RDF device
-// Generation is used to tell which generation of snapshot needs to be updated, it is passed as int64
+//  Generation is used to tell which generation of snapshot needs to be updated, it is passed as int64
 // NewSnapshotName specifies the new snapshot name to which the old snapshot will be renamed
 // ExecutionOption tells the Unisphere to perform the operation either in Synchronous mode or Asynchronous mode
 // Action defined the operation which will be performed on the given snapshot
