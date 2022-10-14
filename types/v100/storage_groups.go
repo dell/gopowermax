@@ -99,7 +99,7 @@ type MoveVolumeToStorageGroupParam struct {
 // EditCompressionParam hold param to edit compression
 // attribute with an SG
 type EditCompressionParam struct {
-	Compression bool `json:"compression,omitempty"`
+	Compression *bool `json:"compression,omitempty"`
 }
 
 // SetHostIOLimitsParam holds param to set host IO limit
