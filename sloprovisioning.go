@@ -510,21 +510,26 @@ func ifDebugLogPayload(payload interface{}) {
 
 // CreateVolumeInStorageGroup creates a volume in the specified Storage Group with a given volumeName
 // and the size of the volume in cylinders.
-func (c *Client) CreateVolumeInStorageGroup(
-	ctx context.Context, symID string, storageGroupID string, volumeName string, volumeSize interface{}, volOpts ...interface{}) (*types.Volume, error) {
+func (c *Client) CreateVolumeInStorageGroup(ctx context.Context, symID string, storageGroupID string, volumeName string, volumeSize interface{}, volOpts map[string]interface{}) (*types.Volume, error) {
 	capUnit := "CYL"
 	enableMobility := false
-
-	for _, volOpt := range volOpts {
-		if value, isUnit := volOpt.(string); isUnit {
-			capUnit = value
-		} else if mobility, isBool := volOpt.(bool); isBool {
-			enableMobility = mobility
-		}
-	}
 	defer c.TimeSpent("CreateVolumeInStorageGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
+	}
+	if len(volOpts) > 0 {
+		if value, ok := volOpts["capacityUnit"]; ok {
+			if val, isUnit := value.(string); isUnit {
+				capUnit = val
+			} else {
+				return nil, fmt.Errorf("invalid capacityUnit for creation of volume")
+			}
+		}
+		if value, ok := volOpts["enableMobility"]; ok {
+			if mobility, isBool := value.(bool); isBool {
+				enableMobility = mobility
+			}
+		}
 	}
 
 	if len(volumeName) > MaxVolIdentifierLength {
@@ -592,34 +597,35 @@ func (c *Client) GetVolumeByIdentifier(ctx context.Context, symID, storageGroupI
 // CreateVolumeInStorageGroupS creates a volume in the specified Storage Group with a given volumeName
 // and the size of the volume in cylinders.
 // This method is run synchronously
-func (c *Client) CreateVolumeInStorageGroupS(ctx context.Context, symID, storageGroupID string, volumeName string, volumeSize interface{}, opts ...interface{}) (*types.Volume, error) {
+func (c *Client) CreateVolumeInStorageGroupS(ctx context.Context, symID, storageGroupID string, volumeName string, volumeSize interface{}, volOpts map[string]interface{}, opts ...http.Header) (*types.Volume, error) {
 	defer c.TimeSpent("CreateVolumeInStorageGroup", time.Now())
 	capUnit := "CYL"
-	var headers []http.Header
 	var enableMobility = false
-	var filteredOpts []interface{}
 
-	for _, opt := range opts {
-		if value, isUnit := opt.(string); isUnit {
-			capUnit = value
-		} else if mobility, isBool := opt.(bool); isBool {
-			enableMobility = mobility
-		} else {
-			filteredOpts = append(filteredOpts, opt)
-		}
-	}
-	for i := 0; i < len(filteredOpts); i++ {
-		headers = append(headers, filteredOpts[i].(http.Header))
-	}
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
+	}
+
+	if len(volOpts) > 0 {
+		if value, ok := volOpts["capacityUnit"]; ok {
+			if val, isUnit := value.(string); isUnit {
+				capUnit = val
+			} else {
+				return nil, fmt.Errorf("invalid capacityUnit for creation of volume")
+			}
+		}
+		if value, ok := volOpts["enableMobility"]; ok {
+			if mobility, isBool := value.(bool); isBool {
+				enableMobility = mobility
+			}
+		}
 	}
 
 	if len(volumeName) > MaxVolIdentifierLength {
 		return nil, fmt.Errorf("Length of volumeName exceeds max limit")
 	}
 
-	payload := c.GetCreateVolInSGPayload(volumeSize, capUnit, volumeName, true, enableMobility, "", "", headers...)
+	payload := c.GetCreateVolInSGPayload(volumeSize, capUnit, volumeName, true, enableMobility, "", "", opts...)
 	err := c.UpdateStorageGroupS(ctx, symID, storageGroupID, payload)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't create volume. error - %s", err.Error())
@@ -632,34 +638,35 @@ func (c *Client) CreateVolumeInStorageGroupS(ctx context.Context, symID, storage
 // CreateVolumeInProtectedStorageGroupS takes simplified input arguments to create a volume of a give name and size in a protected storage group.
 // This will add volume in both Local and Remote Storage group
 // This method is run synchronously
-func (c *Client) CreateVolumeInProtectedStorageGroupS(ctx context.Context, symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, volumeSize interface{}, opts ...interface{}) (*types.Volume, error) {
+func (c *Client) CreateVolumeInProtectedStorageGroupS(ctx context.Context, symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, volumeSize interface{}, volOpts map[string]interface{}, opts ...http.Header) (*types.Volume, error) {
 	defer c.TimeSpent("CreateVolumeInStorageGroup", time.Now())
 	capUnit := "CYL"
-	var headers []http.Header
 	var enableMobility = false
-	var filteredOpts []interface{}
 
-	for _, opt := range opts {
-		if value, isUnit := opt.(string); isUnit {
-			capUnit = value
-		} else if mobility, isBool := opt.(bool); isBool {
-			enableMobility = mobility
-		} else {
-			filteredOpts = append(filteredOpts, opt)
-		}
-	}
-	for i := 0; i < len(filteredOpts); i++ {
-		headers = append(headers, filteredOpts[i].(http.Header))
-	}
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
+	}
+
+	if len(volOpts) > 0 {
+		if value, ok := volOpts["capacityUnit"]; ok {
+			if val, isUnit := value.(string); isUnit {
+				capUnit = val
+			} else {
+				return nil, fmt.Errorf("invalid capacityUnit for creation of volume")
+			}
+		}
+		if value, ok := volOpts["enableMobility"]; ok {
+			if mobility, isBool := value.(bool); isBool {
+				enableMobility = mobility
+			}
+		}
 	}
 
 	if len(volumeName) > MaxVolIdentifierLength {
 		return nil, fmt.Errorf("Length of volumeName exceeds max limit")
 	}
 
-	payload := c.GetCreateVolInSGPayload(volumeSize, capUnit, volumeName, true, enableMobility, remoteSymID, remoteStorageGroupID, headers...)
+	payload := c.GetCreateVolInSGPayload(volumeSize, capUnit, volumeName, true, enableMobility, remoteSymID, remoteStorageGroupID, opts...)
 	err := c.UpdateStorageGroupS(ctx, symID, storageGroupID, payload)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't create volume. error - %s", err.Error())

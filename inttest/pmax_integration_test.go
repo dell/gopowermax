@@ -205,8 +205,8 @@ func createRDFSetup() error {
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 
 	//Creating source volume
-
-	localVol, err = client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultProtectedStorageGroup, volumeName, 50)
+	volOpts := make(map[string]interface{})
+	localVol, err = client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultProtectedStorageGroup, volumeName, 50, volOpts)
 	if err != nil {
 		return fmt.Errorf("failed to create volume : (%s)", err.Error())
 	}
@@ -828,7 +828,8 @@ func TestCreateVolumeInStorageGroup2(t *testing.T) {
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroupS(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
+	volOpts := make(map[string]interface{})
+	vol, err := client.CreateVolumeInStorageGroupS(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1, volOpts)
 	if err != nil {
 		t.Error(err)
 		return
@@ -848,7 +849,8 @@ func TestModifyMobilityForVolume(t *testing.T) {
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroupS(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
+	volOpts := make(map[string]interface{})
+	vol, err := client.CreateVolumeInStorageGroupS(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1, volOpts)
 	if err != nil {
 		t.Error(err)
 		return
@@ -877,7 +879,9 @@ func TestCreateVolumeInStorageGroup2withUnit(t *testing.T) {
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	capUnit := "TB"
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroupS(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, "1", capUnit)
+	volopts := make(map[string]interface{})
+	volopts["capacityUnit"] = capUnit
+	vol, err := client.CreateVolumeInStorageGroupS(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, "1", volopts)
 	if err != nil {
 		t.Error(err)
 		return
@@ -897,7 +901,8 @@ func TestAddVolumesInStorageGroup(t *testing.T) {
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
+	volOpts := make(map[string]interface{})
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1, volOpts)
 	if err != nil {
 		t.Error(err)
 		return
@@ -964,6 +969,7 @@ func TestCreateVolumeInStorageGroupInParallel(t *testing.T) {
 func CreateVolumesInParallel(nVols int, t *testing.T) {
 	fmt.Printf("testing CreateVolumeInStorageGroup with %d parallel requests\n", nVols)
 	volIDList := make([]string, nVols)
+	volOpts := make(map[string]interface{})
 	// make channels for communication
 	idchan := make(chan string, nVols)
 	errchan := make(chan error, nVols)
@@ -982,7 +988,7 @@ func CreateVolumesInParallel(nVols int, t *testing.T) {
 		name := fmt.Sprintf("pmax-Int%d-Scale%d", now.Nanosecond(), i)
 		go func(volumeName string, idchan chan string, errchan chan error) {
 			var err error
-			resp, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, storageGroupName, volumeName, 1)
+			resp, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, storageGroupName, volumeName, 1, volOpts)
 			if resp != nil {
 				fmt.Printf("ID %s Name %s\n%#v\n", resp.VolumeID, volumeName, resp)
 				idchan <- resp.VolumeID
@@ -1442,7 +1448,8 @@ func TestCreateFCMaskingView(t *testing.T) {
 	// add a volume in defaultStorageGroup
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, time.Now().Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
+	volOpts := make(map[string]interface{})
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1, volOpts)
 	if err != nil {
 		t.Error("Expected to create a volume but didn't" + err.Error())
 		return
@@ -1513,7 +1520,8 @@ func TestRenameMaskingView(t *testing.T) {
 	// add a volume in defaultStorageGroup
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, time.Now().Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
+	volOpts := make(map[string]interface{})
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1, volOpts)
 	if err != nil {
 		t.Error("Expected to create a volume but didn't" + err.Error())
 		return
@@ -1671,7 +1679,8 @@ func TestCreateiSCSIMaskingView(t *testing.T) {
 	// add a volume in defaultStorageGroup
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, time.Now().Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
+	volOpts := make(map[string]interface{})
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1, volOpts)
 	if err != nil {
 		t.Error("Expected to create a volume but didn't" + err.Error())
 		return
@@ -1814,7 +1823,8 @@ func TestExpandVolume(t *testing.T) {
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 26)
+	volOpts := make(map[string]interface{})
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 26, volOpts)
 	if err != nil {
 		t.Error(err)
 		return
@@ -1851,7 +1861,8 @@ func TestExpandVolumeWithUnit(t *testing.T) {
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
-	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 26)
+	volOpts := make(map[string]interface{})
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 26, volOpts)
 	if err != nil {
 		t.Error(err)
 		return

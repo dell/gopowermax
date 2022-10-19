@@ -646,43 +646,52 @@ func (c *unitContext) iCallWaitOnJobCompletion() error {
 }
 
 func (c *unitContext) iCallCreateVolumeInStorageGroupWithNameAndSize(volumeName string, sizeInCylinders int) error {
+	volOpts := make(map[string]interface{})
 	if !c.flag91 {
-		c.vol, c.err = c.client.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+		c.vol, c.err = c.client.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts)
 	} else {
-		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts)
 	}
 	return nil
 }
 
 func (c *unitContext) iCallCreateVolumeInStorageGroupWithNameAndSizeAndUnit(volumeName string, sizeInCylinders int, capUnit string) error {
+	volOpts := make(map[string]interface{})
+	volOpts["capacityUnit"] = capUnit
+	volOpts["enableMobility"] = false
 	if !c.flag91 {
-		c.vol, c.err = c.client.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit, false)
+		c.vol, c.err = c.client.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts)
 	} else {
-		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit, false)
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts)
 	}
 	return nil
 }
 
 func (c *unitContext) iCallCreateVolumeInStorageGroupSWithNameAndSize(volumeName string, sizeInCylinders int) error {
+	volOpts := make(map[string]interface{})
 	if !c.flag91 {
-		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts)
 	} else {
-		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts)
 	}
 	return nil
 }
 
 func (c *unitContext) iCallCreateVolumeInStorageGroupSWithNameAndSizeAndUnit(volumeName string, sizeInCylinders int, capUnit string) error {
 	var size interface{}
+	volOpts := make(map[string]interface{})
+	volOpts["capacityUnit"] = capUnit
+	volOpts["enableMobility"] = false
 	if capUnit != "CYL" {
 		size = strconv.Itoa(sizeInCylinders)
 	} else {
 		size = sizeInCylinders
 	}
+
 	if !c.flag91 {
-		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, size, capUnit, false)
+		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, size, volOpts)
 	} else {
-		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, size, capUnit, false)
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, size, volOpts)
 	}
 	return nil
 }
@@ -692,10 +701,11 @@ func (c *unitContext) iCallCreateVolumeInStorageGroupSWithNameAndSizeWithMetaDat
 	metadata.Set("x-csi-pv-name", "testPVName")
 	metadata.Set("x-csi-pv-claimname", "testPVClaimName")
 	metadata.Set("x-csi-pv-namespace", "testPVNamespace")
+	volOpts := make(map[string]interface{})
 	if !c.flag91 {
-		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, metadata)
+		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts, metadata)
 	} else {
-		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, metadata)
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts, metadata)
 	}
 	return nil
 }
