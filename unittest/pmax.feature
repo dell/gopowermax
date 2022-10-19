@@ -1,4 +1,4 @@
-Feature: PMAX Client library 
+Feature: PMAX Client library
   As a developer of the PMAX CSI driver that uses the PMAX REST client library
   I want to test the client library methods
   So they are known to work and have a high test coverage.
