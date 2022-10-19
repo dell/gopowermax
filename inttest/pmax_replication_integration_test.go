@@ -513,7 +513,7 @@ func TestCreateVolumeInProtectedStorageGroupS(t *testing.T) {
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	volOpts := make(map[string]interface{})
-	
+
 	vol, err := client.CreateVolumeInProtectedStorageGroupS(context.TODO(), symmetrixID, remoteSymmetrixID, defaultProtectedStorageGroup, defaultProtectedStorageGroup, volumeName, 30, volOpts)
 	if err != nil {
 		t.Errorf("Error Creating Volume in Protected Storage Group: %s", err.Error())
