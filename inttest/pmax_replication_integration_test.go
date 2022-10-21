@@ -511,7 +511,7 @@ func TestCreateVolumeInProtectedStorageGroupS(t *testing.T) {
 	}
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
-	vol, err := client.CreateVolumeInProtectedStorageGroupS(context.TODO(), symmetrixID, remoteSymmetrixID, defaultProtectedStorageGroup, defaultProtectedStorageGroup, volumeName, 30)
+	vol, err := client.CreateVolumeInProtectedStorageGroupS(context.TODO(), symmetrixID, remoteSymmetrixID, defaultProtectedStorageGroup, defaultProtectedStorageGroup, volumeName, 30, nil)
 	if err != nil {
 		t.Errorf("Error Creating Volume in Protected Storage Group: %s", err.Error())
 		return
@@ -558,7 +558,7 @@ func TestExecuteReplicationActionOnSG(t *testing.T) {
 	}
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
-	vol, err := client.CreateVolumeInProtectedStorageGroupS(context.TODO(), symmetrixID, remoteSymmetrixID, defaultProtectedStorageGroup, defaultProtectedStorageGroup, volumeName, 30)
+	vol, err := client.CreateVolumeInProtectedStorageGroupS(context.TODO(), symmetrixID, remoteSymmetrixID, defaultProtectedStorageGroup, defaultProtectedStorageGroup, volumeName, 30, nil)
 	if err != nil {
 		t.Errorf("Error Creating Volume in Protected Storage Group: %s", err.Error())
 		return
