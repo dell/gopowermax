@@ -109,83 +109,85 @@ var Data struct {
 
 // InducedErrors constants
 var InducedErrors struct {
-	NoConnection                   bool
-	InvalidJSON                    bool
-	BadHTTPStatus                  int
-	GetSymmetrixError              bool
-	GetVolumeIteratorError         bool
-	GetVolumeError                 bool
-	UpdateVolumeError              bool
-	DeleteVolumeError              bool
-	DeviceInSGError                bool
-	GetStorageGroupError           bool
-	InvalidResponse                bool
-	GetStoragePoolError            bool
-	UpdateStorageGroupError        bool
-	GetJobError                    bool
-	JobFailedError                 bool
-	VolumeNotCreatedError          bool
-	GetJobCannotFindRoleForUser    bool
-	CreateStorageGroupError        bool
-	StorageGroupAlreadyExists      bool
-	DeleteStorageGroupError        bool
-	GetStoragePoolListError        bool
-	GetPortGroupError              bool
-	GetPortError                   bool
-	GetSpecificPortError           bool
-	GetPortISCSITargetError        bool
-	GetPortGigEError               bool
-	GetDirectorError               bool
-	GetInitiatorError              bool
-	GetInitiatorByIDError          bool
-	GetHostError                   bool
-	CreateHostError                bool
-	DeleteHostError                bool
-	UpdateHostError                bool
-	GetMaskingViewError            bool
-	CreateMaskingViewError         bool
-	UpdateMaskingViewError         bool
-	MaskingViewAlreadyExists       bool
-	DeleteMaskingViewError         bool
-	PortGroupNotFoundError         bool
-	InitiatorGroupNotFoundError    bool
-	StorageGroupNotFoundError      bool
-	VolumeNotAddedError            bool
-	GetMaskingViewConnectionsError bool
-	ResetAfterFirstError           bool
-	CreateSnapshotError            bool
-	DeleteSnapshotError            bool
-	LinkSnapshotError              bool
-	RenameSnapshotError            bool
-	GetSymVolumeError              bool
-	GetVolSnapsError               bool
-	GetGenerationError             bool
-	GetPrivateVolumeIterator       bool
-	SnapshotNotLicensed            bool
-	UnisphereMismatchError         bool
-	TargetNotDefinedError          bool
-	SnapshotExpired                bool
-	InvalidSnapshotName            bool
-	GetPrivVolumeByIDError         bool
-	CreatePortGroupError           bool
-	UpdatePortGroupError           bool
-	DeletePortGroupError           bool
-	ExpandVolumeError              bool
-	MaxSnapSessionError            bool
-	GetSRDFInfoError               bool
-	VolumeRdfTypesError            bool
-	GetSRDFPairInfoError           bool
-	GetProtectedStorageGroupError  bool
-	CreateSGReplicaError           bool
-	GetRDFGroupError               bool
-	GetSGOnRemote                  bool
-	GetSGWithVolOnRemote           bool
-	RDFGroupHasPairError           bool
-	GetRemoteVolumeError           bool
-	InvalidLocalVolumeError        bool
-	InvalidRemoteVolumeError       bool
-	FetchResponseError             bool
-	RemoveVolumesFromSG            bool
+	NoConnection                       bool
+	InvalidJSON                        bool
+	BadHTTPStatus                      int
+	GetSymmetrixError                  bool
+	GetVolumeIteratorError             bool
+	GetVolumeError                     bool
+	UpdateVolumeError                  bool
+	DeleteVolumeError                  bool
+	DeviceInSGError                    bool
+	GetStorageGroupError               bool
+	GetStorageGroupSnapshotPolicyError bool
+	InvalidResponse                    bool
+	GetStoragePoolError                bool
+	UpdateStorageGroupError            bool
+	GetJobError                        bool
+	JobFailedError                     bool
+	VolumeNotCreatedError              bool
+	GetJobCannotFindRoleForUser        bool
+	CreateStorageGroupError            bool
+	StorageGroupAlreadyExists          bool
+	DeleteStorageGroupError            bool
+	GetStoragePoolListError            bool
+	GetPortGroupError                  bool
+	GetPortError                       bool
+	GetSpecificPortError               bool
+	GetPortISCSITargetError            bool
+	GetPortGigEError                   bool
+	GetDirectorError                   bool
+	GetInitiatorError                  bool
+	GetInitiatorByIDError              bool
+	GetHostError                       bool
+	CreateHostError                    bool
+	DeleteHostError                    bool
+	UpdateHostError                    bool
+	GetMaskingViewError                bool
+	CreateMaskingViewError             bool
+	UpdateMaskingViewError             bool
+	MaskingViewAlreadyExists           bool
+	DeleteMaskingViewError             bool
+	PortGroupNotFoundError             bool
+	InitiatorGroupNotFoundError        bool
+	StorageGroupNotFoundError          bool
+	VolumeNotAddedError                bool
+	GetMaskingViewConnectionsError     bool
+	ResetAfterFirstError               bool
+	CreateSnapshotError                bool
+	DeleteSnapshotError                bool
+	LinkSnapshotError                  bool
+	RenameSnapshotError                bool
+	GetSymVolumeError                  bool
+	GetVolSnapsError                   bool
+	GetGenerationError                 bool
+	GetPrivateVolumeIterator           bool
+	SnapshotNotLicensed                bool
+	UnisphereMismatchError             bool
+	TargetNotDefinedError              bool
+	SnapshotExpired                    bool
+	InvalidSnapshotName                bool
+	GetPrivVolumeByIDError             bool
+	CreatePortGroupError               bool
+	UpdatePortGroupError               bool
+	DeletePortGroupError               bool
+	ExpandVolumeError                  bool
+	MaxSnapSessionError                bool
+	GetSRDFInfoError                   bool
+	VolumeRdfTypesError                bool
+	GetSRDFPairInfoError               bool
+	GetProtectedStorageGroupError      bool
+	CreateSGReplicaError               bool
+	GetRDFGroupError                   bool
+	GetSGOnRemote                      bool
+	GetSGWithVolOnRemote               bool
+	RDFGroupHasPairError               bool
+	GetRemoteVolumeError               bool
+	InvalidLocalVolumeError            bool
+	InvalidRemoteVolumeError           bool
+	FetchResponseError                 bool
+	RemoveVolumesFromSG                bool
+	ModifyMobilityError                bool
 }
 
 // hasError checks to see if the specified error (via pointer)
@@ -215,8 +217,10 @@ func Reset() {
 	InducedErrors.DeleteVolumeError = false
 	InducedErrors.DeviceInSGError = false
 	InducedErrors.GetStorageGroupError = false
+	InducedErrors.GetStorageGroupSnapshotPolicyError = false
 	InducedErrors.InvalidResponse = false
 	InducedErrors.UpdateStorageGroupError = false
+	InducedErrors.ModifyMobilityError = false
 	InducedErrors.GetJobError = false
 	InducedErrors.JobFailedError = false
 	InducedErrors.VolumeNotCreatedError = false
@@ -453,6 +457,7 @@ func getRouter() http.Handler {
 	router.HandleFunc(PRIVATEPREFIX+"/replication/symmetrix/{symid}/volume/{volID}/snapshot/{SnapID}/generation", handleGenerations)
 	router.HandleFunc(PRIVATEPREFIX+"/replication/symmetrix/{symid}/volume/{volID}/snapshot/{SnapID}/generation/{genID}", handleGenerations)
 	router.HandleFunc(PREFIX+"/replication/capabilities/symmetrix", handleCapabilities)
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symID}/snapshot_policy/{snapshotPolicyID}/storagegroup/{storageGroupID}", handleStorageGroupSnapshotPolicy)
 
 	// SRDF
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/rdf_group/{rdf_no}", handleRDFGroup)
@@ -856,6 +861,10 @@ func handleVolume(w http.ResponseWriter, r *http.Request) {
 			FreeVolume(w, updateVolumePayload.EditVolumeActionParam.FreeVolumeParam, volID, executionOption)
 			return
 		}
+		if updateVolumePayload.EditVolumeActionParam.EnableMobilityIDParam != nil {
+			ModifyMobility(w, updateVolumePayload.EditVolumeActionParam.EnableMobilityIDParam, volID, executionOption)
+			return
+		}
 		if updateVolumePayload.EditVolumeActionParam.ModifyVolumeIdentifierParam != nil {
 			if vars["symid"] == Data.RDFGroup.RemoteSymmetrix {
 				RenameVolume(w, updateVolumePayload.EditVolumeActionParam.ModifyVolumeIdentifierParam, volID, executionOption, true)
@@ -978,6 +987,22 @@ func renameVolume(w http.ResponseWriter, param *types.ModifyVolumeIdentifierPara
 	}
 	Data.VolumeIDToVolume[volID].VolumeIdentifier = param.VolumeIdentifier.IdentifierName
 	returnVolume(w, volID, remote)
+}
+
+// ModifyMobility modifes the mobility-id-enabled parameter of volume
+func ModifyMobility(w http.ResponseWriter, param *types.EnableMobilityIDParam, volID string, executionOption string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	modifyMobility(w, param, volID, executionOption)
+}
+
+func modifyMobility(w http.ResponseWriter, param *types.EnableMobilityIDParam, volID string, executionOption string) {
+	if InducedErrors.ModifyMobilityError {
+		writeError(w, "Error modifying mobility for volume: induced error", http.StatusRequestTimeout)
+		return
+	}
+	Data.VolumeIDToVolume[volID].MobilityIDEnabled = param.EnableMobilityID
+	returnVolume(w, volID, false)
 }
 
 // ExpandVolume - Expands volume size in cache
@@ -1143,6 +1168,14 @@ func handleIterator(w http.ResponseWriter, r *http.Request) {
 	case http.MethodDelete:
 		// Nothing to do, will return
 	}
+}
+
+func handleStorageGroupSnapshotPolicy(w http.ResponseWriter, r *http.Request) {
+	if InducedErrors.GetStorageGroupSnapshotPolicyError {
+		writeError(w, "Error retrieving storage group snapshot policy: induced error", http.StatusRequestTimeout)
+		return
+	}
+	returnJSONFile(Data.JSONDir, "storage_group_snapshot_policy.json", w, nil)
 }
 
 // /univmax/restapi/90/sloprovisioning/symmetrix/{symid}/storagegroup/{id}

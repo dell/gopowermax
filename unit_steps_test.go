@@ -1,15 +1,17 @@
 /*
- Copyright © 2020 Dell Inc. or its subsidiaries. All Rights Reserved.
+Copyright © 2020 Dell Inc. or its subsidiaries. All Rights Reserved.
 
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 package pmax
 
@@ -66,31 +68,32 @@ type unitContext struct {
 	err         error // First error observed
 	flag91      bool
 
-	symIDList          *types.SymmetrixIDList
-	sym                *types.Symmetrix
-	vol                *types.Volume
-	volList            []string
-	storageGroup       *types.StorageGroup
-	storageGroupIDList *types.StorageGroupIDList
-	jobIDList          []string
-	job                *types.Job
-	storagePoolList    *types.StoragePoolList
-	portGroupList      *types.PortGroupList
-	portGroup          *types.PortGroup
-	initiatorList      *types.InitiatorList
-	initiator          *types.Initiator
-	hostList           *types.HostList
-	host               *types.Host
-	maskingViewList    *types.MaskingViewList
-	maskingView        *types.MaskingView
-	uMaskingView       *uMV
-	addressList        []string
-	targetList         []ISCSITarget
-	storagePool        *types.StoragePool
-	volIDList          []string
-	hostID             string
-	hostGroupID        string
-	sgID               string
+	symIDList                  *types.SymmetrixIDList
+	sym                        *types.Symmetrix
+	vol                        *types.Volume
+	volList                    []string
+	storageGroup               *types.StorageGroup
+	storageGroupSnapshotPolicy *types.StorageGroupSnapshotPolicy
+	storageGroupIDList         *types.StorageGroupIDList
+	jobIDList                  []string
+	job                        *types.Job
+	storagePoolList            *types.StoragePoolList
+	portGroupList              *types.PortGroupList
+	portGroup                  *types.PortGroup
+	initiatorList              *types.InitiatorList
+	initiator                  *types.Initiator
+	hostList                   *types.HostList
+	host                       *types.Host
+	maskingViewList            *types.MaskingViewList
+	maskingView                *types.MaskingView
+	uMaskingView               *uMV
+	addressList                []string
+	targetList                 []ISCSITarget
+	storagePool                *types.StoragePool
+	volIDList                  []string
+	hostID                     string
+	hostGroupID                string
+	sgID                       string
 
 	symRepCapabilities    *types.SymReplicationCapabilities
 	sourceVolumeList      []types.VolumeList
@@ -158,6 +161,7 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.DeleteVolumeError = false
 	mock.InducedErrors.DeviceInSGError = false
 	mock.InducedErrors.GetStorageGroupError = false
+	mock.InducedErrors.GetStorageGroupSnapshotPolicyError = false
 	mock.InducedErrors.InvalidResponse = false
 	mock.InducedErrors.UpdateStorageGroupError = false
 	mock.InducedErrors.GetJobError = false
@@ -191,6 +195,7 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.GetStoragePoolError = false
 	mock.InducedErrors.ExpandVolumeError = false
 	mock.InducedErrors.UpdatePortGroupError = false
+	mock.InducedErrors.ModifyMobilityError = false
 	switch errorType {
 	case "InvalidJSON":
 		mock.InducedErrors.InvalidJSON = true
@@ -210,6 +215,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.DeviceInSGError = true
 	case "GetStorageGroupError":
 		mock.InducedErrors.GetStorageGroupError = true
+	case "GetStorageGroupSnapshotPolicyError":
+		mock.InducedErrors.GetStorageGroupSnapshotPolicyError = true
 	case "InvalidResponse":
 		mock.InducedErrors.InvalidResponse = true
 	case "UpdateStorageGroupError":
@@ -292,6 +299,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.DeletePortGroupError = true
 	case "ExpandVolumeError":
 		mock.InducedErrors.ExpandVolumeError = true
+	case "ModifyMobilityError":
+		mock.InducedErrors.ModifyMobilityError = true
 	case "none":
 	default:
 		return fmt.Errorf("unknown errorType: %s", errorType)
@@ -501,6 +510,15 @@ func (c *unitContext) iExpandVolumeToSizeWithUnit(volumeID string, sizeStr strin
 
 }
 
+func (c *unitContext) iCallModifyMobilityForVolume(volumeID string, mobility string) error {
+	if c.err != nil {
+		return nil
+	}
+	mobilityBool, _ := strconv.ParseBool(mobility)
+	c.vol, c.err = c.client.ModifyMobilityForVolume(context.TODO(), symID, volumeID, mobilityBool)
+	return nil
+}
+
 func (c *unitContext) iValidateVolumeSize(volumeID string, sizeStr string) error {
 	if c.err != nil {
 		return nil
@@ -539,12 +557,27 @@ func (c *unitContext) iCallGetStorageGroup(sgID string) error {
 	return nil
 }
 
+func (c *unitContext) iCallGetStorageGroupSnapshotPolicy(symID, snapshotPolicyID, storageGroupID string) error {
+	c.storageGroupSnapshotPolicy, c.err = c.client.GetStorageGroupSnapshotPolicy(context.TODO(), symID, snapshotPolicyID, storageGroupID)
+	return nil
+}
+
 func (c *unitContext) iGetAValidStorageGroupIfNoErrors() error {
 	if c.err != nil {
 		return nil
 	}
 	if c.storageGroup.StorageGroupID == "" || c.storageGroup.Type == "" {
 		return fmt.Errorf("Expected StorageGroup to have StorageGroupID and Type but didn't")
+	}
+	return nil
+}
+
+func (c *unitContext) iGetAValidStorageGroupSnapshotPolicyObjectIfNoError() error {
+	if c.err != nil {
+		return nil
+	}
+	if c.storageGroupSnapshotPolicy.StorageGroupID == "IntSGB" {
+		return fmt.Errorf("Storage Group [IntSGB] on Symmetrix [000000000002] cannot be found")
 	}
 	return nil
 }
@@ -613,37 +646,52 @@ func (c *unitContext) iCallWaitOnJobCompletion() error {
 }
 
 func (c *unitContext) iCallCreateVolumeInStorageGroupWithNameAndSize(volumeName string, sizeInCylinders int) error {
+	volOpts := make(map[string]interface{})
 	if !c.flag91 {
-		c.vol, c.err = c.client.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+		c.vol, c.err = c.client.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts)
 	} else {
-		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts)
 	}
 	return nil
 }
 
 func (c *unitContext) iCallCreateVolumeInStorageGroupWithNameAndSizeAndUnit(volumeName string, sizeInCylinders int, capUnit string) error {
+	volOpts := make(map[string]interface{})
+	volOpts["capacityUnit"] = capUnit
+	volOpts["enableMobility"] = false
 	if !c.flag91 {
-		c.vol, c.err = c.client.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit)
+		c.vol, c.err = c.client.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts)
 	} else {
-		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit)
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts)
 	}
 	return nil
 }
 
 func (c *unitContext) iCallCreateVolumeInStorageGroupSWithNameAndSize(volumeName string, sizeInCylinders int) error {
+	volOpts := make(map[string]interface{})
 	if !c.flag91 {
-		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts)
 	} else {
-		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders)
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts)
 	}
 	return nil
 }
 
 func (c *unitContext) iCallCreateVolumeInStorageGroupSWithNameAndSizeAndUnit(volumeName string, sizeInCylinders int, capUnit string) error {
-	if !c.flag91 {
-		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit)
+	var size interface{}
+	volOpts := make(map[string]interface{})
+	volOpts["capacityUnit"] = capUnit
+	volOpts["enableMobility"] = false
+	if capUnit != "CYL" {
+		size = strconv.Itoa(sizeInCylinders)
 	} else {
-		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, capUnit)
+		size = sizeInCylinders
+	}
+
+	if !c.flag91 {
+		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, size, volOpts)
+	} else {
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, size, volOpts)
 	}
 	return nil
 }
@@ -653,10 +701,11 @@ func (c *unitContext) iCallCreateVolumeInStorageGroupSWithNameAndSizeWithMetaDat
 	metadata.Set("x-csi-pv-name", "testPVName")
 	metadata.Set("x-csi-pv-claimname", "testPVClaimName")
 	metadata.Set("x-csi-pv-namespace", "testPVNamespace")
+	volOpts := make(map[string]interface{})
 	if !c.flag91 {
-		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, metadata)
+		c.vol, c.err = c.client.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts, metadata)
 	} else {
-		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, metadata)
+		c.vol, c.err = c.client91.CreateVolumeInStorageGroupS(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts, metadata)
 	}
 	return nil
 }
@@ -667,6 +716,17 @@ func (c *unitContext) iGetAValidVolumeWithNameIfNoError(volumeName string) error
 	}
 	if c.vol.VolumeIdentifier != volumeName {
 		return fmt.Errorf("Expected volume named %s but got %s", volumeName, c.vol.VolumeIdentifier)
+	}
+	return nil
+}
+
+func (c *unitContext) iGetAValidVolumeWithMobilityModified(mobility string) error {
+	if c.err != nil {
+		return nil
+	}
+	mobilityBool, _ := strconv.ParseBool(mobility)
+	if c.vol.MobilityIDEnabled != mobilityBool {
+		return fmt.Errorf("Expected volume mobility-enabled: %v but %v ", mobilityBool, c.vol.MobilityIDEnabled)
 	}
 	return nil
 }
@@ -1646,8 +1706,10 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call GetStorageGroupIDList$`, c.iCallGetStorageGroupIDList)
 	s.Step(`^I get a valid StorageGroupIDList if no errors$`, c.iGetAValidStorageGroupIDListIfNoErrors)
 	s.Step(`^I call GetStorageGroup "([^"]*)"$`, c.iCallGetStorageGroup)
+	s.Step(`^I call GetStorageGroupSnapshotPolicy with "([^"]*)" "([^"]*)" "([^"]*)"$`, c.iCallGetStorageGroupSnapshotPolicy)
 	s.Step(`^I have a StorageGroup "([^"]*)"$`, c.iHaveAStorageGroup)
 	s.Step(`^I get a valid StorageGroup if no errors$`, c.iGetAValidStorageGroupIfNoErrors)
+	s.Step(`^I get a valid StorageGroupSnapshotPolicy Object if no error$`, c.iGetAValidStorageGroupSnapshotPolicyObjectIfNoError)
 	s.Step(`^I have (\d+) jobs$`, c.iHaveJobs)
 	s.Step(`^I call GetJobIDList with "([^"]*)"$`, c.iCallGetJobIDListWith)
 	s.Step(`^I get a valid JobsIDList with (\d+) if no errors$`, c.iGetAValidJobsIDListWithIfNoErrors)
@@ -1662,6 +1724,7 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call CreateVolumeInStorageGroupS with name "([^"]*)" and size (\d+) and unit "([^"]*)"$`, c.iCallCreateVolumeInStorageGroupSWithNameAndSizeAndUnit)
 	s.Step(`^I call CreateVolumeInStorageGroupSWithMetaDataHeaders with name "([^"]*)" and size (\d+)$`, c.iCallCreateVolumeInStorageGroupSWithNameAndSizeWithMetaDataHeaders)
 	s.Step(`^I get a valid Volume with name "([^"]*)" if no error$`, c.iGetAValidVolumeWithNameIfNoError)
+	s.Step(`^I validate that volume has mobility modified to "([^"]*)"$`, c.iGetAValidVolumeWithMobilityModified)
 	s.Step(`^I call CreateStorageGroup with name "([^"]*)" and srp "([^"]*)" and sl "([^"]*)" and hostlimits "([^"]*)"$`, c.iCallCreateStorageGroupWithNameAndSrpAndSlAndHostLimits)
 	s.Step(`^I call CreateStorageGroup with name "([^"]*)" and srp "([^"]*)" and sl "([^"]*)"$`, c.iCallCreateStorageGroupWithNameAndSrpAndSl)
 	s.Step(`^I call DeleteStorageGroup "([^"]*)"$`, c.iCallDeleteStorageGroup)
@@ -1671,6 +1734,7 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call RemoveVolumeFromStorageGroup$`, c.iCallRemoveVolumeFromStorageGroup)
 	s.Step(`^the volume is no longer a member of the Storage Group if no error$`, c.theVolumeIsNoLongerAMemberOfTheStorageGroupIfNoError)
 	s.Step(`^I call RenameVolume with "([^"]*)"$`, c.iCallRenameVolumeWith)
+	s.Step(`^I call ModifyMobility for Volume with id "([^"]*)" to mobility "([^"]*)"$`, c.iCallModifyMobilityForVolume)
 	s.Step(`^I call InitiateDeallocationOfTracksFromVolume$`, c.iCallInitiateDeallocationOfTracksFromVolume)
 	s.Step(`^I call DeleteVolume$`, c.iCallDeleteVolume)
 	s.Step(`^I expand volume "([^"]*)" to "([^"]*)" in GB$`, c.iExpandVolumeToSize)

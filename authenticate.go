@@ -112,11 +112,12 @@ func doLog(
 // NewClient returns a new Client, which is of interface type Pmax.
 // The Client holds state for the connection.
 // Thhe following environment variables define the connection:
-//    CSI_POWERMAX_ENDPOINT - A URL of the form https://1.2.3.4:8443
-//    CSI_POWERMAX_VERSION - should not be used. Defines a particular form of versioning.
-//    CSI_APPLICATION_NAME - Application name which will be used for registering the application with Unisphere REST APIs
-//    CSI_POWERMAX_INSECURE - A boolean indicating whether unvalidated certificates can be accepted. Defaults to true.
-//    CSI_POWERMAX_USECERTS - Indicates whether to use certificates at all. Defaults to true.
+//
+//	CSI_POWERMAX_ENDPOINT - A URL of the form https://1.2.3.4:8443
+//	CSI_POWERMAX_VERSION - should not be used. Defines a particular form of versioning.
+//	CSI_APPLICATION_NAME - Application name which will be used for registering the application with Unisphere REST APIs
+//	CSI_POWERMAX_INSECURE - A boolean indicating whether unvalidated certificates can be accepted. Defaults to true.
+//	CSI_POWERMAX_USECERTS - Indicates whether to use certificates at all. Defaults to true.
 func NewClient() (client Pmax, err error) {
 	return NewClientWithArgs(
 		os.Getenv("CSI_POWERMAX_ENDPOINT"),

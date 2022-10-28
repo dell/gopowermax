@@ -50,8 +50,9 @@ func getOrCreateVolumes(client pmax.Pmax, target bool) (*types.Volume, *types.Vo
 	for i := 0; i < maxIters; i++ {
 		go func(i int) {
 			volumeName := fmt.Sprintf("csi%s-Int%d%d", volumePrefix, time.Now().Nanosecond(), i)
+			volOpts := make(map[string]interface{})
 			var vol Vol
-			vol.Volume, vol.Err = client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1)
+			vol.Volume, vol.Err = client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1, volOpts)
 			if vol.Err != nil && strings.Contains(vol.Err.Error(), "Failed to find newly created volume with name") {
 				time.Sleep(2 * time.Second)
 				ids, err := client.GetVolumeIDList(context.TODO(), symmetrixID, volumeName, false)
@@ -511,7 +512,9 @@ func TestCreateVolumeInProtectedStorageGroupS(t *testing.T) {
 	}
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
-	vol, err := client.CreateVolumeInProtectedStorageGroupS(context.TODO(), symmetrixID, remoteSymmetrixID, defaultProtectedStorageGroup, defaultProtectedStorageGroup, volumeName, 30)
+	volOpts := make(map[string]interface{})
+
+	vol, err := client.CreateVolumeInProtectedStorageGroupS(context.TODO(), symmetrixID, remoteSymmetrixID, defaultProtectedStorageGroup, defaultProtectedStorageGroup, volumeName, 30, volOpts)
 	if err != nil {
 		t.Errorf("Error Creating Volume in Protected Storage Group: %s", err.Error())
 		return
@@ -529,7 +532,8 @@ func TestAddVolumesToProtectedStorageGroup(t *testing.T) {
 	}
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
-	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG, volumeName, 50)
+	volOpts := make(map[string]interface{})
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG, volumeName, 50, volOpts)
 	if err != nil {
 		t.Error(err)
 		return
@@ -558,7 +562,8 @@ func TestExecuteReplicationActionOnSG(t *testing.T) {
 	}
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
-	vol, err := client.CreateVolumeInProtectedStorageGroupS(context.TODO(), symmetrixID, remoteSymmetrixID, defaultProtectedStorageGroup, defaultProtectedStorageGroup, volumeName, 30)
+	volOpts := make(map[string]interface{})
+	vol, err := client.CreateVolumeInProtectedStorageGroupS(context.TODO(), symmetrixID, remoteSymmetrixID, defaultProtectedStorageGroup, defaultProtectedStorageGroup, volumeName, 30, volOpts)
 	if err != nil {
 		t.Errorf("Error Creating Volume in Protected Storage Group: %s", err.Error())
 		return
