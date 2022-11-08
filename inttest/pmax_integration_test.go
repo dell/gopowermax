@@ -72,9 +72,9 @@ var (
 	defaultFCHost                = "IntegrationFCHost"
 	defaultiSCSIHost             = "IntegrationiSCSIHost"
 	defaultFCdirname             = "FA-1D"
-        defaultFCportName            = "4"
-        defaultiscsidirName          = "SE-1E"
-        defaultiscsiportName         = "0"
+	defaultFCportName            = "4"
+	defaultiscsidirName          = "SE-1E"
+	defaultiscsiportName         = "0"
 	localVol, remoteVol          *types.Volume
 )
 
@@ -104,9 +104,9 @@ func setDefaultVariables() {
 	sgPrefix = setenvVariable("SGPrefix", sgPrefix)
 	snapshotPrefix = setenvVariable("SnapPrefix", snapshotPrefix)
 	defaultFCdirname = setenvVariable("DefaultFCDirName", defaultFCdirname)
-        defaultFCportName = setenvVariable("DefaultFCPortName", defaultFCportName)
-        defaultiscsidirName = setenvVariable("DefaultISCSIDirName", defaultiscsidirName)
-        defaultiscsiportName = setenvVariable("DefaultISCSIPortName", defaultiscsiportName)
+	defaultFCportName = setenvVariable("DefaultFCPortName", defaultFCportName)
+	defaultiscsidirName = setenvVariable("DefaultISCSIDirName", defaultiscsidirName)
+	defaultiscsiportName = setenvVariable("DefaultISCSIPortName", defaultiscsiportName)
 	defaultProtectedStorageGroup = defaultProtectedStorageGroup + "-" + localRDFGrpNo + "-" + defaultRepMode
 }
 
