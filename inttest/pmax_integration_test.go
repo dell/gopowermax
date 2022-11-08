@@ -71,8 +71,8 @@ var (
 	defaultSnapshotPolicy        = "DailyDefault"
 	defaultFCHost                = "IntegrationFCHost"
 	defaultiSCSIHost             = "IntegrationiSCSIHost"
-	defaultdirName               = "FA-1D"
-        defaultportName              = "4"
+	defaultFCdirname             = "FA-1D"
+        defaultFCportName            = "4"
         defaultiscsidirName          = "SE-1E"
         defaultiscsiportName         = "0"
 	localVol, remoteVol          *types.Volume
@@ -103,8 +103,8 @@ func setDefaultVariables() {
 	defaultServiceLevel = setenvVariable("DefaultServiceLevel", defaultServiceLevel)
 	sgPrefix = setenvVariable("SGPrefix", sgPrefix)
 	snapshotPrefix = setenvVariable("SnapPrefix", snapshotPrefix)
-	defaultdirName = setenvVariable("DefaultDirName", defaultdirName)
-        defaultportName = setenvVariable("DefaultPortName", defaultportName)
+	defaultFCdirname = setenvVariable("DefaultFCDirName", defaultFCdirname)
+        defaultFCportName = setenvVariable("DefaultFCPortName", defaultFCportName)
         defaultiscsidirName = setenvVariable("DefaultISCSIDirName", defaultiscsidirName)
         defaultiscsiportName = setenvVariable("DefaultISCSIPortName", defaultiscsiportName)
 	defaultProtectedStorageGroup = defaultProtectedStorageGroup + "-" + localRDFGrpNo + "-" + defaultRepMode
@@ -1045,8 +1045,8 @@ func TestGetPorts(t *testing.T) {
 			return
 		}
 	}
-	dirName := defaultdirName
-	portName := defaultportName
+	dirName := defaultFCdirname
+	portName := defaultFCportName
 	port, err := client.GetPort(context.TODO(), symmetrixID, dirName, portName)
 	if err != nil {
 		t.Errorf("Unable to read FC storage port %s %s: %s", dirName, portName, err)
