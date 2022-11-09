@@ -75,6 +75,7 @@ var (
 	defaultFCportName            = "4"
 	defaultiscsidirName          = "SE-1E"
 	defaultiscsiportName         = "0"
+	defaultDirectorID	     = "OR-1C"
 	localVol, remoteVol          *types.Volume
 )
 
@@ -107,6 +108,7 @@ func setDefaultVariables() {
 	defaultFCportName = setenvVariable("DefaultFCPortName", defaultFCportName)
 	defaultiscsidirName = setenvVariable("DefaultISCSIDirName", defaultiscsidirName)
 	defaultiscsiportName = setenvVariable("DefaultISCSIPortName", defaultiscsiportName)
+	defaultDirectorID = setenvVariable("DefaultDirectorID",defaultDirectorID)
 	defaultProtectedStorageGroup = defaultProtectedStorageGroup + "-" + localRDFGrpNo + "-" + defaultRepMode
 }
 
@@ -1600,7 +1602,7 @@ func TestCreatePortGroup(t *testing.T) {
 	portGroupID := "IntTestPG"
 	portKeys := make([]types.PortKey, 0)
 	portKey := types.PortKey{
-		DirectorID: "OR-1C",
+		DirectorID: defaultDirectorID,
 		PortID:     "0",
 	}
 	portKeys = append(portKeys, portKey)
@@ -1625,7 +1627,7 @@ func TestRenamePortGroup(t *testing.T) {
 	newPortGroupID := "test_rename_portgroup"
 	portKeys := make([]types.PortKey, 0)
 	portKey := types.PortKey{
-		DirectorID: "OR-1C",
+		DirectorID: defaultDirectorID,
 		PortID:     "0",
 	}
 	portKeys = append(portKeys, portKey)
