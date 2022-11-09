@@ -569,6 +569,9 @@ func TestExecuteReplicationActionOnSG(t *testing.T) {
 		return
 	}
 	fmt.Printf("Volume in Protected Storage Group created successfully: %v\n", vol)
+	
+	fmt.Printf("Waiting for 5 minutes \n")
+	time.Sleep(300 * time.Second)
 
 	err = client.ExecuteReplicationActionOnSG(context.TODO(), symmetrixID, "Suspend", defaultProtectedStorageGroup, localRDFGrpNo, true, true, false)
 	if err != nil {
