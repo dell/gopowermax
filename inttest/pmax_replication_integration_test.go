@@ -520,6 +520,8 @@ func TestCreateVolumeInProtectedStorageGroupS(t *testing.T) {
 		return
 	}
 	fmt.Printf("Volume in Protected Storage Group created successfully: %v\n", vol)
+	fmt.Printf("Waiting for 5 minutes \n")
+	time.Sleep(300 * time.Second)
 	cleanupRDFPair(vol.VolumeID, volumeName, defaultProtectedStorageGroup, t)
 }
 func TestAddVolumesToProtectedStorageGroup(t *testing.T) {
@@ -570,8 +572,8 @@ func TestExecuteReplicationActionOnSG(t *testing.T) {
 	}
 	fmt.Printf("Volume in Protected Storage Group created successfully: %v\n", vol)
 	
-	fmt.Printf("Waiting for 5 minutes \n")
-	time.Sleep(300 * time.Second)
+	fmt.Printf("Waiting for 8 minutes \n")
+	time.Sleep(500 * time.Second)
 
 	err = client.ExecuteReplicationActionOnSG(context.TODO(), symmetrixID, "Suspend", defaultProtectedStorageGroup, localRDFGrpNo, true, true, false)
 	if err != nil {
