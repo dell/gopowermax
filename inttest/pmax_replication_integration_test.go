@@ -546,7 +546,7 @@ func TestAddVolumesToProtectedStorageGroup(t *testing.T) {
 		return
 	}
 	fmt.Printf("Waiting for 5 minutes \n")
-        time.Sleep(300 * time.Second)
+	time.Sleep(300 * time.Second)
 	sg, err := client.RemoveVolumesFromStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG, true, vol.VolumeID)
 	if err != nil {
 		t.Error(err)
@@ -573,7 +573,7 @@ func TestExecuteReplicationActionOnSG(t *testing.T) {
 		return
 	}
 	fmt.Printf("Volume in Protected Storage Group created successfully: %v\n", vol)
-	
+
 	fmt.Printf("Waiting for 10 minutes \n")
 	time.Sleep(600 * time.Second)
 

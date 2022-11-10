@@ -75,8 +75,8 @@ var (
 	defaultFCportName            = "4"
 	defaultiscsidirName          = "SE-1E"
 	defaultiscsiportName         = "0"
-	defaultFCDirectorID	     = "OR-1C"
-	defaultFCPortID		     = "0"
+	defaultFCDirectorID          = "OR-1C"
+	defaultFCPortID              = "0"
 	localVol, remoteVol          *types.Volume
 )
 
