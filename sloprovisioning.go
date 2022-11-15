@@ -1688,6 +1688,7 @@ func (c *Client) UpdatePortGroup(ctx context.Context, symID string, portGroupID 
 			},
 		}
 		add := types.EditPortGroup{
+			ExecutionOption:          types.ExecutionOptionSynchronous,
 			EditPortGroupActionParam: edit,
 		}
 		err := c.api.Put(ctx, URL, c.getDefaultHeaders(), add, &pg)
@@ -1705,6 +1706,7 @@ func (c *Client) UpdatePortGroup(ctx context.Context, symID string, portGroupID 
 			},
 		}
 		remove := types.EditPortGroup{
+			ExecutionOption:          types.ExecutionOptionSynchronous,
 			EditPortGroupActionParam: edit,
 		}
 		err := c.api.Put(ctx, URL, c.getDefaultHeaders(), remove, &pg)
