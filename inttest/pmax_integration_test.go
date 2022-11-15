@@ -1655,6 +1655,7 @@ func TestUpdatePortGroup(t *testing.T) {
 	portKeys = portGroup.SymmetrixPortKey
 	if portKeys[0].DirectorID != "OR-2C" {
 		t.Errorf("Couldnt modify port group details: %s", err.Error())
+		return
 	}
 
 	err = client.DeletePortGroup(context.TODO(), symmetrixID, newPortGroupID)
