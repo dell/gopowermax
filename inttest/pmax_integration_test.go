@@ -1593,7 +1593,6 @@ func TestRenameMaskingView(t *testing.T) {
 }
 
 func TestCreatePortGroup(t *testing.T) {
-	t.Skip("Skipping this test until Delete Port Group is implemented")
 	if client == nil {
 		err := getClient()
 		if err != nil {
@@ -1614,6 +1613,57 @@ func TestCreatePortGroup(t *testing.T) {
 		return
 	}
 	fmt.Println(portGroup.PortGroupID)
+	err = client.DeletePortGroup(context.TODO(), symmetrixID, portGroup.PortGroupID)
+	if err != nil {
+		t.Error("Couldn't delete port group")
+		return
+	}
+}
+
+func TestUpdatePortGroup(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+	portGroupID := "IntTestPG"
+	portKeys := make([]types.PortKey, 0)
+	portKey := types.PortKey{
+		DirectorID: defaultFCDirectorID,
+		PortID:     defaultFCPortID,
+	}
+	portKeys = append(portKeys, portKey)
+	portGroup, err := client.CreatePortGroup(context.TODO(), symmetrixID, portGroupID, portKeys, "SCSI_FC")
+	if err != nil {
+		t.Error("Couldn't create port group")
+		return
+	}
+	newPortGroupID := portGroup.PortGroupID
+	portKeysUpdated := make([]types.PortKey, 0)
+	portKey = types.PortKey{
+		DirectorID: "OR-2C",
+		PortID:     defaultFCPortID,
+	}
+	portKeysUpdated = append(portKeysUpdated, portKey)
+	portGroup, err = client.UpdatePortGroup(context.TODO(), symmetrixID, newPortGroupID, portKeysUpdated)
+	if err != nil {
+		t.Errorf("Couldn't update port group: %s ", err.Error())
+		return
+	}
+	portKeys = portGroup.SymmetrixPortKey
+	if portKeys[0].DirectorID != "OR-2C" {
+		t.Errorf("Couldnt modify port group details: %s", err.Error())
+		return
+	}
+
+	err = client.DeletePortGroup(context.TODO(), symmetrixID, newPortGroupID)
+	if err != nil {
+		t.Error("Couldn't delete port group")
+		return
+	}
+
 }
 
 func TestRenamePortGroup(t *testing.T) {
