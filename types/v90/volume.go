@@ -54,6 +54,7 @@ type Volume struct {
 	PhysicalName          string       `json:"pysical_name"`
 	VolumeIdentifier      string       `json:"volume_identifier"`
 	WWN                   string       `json:"wwn"`
+	EffectiveWWN          string       `json:"effective_wwn"`
 	Encapsulated          bool         `json:"encapsulated"`
 	NumberOfStorageGroups int          `json:"num_of_storage_groups"`
 	NumberOfFrontEndPaths int          `json:"num_of_front_end_paths"`
