@@ -1495,7 +1495,7 @@ func TestExpandVolume(t *testing.T) {
 	//expand Volume
 	expandedSize := 30
 	fmt.Println("Doing VolumeExpansion")
-	expandedVol, err := client.ExpandVolume(context.TODO(), symmetrixID, vol.VolumeID, expandedSize)
+	expandedVol, err := client.ExpandVolume(context.TODO(), symmetrixID, vol.VolumeID, 0, expandedSize)
 	if err != nil {
 		t.Error("Error in Volume Expansion: " + err.Error())
 		return
