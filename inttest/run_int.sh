@@ -76,7 +76,11 @@ fi
 
 if [ ${SHORT} = "yes" ]; then
     echo "running an abbreviated set of tests"
-    go test -v -short -timeout 90m -coverprofile=c.out -coverpkg github.com/dell/gopowermax/v2 $integrationfiles
+    export GOPATH=$HOME/go
+    export PATH=$PATH:$GOPATH/bin
+    go test -v -short -timeout 90m -coverprofile=c.out -coverpkg github.com/dell/gopowermax/v2 $integrationfiles | go-junit-report  > report.xml
 else
-    go test -v -timeout 90m -coverprofile=c.out -coverpkg github.com/dell/gopowermax/v2 $integrationfiles
+    export GOPATH=$HOME/go
+    export PATH=$PATH:$GOPATH/bin
+    go test -v -run TestGetPorts -timeout 90m -coverprofile=c.out -coverpkg github.com/dell/gopowermax/v2 $integrationfiles | go-junit-report  > report.xml
 fi
