@@ -473,7 +473,7 @@ func (c *unitContext) iExpandVolumeToSize(volumeID string, sizeStr string) error
 	}
 
 	if size, err := strconv.Atoi(sizeStr); err == nil {
-		c.vol, c.err = c.client.ExpandVolume(context.TODO(), symID, volumeID, size)
+		c.vol, c.err = c.client.ExpandVolume(context.TODO(), symID, volumeID, 0, size)
 	} else {
 		return err
 	}

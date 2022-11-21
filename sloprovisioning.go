@@ -608,7 +608,7 @@ func (c *Client) CreateVolumeInProtectedStorageGroupS(ctx context.Context, symID
 }
 
 // ExpandVolume expands an existing volume to a new (larger) size in CYL
-func (c *Client) ExpandVolume(ctx context.Context, symID string, volumeID string, newSizeCYL int) (*types.Volume, error) {
+func (c *Client) ExpandVolume(ctx context.Context, symID string, volumeID string, rdfgNo int, newSizeCYL int) (*types.Volume, error) {
 	payload := &types.EditVolumeParam{
 		EditVolumeActionParam: types.EditVolumeActionParam{
 			ExpandVolumeParam: &types.ExpandVolumeParam{
@@ -618,6 +618,11 @@ func (c *Client) ExpandVolume(ctx context.Context, symID string, volumeID string
 				},
 			},
 		},
+	}
+
+	if rdfgNo > 0 {
+		// This expansion is for replicated volume
+		payload.EditVolumeActionParam.ExpandVolumeParam.RDFGroupNumber = rdfgNo
 	}
 
 	payload.ExecutionOption = types.ExecutionOptionSynchronous

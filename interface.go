@@ -118,11 +118,11 @@ type Pmax interface {
 	// This method creates a job and waits on the job to complete.
 	CreateVolumeInStorageGroup(ctx context.Context, symID string, storageGroupID string, volumeName string, sizeInCylinders int) (*types.Volume, error)
 
-	// CreateVolumeInStorageGroup takes simplified input arguments to create a volume of a give name and size in a particular storage group.
-	// This is done synchronously and no jobs are created. HTTP header argument is optional
+	//CreateVolumeInStorageGroupS takes simplified input arguments to create a volume of a give name and size in a particular storage group.
+	//This is done synchronously and no jobs are created. HTTP header argument is optional
 	CreateVolumeInStorageGroupS(ctx context.Context, symID, storageGroupID string, volumeName string, sizeInCylinders int, opts ...http.Header) (*types.Volume, error)
 
-	// CreateVolumeInProtectedStorageGroup takes simplified input arguments to create a volume of a give name and size in a protected storage group.
+	// CreateVolumeInProtectedStorageGroupS takes simplified input arguments to create a volume of a give name and size in a protected storage group.
 	// This will add volume in both Local and Remote Storage group
 	// This is done synchronously and no jobs are created. HTTP header argument is optional
 	CreateVolumeInProtectedStorageGroupS(ctx context.Context, symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, sizeInCylinders int, opts ...http.Header) (*types.Volume, error)
@@ -133,30 +133,32 @@ type Pmax interface {
 	// DeleteMaskingView deletes a masking view given a masking view id
 	DeleteMaskingView(ctx context.Context, symID string, maskingViewID string) error
 
-	// Get the list of Storage Pools
+	//GetStoragePoolList Gets the list of Storage Pools
 	GetStoragePoolList(ctx context.Context, symID string) (*types.StoragePoolList, error)
 
-	// Rename a Volume given the volumeID
+	//RenameVolume Renames a Volume given the volumeID
 	RenameVolume(ctx context.Context, symID string, volumeID string, newName string) (*types.Volume, error)
 
-	// Add volume(s) asynchronously to a StorageGroup
+	//AddVolumesToStorageGroup Adds volume(s) asynchronously to a StorageGroup
 	AddVolumesToStorageGroup(ctx context.Context, symID, storageGroupID string, force bool, volumeIDs ...string) error
-	// Add volume(s) synchronously to a StorageGroup
+
+	//AddVolumesToStorageGroupS Adds volume(s) synchronously to a StorageGroup
 	// This is a blocking call and will only return once the volumes have been added to storage group
 	AddVolumesToStorageGroupS(ctx context.Context, symID, storageGroupID string, force bool, volumeIDs ...string) error
-	// Adds one or more volumes (given by their volumeIDs) to a Protected StorageGroup
+
+	//AddVolumesToProtectedStorageGroup Adds one or more volumes (given by their volumeIDs) to a Protected StorageGroup
 	AddVolumesToProtectedStorageGroup(ctx context.Context, symID, storageGroupID, remoteSymID, remoteStorageGroupID string, force bool, volumeIDs ...string) error
 
-	// Remove volume(s) synchronously from a StorageGroup
+	//RemoveVolumesFromStorageGroup Remove volume(s) synchronously from a StorageGroup
 	RemoveVolumesFromStorageGroup(ctx context.Context, symID string, storageGroupID string, force bool, volumeIDs ...string) (*types.StorageGroup, error)
 
 	// RemoveVolumesFromProtectedStorageGroup removes one or more volumes (given by their volumeIDs) from a Protected StorageGroup.
 	RemoveVolumesFromProtectedStorageGroup(ctx context.Context, symID string, storageGroupID, remoteSymID, remoteStorageGroupID string, force bool, volumeIDs ...string) (*types.StorageGroup, error)
 
-	// Initiate a job to remove storage space from the volume.
+	//InitiateDeallocationOfTracksFromVolume Initiate a job to remove storage space from the volume.
 	InitiateDeallocationOfTracksFromVolume(ctx context.Context, symID string, volumeID string) (*types.Job, error)
 
-	// Deletes a volume
+	//DeleteVolume Deletes a volume
 	DeleteVolume(ctx context.Context, symID string, volumeID string) error
 
 	// GetMaskingViewList  returns a list of the MaskingView names.
@@ -176,7 +178,7 @@ type Pmax interface {
 	// CreatePortGroup creates a port group given the Port Group id and a list of dir/port ids
 	CreatePortGroup(ctx context.Context, symID string, portGroupID string, dirPorts []types.PortKey) (*types.PortGroup, error)
 
-	// System
+	//GetSymmetrixIDList gets all the symmetrix systems
 	GetSymmetrixIDList(ctx context.Context) (*types.SymmetrixIDList, error)
 	GetSymmetrixByID(ctx context.Context, id string) (*types.Symmetrix, error)
 
@@ -266,17 +268,17 @@ type Pmax interface {
 	// GetPrivVolumeByID returns a Volume structure given the symmetrix and volume ID (volume ID is in WWN format)
 	GetPrivVolumeByID(ctx context.Context, symID string, volumeID string) (*types.VolumeResultPrivate, error)
 
-	// Delete PortGroup
+	//DeletePortGroup Deletes a PortGroup
 	DeletePortGroup(ctx context.Context, symID string, portGroupID string) error
-	// Update PortGroup
+	//UpdatePortGroup Updates a PortGroup
 	UpdatePortGroup(ctx context.Context, symID string, portGroupID string, ports []types.PortKey) (*types.PortGroup, error)
 
-	// Expand the size of an existing volume
-	ExpandVolume(ctx context.Context, symID string, volumeID string, newSizeCYL int) (*types.Volume, error)
+	//ExpandVolume Expands the size of an existing volume
+	ExpandVolume(ctx context.Context, symID string, volumeID string, rdfgNo int, newSizeCYL int) (*types.Volume, error)
 	GetCreateVolInSGPayload(sizeInCylinders int, volumeName string, isSync bool, remoteSymID, storageGroupID string, opts ...http.Header) (payload interface{})
 	//GetCreateVolInSGPayloadWithMetaDataHeaders(sizeInCylinders int, volumeName string, isSync bool, remoteSymID, remoteStorageGroupID string, metadata http.Header) (payload interface{})
 
-	// Fetches RDF group information
+	//GetRDFGroup Fetches RDF group information
 	GetRDFGroup(ctx context.Context, symID, rdfGroup string) (*types.RDFGroup, error)
 	// GetProtectedStorageGroup returns protected storage group given the storage group ID
 	GetProtectedStorageGroup(ctx context.Context, symID, storageGroup string) (*types.RDFStorageGroup, error)
@@ -284,10 +286,10 @@ type Pmax interface {
 	CreateSGReplica(ctx context.Context, symID, remoteSymID, rdfMode, rdfGroupNo, sourceSG, remoteSGName, remoteServiceLevel string, bias bool) (*types.SGRDFInfo, error)
 	// ExecuteReplicationActionOnSG executes supported replication based actions on the protected SG
 	ExecuteReplicationActionOnSG(ctx context.Context, symID, action, storageGroup, rdfGroup string, force, exemptConsistency, bias bool) error
-	// Creates a volume replication pair
+	//CreateRDFPair Creates a volume replication pair
 	CreateRDFPair(ctx context.Context, symID, rdfGroupNo, deviceID, rdfMode, rdfType string, establish, exemptConsistency bool) (*types.RDFDevicePairList, error)
-	/// GetRDFDevicePairInfo returns RDF volume information
+	//GetRDFDevicePairInfo returns RDF volume information
 	GetRDFDevicePairInfo(ctx context.Context, symID, rdfGroup, volumeID string) (*types.RDFDevicePair, error)
-	// GetStorageGroupRDFInfo returns the of RDF info of protected storage group
+	//GetStorageGroupRDFInfo returns the of RDF info of protected storage group
 	GetStorageGroupRDFInfo(ctx context.Context, symID, sgName, rdfGroupNo string) (*types.StorageGroupRDFG, error)
 }
