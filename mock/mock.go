@@ -3488,7 +3488,7 @@ func handleHostGroup(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "InvalidJson", http.StatusBadRequest)
 			return
 		}
-		AddHostGroup(createHostGroupParam.HostGroupID, createHostGroupParam.HostIDs, createHostGroupParam.HostFlags)
+		AddHostGroup(createHostGroupParam.HostGroupID, createHostGroupParam.HostIDs, createHostGroupParam.HostFlags) // #nosec G20
 		ReturnHostGroup(w, createHostGroupParam.HostGroupID)
 
 	case http.MethodPut:
@@ -3511,7 +3511,7 @@ func handleHostGroup(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error deleting HostGroup: induced error", http.StatusRequestTimeout)
 			return
 		}
-		RemoveHostGroup(hostGroupID)
+		RemoveHostGroup(hostGroupID) // #nosec G20
 	default:
 		writeError(w, "Invalid Method", http.StatusBadRequest)
 	}

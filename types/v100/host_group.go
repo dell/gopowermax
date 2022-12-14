@@ -24,6 +24,7 @@ type CreateHostGroupParam struct {
 	NewHosts        []CreateHostParam `json:"new_hosts,omitempty"`
 }
 
+// HostGroup holds the information about a hostgroup
 type HostGroup struct {
 	HostGroupID        string        `json:"hostGroupId"`
 	NumOfHosts         int64         `json:"num_of_hosts"`
@@ -38,6 +39,7 @@ type HostGroup struct {
 	Hosts              []HostSummary `json:"host"`
 }
 
+// HostSummary holds the information about hostIDs and its corresponding initiators associated with the hostgroup
 type HostSummary struct {
 	HostID     string   `json:"hostId"`
 	Initiators []string `json:"initiator"`

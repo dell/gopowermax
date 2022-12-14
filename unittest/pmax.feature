@@ -1145,3 +1145,4 @@ Scenario Outline: Test GetHostList
     | "Test-HostGroup"        | "none"                  | "none"                                | ""        | "true"       |
     | "Test-HostGroup"        | "DeleteHostGroupError"  | "induced error"                       | ""        | "false"      |
     | "Test-HostGroup"        | "none"                  | "ignored as it is not managed"        | "ignored" | "false"      |
+    

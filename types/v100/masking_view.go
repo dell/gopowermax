@@ -63,8 +63,6 @@ type HostFlags struct {
 	ConsistentLUN       bool      `json:"consistent_lun"`
 }
 
-
-
 // UseExistingHostGroupParam contains ID of the
 // host group
 type UseExistingHostGroupParam struct {
