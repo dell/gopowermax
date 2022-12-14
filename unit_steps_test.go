@@ -1727,6 +1727,47 @@ func (c *unitContext) iCallCreateHostGroupWithFlags(hostGroupID string, setHostF
 	return nil
 }
 
+func (c *unitContext) iCallUpdateHostGroupFlagsWithFlags(hostGroupID string, updateHostFlags string) error {
+	hostIDs := make([]string, 1)
+	c.hostGroupID = hostGroupID
+	hostIDs[0] = testHost
+	if updateHostFlags == "true" {
+		hostFlags := &types.HostFlags{
+			VolumeSetAddressing: &types.HostFlag{},
+			DisableQResetOnUA:   &types.HostFlag{},
+			EnvironSet:          &types.HostFlag{},
+			AvoidResetBroadcast: &types.HostFlag{},
+			OpenVMS:             &types.HostFlag{},
+			SCSI3:               &types.HostFlag{},
+			Spc2ProtocolVersion: &types.HostFlag{
+				Enabled:  true,
+				Override: true,
+			},
+			SCSISupport1:  &types.HostFlag{},
+			ConsistentLUN: false,
+		}
+		c.hostGroup, c.err = c.client.UpdateHostGroupFlags(context.TODO(), symID, hostGroupID, hostFlags)
+	} else {
+		c.hostGroup, c.err = c.client.UpdateHostGroupFlags(context.TODO(), symID, hostGroupID, nil)
+	}
+
+	return nil
+}
+
+func (c *unitContext) iCallUpdateHostGroupHostsWithHosts(hostGroupID, hostID string) error {
+	hostIDs := make([]string, 1)
+	c.hostGroupID = hostGroupID
+	hostIDs[0] = hostID
+	c.hostGroup, c.err = c.client.UpdateHostGroupHosts(context.TODO(), symID, c.hostGroupID, hostIDs)
+	return nil
+}
+
+func (c *unitContext) iCallUpdateHostGroupName(newName string) error {
+	c.hostGroup, c.err = c.client.UpdateHostGroupName(context.TODO(), symID, c.hostGroupID, newName)
+	c.hostGroupID = newName
+	return nil
+}
+
 func (c *unitContext) iGetAValidHostGroupIfNoError() error {
 	if c.err != nil {
 		return nil
@@ -1735,6 +1776,38 @@ func (c *unitContext) iGetAValidHostGroupIfNoError() error {
 		return fmt.Errorf("Expected to get HostGroup %s, but received %s",
 			c.hostGroup.HostGroupID, c.hostGroupID)
 	}
+	return nil
+}
+
+func (c *unitContext) iHaveAValidHostGroup(hostGroupname string) error {
+	hostIDs := make([]string, 1)
+	c.hostGroupID = hostGroupname
+	hostIDs[0] = testHost
+	hostFlags := &types.HostFlags{
+		VolumeSetAddressing: &types.HostFlag{},
+		DisableQResetOnUA:   &types.HostFlag{},
+		EnvironSet:          &types.HostFlag{},
+		AvoidResetBroadcast: &types.HostFlag{},
+		OpenVMS:             &types.HostFlag{},
+		SCSI3:               &types.HostFlag{},
+		Spc2ProtocolVersion: &types.HostFlag{
+			Enabled:  true,
+			Override: true,
+		},
+		SCSISupport1:  &types.HostFlag{},
+		ConsistentLUN: false,
+	}
+	c.hostGroup, c.err = mock.AddHostGroup(c.hostGroupID, hostIDs, hostFlags)
+	return nil
+}
+
+func (c *unitContext) iCallGetHostGroupByID(hostGroupID string) error {
+	c.hostGroup, c.err = c.client.GetHostGroupByID(context.TODO(), symID, hostGroupID)
+	return nil
+}
+
+func (c *unitContext) iCallDeleteHostGroup(hostGroupName string) error {
+	c.err = c.client.DeleteHostGroup(context.TODO(), symID, hostGroupName)
 	return nil
 }
 
@@ -1832,6 +1905,12 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call CreateHostGroup "([^"]*)" with flags "([^"]*)"$`, c.iCallCreateHostGroupWithFlags)
 	s.Step(`^I get a valid HostGroup if no error$`, c.iGetAValidHostGroupIfNoError)
 	s.Step(`^I have a HostGroup "([^"]*)"$`, c.iHaveAHostGroup)
+	s.Step(`^I have a valid HostGroup "([^"]*)"$`, c.iHaveAValidHostGroup)
+	s.Step(`^I call GetHostGroupByID "([^"]*)"$`, c.iCallGetHostGroupByID)
+	s.Step(`^I call UpdateHostGroupFlags "([^"]*)" with flags "([^"]*)"$`, c.iCallUpdateHostGroupFlagsWithFlags)
+	s.Step(`^I call UpdateHostGroupHosts "([^"]*)" with hosts "([^"]*)"$`, c.iCallUpdateHostGroupHostsWithHosts)
+	s.Step(`^I call UpdateHostGroupName "([^"]*)"$`, c.iCallUpdateHostGroupName)
+	s.Step(`^I call DeleteHostGroup "([^"]*)"$`, c.iCallDeleteHostGroup)
 	s.Step(`^I call CreateHost "([^"]*)"$`, c.iCallCreateHost)
 	s.Step(`^I call DeleteHost "([^"]*)"$`, c.iCallDeleteHost)
 	s.Step(`^I call AddVolumesToStorageGroup "([^"]*)"$`, c.iCallAddVolumesToStorageGroup)

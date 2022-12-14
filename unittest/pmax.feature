@@ -1068,4 +1068,80 @@ Scenario Outline: Test GetHostList
     | "Test-HostGroup"    | "none"                         | "none"                                     | ""        | "true"       |
     | "Test-HostGroup"    | "CreateHostGroupError"         | "induced error"                            | ""        | "false"      |
     | "Test-HostGroup"    | "none"                         | "ignored as it is not managed"             | "ignored" | "false"      |
-      
+
+  Scenario Outline: Test GetHostGroupByID
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I have a valid HostGroup <hostGroupname>
+    And I induce error <induced>
+    When I call GetHostGroupByID <hostGroupname>
+    Then the error message contains <errormsg>
+    And I get a valid HostGroup if no error
+
+    Examples:
+    | hostGroupname     | induced                        | errormsg                                     | arrays    |
+    | "Test-HostGroup"  | "none"                         | "none"                                       | ""        |
+    | "Test-HostGroup"  | "GetHostGroupError"            | "induced error"                              | ""        |
+    | "Test-HostGroup"  | "none"                         | "ignored as it is not managed"               | "ignored" |
+
+  Scenario Outline: Test UpdateHostGroupHosts
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    When I call CreateHostGroup <hostGroupname> with flags <setHostFlags>
+    And I get a valid HostGroup if no error
+    When I call UpdateHostGroupHosts <hostGroupname> with hosts <hostsIDs>
+    Then the error message contains <errormsg>
+    And I get a valid HostGroup if no error
+
+    Examples:
+    | hostGroupname       | induced                        | errormsg                              | arrays    | hostsIDs     | setHostFlags |
+    | "Test-HostGroup"    | "none"                         | "none"                                | ""        | "testHostID" | "true"       |
+    | "Test-HostGroup"    | "UpdateHostGroupError"         | "induced error"                       | ""        | ""           | "false"      |
+    | "Test-HostGroup"    | "none"                         | "ignored as it is not managed"        | "ignored" | "testHostID" | "false"      |
+
+  Scenario Outline: Test UpdateHostGroupFlags
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    When I call CreateHostGroup <hostGroupname> with flags <setHostFlags>
+    And I get a valid HostGroup if no error
+    When I call UpdateHostGroupFlags <hostGroupname> with flags <updateHostFlags>
+    Then the error message contains <errormsg>
+    And I get a valid HostGroup if no error
+
+    Examples:
+    | hostGroupname       | induced                        | errormsg                  | arrays    | setHostFlags | updateHostFlags |
+    | "Test-HostGroup"    | "none"                         | "none"                    | ""        | "false"      | "true"          |
+    | "Test-HostGroup"    | "UpdateHostGroupError"         | "induced error"           | ""        | "false"      | "false"         |
+
+  Scenario Outline: Test UpdateHostGroupName
+      Given a valid connection
+      And I have an allowed list of <arrays>
+      And I induce error <induced>
+      When I call CreateHostGroup <hostGroupname> with flags <setHostFlags>
+      And I get a valid HostGroup if no error
+      When I call UpdateHostGroupName <newhostGroupName>
+      Then the error message contains <errormsg>
+      And I get a valid HostGroup if no error
+
+      Examples:
+      | hostGroupname       | newhostGroupName     | induced                        | errormsg                            | arrays    | setHostFlags |
+      | "Test-HostGroup"    | "Test-HostGroup123"  | "none"                         | "none"                              | ""        | "true"       |
+      | "Test-HostGroup"    | "Test-HostGroup123"  | "UpdateHostGroupError"         | "induced error"                     | ""        | "false"      |
+      | "Test-HostGroup"    | "Test-HostGroup123"  | "none"                         | "ignored as it is not managed"      | "ignored" | "true"       |
+
+  Scenario Outline: Test DeleteHostGroup
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    When I call CreateHostGroup <hostGroupname> with flags <setHostFlags>
+    And I get a valid HostGroup if no error
+    When I call DeleteHostGroup <hostGroupname>
+    Then the error message contains <errormsg>
+
+    Examples:
+    | hostGroupname           | induced                 | errormsg                              | arrays    | setHostFlags |
+    | "Test-HostGroup"        | "none"                  | "none"                                | ""        | "true"       |
+    | "Test-HostGroup"        | "DeleteHostGroupError"  | "induced error"                       | ""        | "false"      |
+    | "Test-HostGroup"        | "none"                  | "ignored as it is not managed"        | "ignored" | "false"      |

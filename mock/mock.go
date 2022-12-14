@@ -3621,7 +3621,8 @@ func updateHostGroup(hostGroupID string, editPayload *types.EditHostGroupActionP
 	}
 
 	if editPayload.RenameHostGroupParam != nil {
-		hostGroup.HostGroupID = editPayload.RenameHostGroupParam.NewHostGroupName
+		hostGroupID = editPayload.RenameHostGroupParam.NewHostGroupName
+		hostGroup.HostGroupID = hostGroupID
 	}
 
 	// Update the HostGroup mapping with the update HostGroup
