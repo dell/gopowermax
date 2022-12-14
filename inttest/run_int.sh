@@ -82,5 +82,5 @@ if [ ${SHORT} = "yes" ]; then
 else
     export GOPATH=$HOME/go
     export PATH=$PATH:$GOPATH/bin
-    go test -v -run TestGetPorts -timeout 90m -coverprofile=c.out -coverpkg github.com/dell/gopowermax/v2 $integrationfiles | go-junit-report  > report.xml
+    go test -v -timeout 90m -coverprofile=c.out -coverpkg github.com/dell/gopowermax/v2 $integrationfiles | go-junit-report  > report.xml
 fi
