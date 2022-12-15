@@ -1,0 +1,27 @@
+{
+  "resultList": {
+    "result": [
+      {
+        "volumeResult": [
+          {
+            "MBRead": 0.0,
+            "MBWritten": 0.0,
+            "Reads": 0.0,
+            "Writes": 0.0,
+            "ReadResponseTime": 0.0,
+            "WriteResponseTime": 0.0,
+            "timestamp": 1671090600000
+          }
+        ],
+        "volumeId": "002C8",
+        "storageGroups": "csi-no-srp-sg"
+      }
+    ],
+    "from": 1,
+    "to": 1
+  },
+  "id": "c728ab63-48a3-4689-9e20-a513ea6d8004_0",
+  "count": 1,
+  "expirationTime": 1671093985635,
+  "maxPageSize": 1000
+}

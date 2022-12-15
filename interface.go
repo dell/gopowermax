@@ -333,4 +333,10 @@ type Pmax interface {
 
 	//GetLocalRDFPortDetails returns details about the local RDFDir:port
 	GetLocalRDFPortDetails(ctx context.Context, localSymID string, rdfDir string, rdfPort int) (*types.RDFPortDetails, error)
+
+	//GetStorageGroupMetrics returns the list of required metrics
+	GetStorageGroupMetrics(ctx context.Context, symID string, storageGroupID string, metricsQuery []string) (*types.StorageGroupMetricsIterator, error)
+
+	//GetVolumesMetrics returns the list of volume metrics for specific storage groups
+	GetVolumesMetrics(ctx context.Context, symID string, storageGroups string, metricsQuery []string) (*types.VolumeMetricsIterator, error)
 }

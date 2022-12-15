@@ -106,6 +106,9 @@ type unitContext struct {
 	volSnapGenerationInfo *types.VolumeSnapshotGeneration
 	volResultPrivate      *types.VolumeResultPrivate
 
+	storageGroupMetrics *types.StorageGroupMetricsIterator
+	volumesMetrics      *types.VolumeMetricsIterator
+
 	inducedErrors struct {
 		badCredentials bool
 		badPort        bool
@@ -317,6 +320,10 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.DeleteHostGroupError = true
 	case "GetHostGroupListError":
 		mock.InducedErrors.GetHostGroupListError = true
+	case "GetStorageGroupMetricsError":
+		mock.InducedErrors.GetStorageGroupMetricsError = true
+	case "GetVolumesMetricsError":
+		mock.InducedErrors.GetVolumesMetricsError = true
 	case "none":
 	default:
 		return fmt.Errorf("unknown errorType: %s", errorType)
@@ -1830,6 +1837,44 @@ func (c *unitContext) iGetAValidHostGroupListIfNoError() error {
 	return nil
 }
 
+func (c *unitContext) iCallGetStorageGroupMetrics() error {
+	var metrics *types.StorageGroupMetricsIterator
+	metrics, c.err = c.client.GetStorageGroupMetrics(context.TODO(), symID, mock.DefaultStorageGroup, []string{"HostMBReads"})
+	c.storageGroupMetrics = metrics
+	return nil
+}
+
+func (c *unitContext) iGetStorageGroupMetrics() error {
+	if c.err == nil {
+		if c.storageGroupMetrics == nil {
+			return fmt.Errorf("StorageGroupMetrics nil")
+		}
+		if len(c.storageGroupMetrics.ResultList.Result) == 0 {
+			return fmt.Errorf("no metric in StorageGroupMetrics")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iCallGetVolumesMetrics() error {
+	var metrics *types.VolumeMetricsIterator
+	metrics, c.err = c.client.GetVolumesMetrics(context.TODO(), symID, mock.DefaultStorageGroup, []string{"MBReads"})
+	c.volumesMetrics = metrics
+	return nil
+}
+
+func (c *unitContext) iGetVolumesMetrics() error {
+	if c.err == nil {
+		if c.volumesMetrics == nil {
+			return fmt.Errorf("volumesMetrics nil")
+		}
+		if len(c.volumesMetrics.ResultList.Result) == 0 {
+			return fmt.Errorf("no metric in volumesMetrics")
+		}
+	}
+	return nil
+}
+
 func UnitTestContext(s *godog.Suite) {
 	c := &unitContext{}
 	s.Step(`^I induce error "([^"]*)"$`, c.iInduceError)
@@ -1990,4 +2035,10 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call RemoveVolumesFromProtectedStorageGroup$`, c.iCallRemoveVolumesFromProtectedStorageGroup)
 	s.Step(`^I call CreateRDFPair$`, c.iCallCreateRDFPair)
 	s.Step(`^I call ExecuteAction "([^"]*)"$`, c.iCallExecuteAction)
+
+	// Performance Metrics
+	s.Step(`^I call GetStorageGroupMetrics$`, c.iCallGetStorageGroupMetrics)
+	s.Step(`^I get StorageGroupMetrics$`, c.iGetStorageGroupMetrics)
+	s.Step(`^I call GetVolumesMetrics$`, c.iCallGetVolumesMetrics)
+	s.Step(`^I get VolumesMetrics$`, c.iGetVolumesMetrics)
 }

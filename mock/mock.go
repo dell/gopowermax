@@ -194,6 +194,8 @@ var InducedErrors struct {
 	DeleteHostGroupError               bool
 	UpdateHostGroupError               bool
 	GetHostGroupListError              bool
+	GetStorageGroupMetricsError        bool
+	GetVolumesMetricsError             bool
 }
 
 // hasError checks to see if the specified error (via pointer)
@@ -297,6 +299,8 @@ func Reset() {
 	InducedErrors.DeleteHostGroupError = false
 	InducedErrors.UpdateHostGroupError = false
 	InducedErrors.GetHostGroupListError = false
+	InducedErrors.GetStorageGroupMetricsError = false
+	InducedErrors.GetVolumesMetricsError = false
 	Data.JSONDir = "mock"
 	Data.VolumeIDToIdentifier = make(map[string]string)
 	Data.VolumeIDToSize = make(map[string]int)
@@ -479,6 +483,10 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{id}/rdf_group", handleRDFStorageGroup)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{id}/rdf_group/{rdf_no}", handleSGRDFInfo)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/rdf_group/{rdf_no}/volume/{volume_id}", handleRDFDevicePair)
+
+	// Storage Group Metrics
+	router.HandleFunc(PREFIXNOVERSION+"/performance/StorageGroup/metrics", handleStorageGroupMetrics)
+	router.HandleFunc(PREFIXNOVERSION+"/performance/Volume/metrics", handleVolumeMetrics)
 
 	mockRouter = router
 	return router
@@ -2676,6 +2684,26 @@ func returnPortGroup(w http.ResponseWriter, portGroupID string) {
 		}
 		writeJSON(w, portGroupList)
 	}
+}
+
+func handleStorageGroupMetrics(w http.ResponseWriter, r *http.Request) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	if InducedErrors.GetStorageGroupMetricsError {
+		writeError(w, "Error getting storage group metrics: induced error", http.StatusRequestTimeout)
+		return
+	}
+	returnJSONFile(Data.JSONDir, "storage_group_metrics.json", w, nil)
+}
+
+func handleVolumeMetrics(w http.ResponseWriter, r *http.Request) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	if InducedErrors.GetVolumesMetricsError {
+		writeError(w, "Error getting volume metrics: induced error", http.StatusRequestTimeout)
+		return
+	}
+	returnJSONFile(Data.JSONDir, "volume_metrics.json", w, nil)
 }
 
 func handleNotFound(w http.ResponseWriter, r *http.Request) {

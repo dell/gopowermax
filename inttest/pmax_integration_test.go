@@ -2125,3 +2125,39 @@ func TestGetHostGroupIDs(t *testing.T) {
 	}
 
 }
+
+func TestGetStorageGroupMetrics(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+	}
+	queryParams := []string{"HostMBReads"}
+
+	metrics, err := client.GetStorageGroupMetrics(context.TODO(), symmetrixID, defaultStorageGroup, queryParams)
+	if err != nil {
+		t.Errorf("Failed to get storage group %s metrics", defaultStorageGroup)
+		return
+	}
+	fmt.Printf("HostMBReads of storage group %s: %f \n", defaultStorageGroup, metrics.ResultList.Result[0].HostMBReads)
+}
+
+func TestGetVolumesMetrics(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+	}
+	queryParams := []string{"MBRead"}
+
+	metrics, err := client.GetVolumesMetrics(context.TODO(), symmetrixID, defaultStorageGroup, queryParams)
+	if err != nil {
+		t.Errorf("Failed to get volume in storage group %s Metrics", defaultStorageGroup)
+		return
+	}
+	fmt.Printf("MBRead of volume %s: %f \n", metrics.ResultList.Result[0].VolumeId, metrics.ResultList.Result[0].VolumeResult[0].MBRead)
+}
