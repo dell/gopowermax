@@ -2036,7 +2036,7 @@ func TestHostGroup_CRUDOperation(t *testing.T) {
 
 	hostGroup, err = client.UpdateHostGroupName(context.TODO(), symmetrixID, hostGroupID, newHostGroupID)
 	if err != nil || hostGroup == nil {
-		t.Error("Failed to Update FC hostflags " + err.Error())
+		t.Error("Failed to rename hostgroup " + err.Error())
 		return
 	}
 
@@ -2047,7 +2047,7 @@ func TestHostGroup_CRUDOperation(t *testing.T) {
 
 	hostGroup, err = client.UpdateHostGroupHosts(context.TODO(), symmetrixID, hostGroup.HostGroupID, []string{})
 	if err != nil {
-		t.Error("Failed to Update FC hostflags " + err.Error())
+		t.Error("Failed to Update hosts for the hostgroup " + err.Error())
 		return
 	}
 
@@ -2058,7 +2058,7 @@ func TestHostGroup_CRUDOperation(t *testing.T) {
 
 	hostGroup, err = client.UpdateHostGroupHosts(context.TODO(), symmetrixID, hostGroup.HostGroupID, hostIDs)
 	if err != nil {
-		t.Error("Failed to Update FC hostflags " + err.Error())
+		t.Error("Failed to Update hosts for the hostgroup " + err.Error())
 		return
 	}
 
