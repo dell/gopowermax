@@ -1801,6 +1801,24 @@ func (c *Client) GetHostGroupByID(ctx context.Context, symID string, hostGroupID
 	return hostGroup, nil
 }
 
+// GetHostGroupList returns an HostGroupList object, which contains a list of all the HostGroups.
+func (c *Client) GetHostGroupList(ctx context.Context, symID string) (*types.HostGroupList, error) {
+	defer c.TimeSpent("GetHostGroupList", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XHostGroup
+	hostgroupList := &types.HostGroupList{}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), hostgroupList)
+	if err != nil {
+		log.Error("GetHostGroupList failed: " + err.Error())
+		return nil, err
+	}
+	return hostgroupList, nil
+}
+
 // DeleteHostGroup deletes a host entry.
 func (c *Client) DeleteHostGroup(ctx context.Context, symID string, hostGroupID string) error {
 	defer c.TimeSpent("DeleteHostGroup", time.Now())

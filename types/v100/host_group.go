@@ -68,3 +68,8 @@ type RenameHostGroupParam struct {
 type EditHostsParam struct {
 	Host []string `json:"host"`
 }
+
+// HostGroupList : list of hostgroups
+type HostGroupList struct {
+	HostGroupIDs []string `json:"hostGroupId"`
+}

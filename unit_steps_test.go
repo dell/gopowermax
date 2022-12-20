@@ -85,6 +85,7 @@ type unitContext struct {
 	hostList                   *types.HostList
 	host                       *types.Host
 	hostGroup                  *types.HostGroup
+	hostGroupList              *types.HostGroupList
 	maskingViewList            *types.MaskingViewList
 	maskingView                *types.MaskingView
 	uMaskingView               *uMV
@@ -314,6 +315,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.UpdateHostGroupError = true
 	case "DeleteHostGroupError":
 		mock.InducedErrors.DeleteHostGroupError = true
+	case "GetHostGroupListError":
+		mock.InducedErrors.GetHostGroupListError = true
 	case "none":
 	default:
 		return fmt.Errorf("unknown errorType: %s", errorType)
@@ -1811,6 +1814,22 @@ func (c *unitContext) iCallDeleteHostGroup(hostGroupName string) error {
 	return nil
 }
 
+func (c *unitContext) iCallGetHostGroupList() error {
+	c.hostGroupList, c.err = c.client.GetHostGroupList(context.TODO(), symID)
+	return nil
+}
+
+func (c *unitContext) iGetAValidHostGroupListIfNoError() error {
+	if c.err != nil {
+		return nil
+	}
+	if c.hostGroupList == nil || len(c.hostGroupList.HostGroupIDs) == 0 {
+		return fmt.Errorf("Expected item in HostGroupList but got none")
+	}
+	fmt.Println(c.hostGroupList)
+	return nil
+}
+
 func UnitTestContext(s *godog.Suite) {
 	c := &unitContext{}
 	s.Step(`^I induce error "([^"]*)"$`, c.iInduceError)
@@ -1911,6 +1930,8 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call UpdateHostGroupHosts "([^"]*)" with hosts "([^"]*)"$`, c.iCallUpdateHostGroupHostsWithHosts)
 	s.Step(`^I call UpdateHostGroupName "([^"]*)"$`, c.iCallUpdateHostGroupName)
 	s.Step(`^I call DeleteHostGroup "([^"]*)"$`, c.iCallDeleteHostGroup)
+	s.Step(`^I call GetHostGroupList$`, c.iCallGetHostGroupList)
+	s.Step(`^I get a valid HostGroupList if no error$`, c.iGetAValidHostGroupListIfNoError)
 	s.Step(`^I call CreateHost "([^"]*)"$`, c.iCallCreateHost)
 	s.Step(`^I call DeleteHost "([^"]*)"$`, c.iCallDeleteHost)
 	s.Step(`^I call AddVolumesToStorageGroup "([^"]*)"$`, c.iCallAddVolumesToStorageGroup)

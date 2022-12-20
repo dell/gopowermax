@@ -1145,4 +1145,18 @@ Scenario Outline: Test GetHostList
     | "Test-HostGroup"        | "none"                  | "none"                                | ""        | "true"       |
     | "Test-HostGroup"        | "DeleteHostGroupError"  | "induced error"                       | ""        | "false"      |
     | "Test-HostGroup"        | "none"                  | "ignored as it is not managed"        | "ignored" | "false"      |
-    
+
+  Scenario Outline: Test GetHostGroupList
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I have a valid HostGroup <hostGroupname>
+    And I induce error <induced>
+    When I call GetHostGroupList
+    Then the error message contains <errormsg>
+    And I get a valid HostGroupList if no error
+
+    Examples:
+    | hostGroupname         | induced                            | errormsg                                              | arrays    |
+    | "Test-HostGroup-1"    | "none"                             | "none"                                                | ""        |
+    | "Test-HostGroup-1"    | "GetHostGroupListError"            | "induced error"                                       | ""        |
+    | "Test-HostGroup-1"    | "none"                             | "ignored as it is not managed"                        | "ignored" |

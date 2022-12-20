@@ -193,6 +193,7 @@ var InducedErrors struct {
 	CreateHostGroupError               bool
 	DeleteHostGroupError               bool
 	UpdateHostGroupError               bool
+	GetHostGroupListError              bool
 }
 
 // hasError checks to see if the specified error (via pointer)
@@ -295,6 +296,7 @@ func Reset() {
 	InducedErrors.CreateHostGroupError = false
 	InducedErrors.DeleteHostGroupError = false
 	InducedErrors.UpdateHostGroupError = false
+	InducedErrors.GetHostGroupListError = false
 	Data.JSONDir = "mock"
 	Data.VolumeIDToIdentifier = make(map[string]string)
 	Data.VolumeIDToSize = make(map[string]int)
@@ -3473,6 +3475,9 @@ func handleHostGroup(w http.ResponseWriter, r *http.Request) {
 		if InducedErrors.GetHostGroupError {
 			writeError(w, "Error retrieving HostGroup: induced error", http.StatusRequestTimeout)
 			return
+		} else if InducedErrors.GetHostGroupListError {
+			writeError(w, "Error retrieving HostGroupList: induced error", http.StatusRequestTimeout)
+			return
 		}
 		returnHostGroup(w, hostGroupID)
 
@@ -3531,6 +3536,15 @@ func returnHostGroup(w http.ResponseWriter, hostGroupID string) {
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
+	} else {
+		hostGroupIDs := make([]string, 0)
+		for k := range Data.HostGroupIDToHostGroup {
+			hostGroupIDs = append(hostGroupIDs, k)
+		}
+		hostgroupIDList := &types.HostGroupList{
+			HostGroupIDs: hostGroupIDs,
+		}
+		writeJSON(w, hostgroupIDList)
 	}
 }
 

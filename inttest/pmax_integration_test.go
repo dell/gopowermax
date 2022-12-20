@@ -2075,3 +2075,53 @@ func TestHostGroup_CRUDOperation(t *testing.T) {
 		return
 	}
 }
+
+func TestGetHostGroupIDs(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+
+	// Creating a test hostgroup and asserting atleast one hostgroup is returned by the API.
+	hostGroupID := "IntTestHostGroup"
+	hostIDs := []string{defaultFCHost}
+	hostFlags := &types.HostFlags{
+		VolumeSetAddressing: &types.HostFlag{},
+		DisableQResetOnUA:   &types.HostFlag{},
+		EnvironSet:          &types.HostFlag{},
+		AvoidResetBroadcast: &types.HostFlag{},
+		OpenVMS:             &types.HostFlag{},
+		SCSI3:               &types.HostFlag{},
+		Spc2ProtocolVersion: &types.HostFlag{},
+		SCSISupport1:        &types.HostFlag{},
+		ConsistentLUN:       false,
+	}
+	_, err := client.CreateHostGroup(context.TODO(), symmetrixID, hostGroupID, hostIDs, hostFlags)
+	if err != nil {
+		t.Error("Couldn't create Host group")
+		return
+	}
+
+	hostGroupList, err := client.GetHostGroupList(context.TODO(), symmetrixID)
+	for _, id := range hostGroupList.HostGroupIDs {
+		fmt.Printf("HostGroup ID: %s\n", id)
+	}
+	if err != nil || hostGroupList == nil {
+		t.Error("cannot get HostGroup List: ", err.Error())
+		return
+	}
+	if len(hostGroupList.HostGroupIDs) == 0 {
+		t.Error("expected at least one HostGroup ID in list")
+		return
+	}
+
+	err = client.DeleteHostGroup(context.TODO(), symmetrixID, hostGroupID)
+	if err != nil {
+		t.Error("Couldn't delete host group")
+		return
+	}
+
+}
