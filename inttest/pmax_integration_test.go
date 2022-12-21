@@ -2159,5 +2159,5 @@ func TestGetVolumesMetrics(t *testing.T) {
 		t.Errorf("Failed to get volume in storage group %s Metrics", defaultStorageGroup)
 		return
 	}
-	fmt.Printf("MBRead of volume %s: %f \n", metrics.ResultList.Result[0].VolumeId, metrics.ResultList.Result[0].VolumeResult[0].MBRead)
+	fmt.Printf("MBRead of volume %s: %f \n", metrics.ResultList.Result[0].VolumeID, metrics.ResultList.Result[0].VolumeResult[0].MBRead)
 }

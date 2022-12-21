@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// The following constants are for the query of performance metrics for pmax
 const (
 	Average      = "Average"
 	Performance  = "performance"
@@ -16,6 +17,7 @@ const (
 	Metrics      = "/metrics"
 )
 
+// GetStorageGroupMetrics returns a list of Storage Group performance metrics
 func (c *Client) GetStorageGroupMetrics(ctx context.Context, symID string, storageGroupID string, metricsQuery []string) (*types.StorageGroupMetricsIterator, error) {
 	defer c.TimeSpent("GetStorageGroupMetrics", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
@@ -25,11 +27,11 @@ func (c *Client) GetStorageGroupMetrics(ctx context.Context, symID string, stora
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	params := types.StorageGroupMetricsParam{
-		SymmetrixId:    symID,
+		SymmetrixID:    symID,
 		StartDate:      time.Now().UnixMilli() - 300000,
 		EndDate:        time.Now().UnixMilli(),
 		DataFormat:     Average,
-		StorageGroupId: storageGroupID,
+		StorageGroupID: storageGroupID,
 		Metrics:        metricsQuery,
 	}
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodPost, URL, c.getDefaultHeaders(), params)
@@ -45,6 +47,7 @@ func (c *Client) GetStorageGroupMetrics(ctx context.Context, symID string, stora
 	return metricsList, nil
 }
 
+// GetVolumesMetrics returns a list of Volume performance metrics
 func (c *Client) GetVolumesMetrics(ctx context.Context, symID string, storageGroups string, metricsQuery []string) (*types.VolumeMetricsIterator, error) {
 	defer c.TimeSpent("GetStorageGroupMetrics", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
@@ -54,7 +57,7 @@ func (c *Client) GetVolumesMetrics(ctx context.Context, symID string, storageGro
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	params := types.VolumeMetricsParam{
-		SystemId:                       symID,
+		SystemID:                       symID,
 		StartDate:                      time.Now().UnixMilli() - 300000,
 		EndDate:                        time.Now().UnixMilli(),
 		DataFormat:                     Average,
