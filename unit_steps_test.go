@@ -84,6 +84,8 @@ type unitContext struct {
 	initiator                  *types.Initiator
 	hostList                   *types.HostList
 	host                       *types.Host
+	hostGroup                  *types.HostGroup
+	hostGroupList              *types.HostGroupList
 	maskingViewList            *types.MaskingViewList
 	maskingView                *types.MaskingView
 	uMaskingView               *uMV
@@ -196,6 +198,10 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.ExpandVolumeError = false
 	mock.InducedErrors.UpdatePortGroupError = false
 	mock.InducedErrors.ModifyMobilityError = false
+	mock.InducedErrors.CreateHostGroupError = false
+	mock.InducedErrors.GetHostGroupError = false
+	mock.InducedErrors.UpdateHostGroupError = false
+	mock.InducedErrors.DeleteHostGroupError = false
 	switch errorType {
 	case "InvalidJSON":
 		mock.InducedErrors.InvalidJSON = true
@@ -301,6 +307,16 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.ExpandVolumeError = true
 	case "ModifyMobilityError":
 		mock.InducedErrors.ModifyMobilityError = true
+	case "CreateHostGroupError":
+		mock.InducedErrors.CreateHostGroupError = true
+	case "GetHostGroupError":
+		mock.InducedErrors.GetHostGroupError = true
+	case "UpdateHostGroupError":
+		mock.InducedErrors.UpdateHostGroupError = true
+	case "DeleteHostGroupError":
+		mock.InducedErrors.DeleteHostGroupError = true
+	case "GetHostGroupListError":
+		mock.InducedErrors.GetHostGroupListError = true
 	case "none":
 	default:
 		return fmt.Errorf("unknown errorType: %s", errorType)
@@ -1687,6 +1703,133 @@ func (c *unitContext) iCallExecuteAction(action string) error {
 	return nil
 }
 
+func (c *unitContext) iCallCreateHostGroupWithFlags(hostGroupID string, setHostFlags string) error {
+	hostIDs := make([]string, 1)
+	c.hostGroupID = hostGroupID
+	hostIDs[0] = testHost
+	if setHostFlags == "true" {
+		hostFlags := &types.HostFlags{
+			VolumeSetAddressing: &types.HostFlag{},
+			DisableQResetOnUA:   &types.HostFlag{},
+			EnvironSet:          &types.HostFlag{},
+			AvoidResetBroadcast: &types.HostFlag{},
+			OpenVMS:             &types.HostFlag{},
+			SCSI3:               &types.HostFlag{},
+			Spc2ProtocolVersion: &types.HostFlag{
+				Enabled:  true,
+				Override: true,
+			},
+			SCSISupport1:  &types.HostFlag{},
+			ConsistentLUN: false,
+		}
+		c.hostGroup, c.err = c.client.CreateHostGroup(context.TODO(), symID, hostGroupID, hostIDs, hostFlags)
+	} else {
+		c.hostGroup, c.err = c.client.CreateHostGroup(context.TODO(), symID, hostGroupID, hostIDs, nil)
+	}
+
+	return nil
+}
+
+func (c *unitContext) iCallUpdateHostGroupFlagsWithFlags(hostGroupID string, updateHostFlags string) error {
+	hostIDs := make([]string, 1)
+	c.hostGroupID = hostGroupID
+	hostIDs[0] = testHost
+	if updateHostFlags == "true" {
+		hostFlags := &types.HostFlags{
+			VolumeSetAddressing: &types.HostFlag{},
+			DisableQResetOnUA:   &types.HostFlag{},
+			EnvironSet:          &types.HostFlag{},
+			AvoidResetBroadcast: &types.HostFlag{},
+			OpenVMS:             &types.HostFlag{},
+			SCSI3:               &types.HostFlag{},
+			Spc2ProtocolVersion: &types.HostFlag{
+				Enabled:  true,
+				Override: true,
+			},
+			SCSISupport1:  &types.HostFlag{},
+			ConsistentLUN: false,
+		}
+		c.hostGroup, c.err = c.client.UpdateHostGroupFlags(context.TODO(), symID, hostGroupID, hostFlags)
+	} else {
+		c.hostGroup, c.err = c.client.UpdateHostGroupFlags(context.TODO(), symID, hostGroupID, nil)
+	}
+
+	return nil
+}
+
+func (c *unitContext) iCallUpdateHostGroupHostsWithHosts(hostGroupID, hostID string) error {
+	hostIDs := make([]string, 1)
+	c.hostGroupID = hostGroupID
+	hostIDs[0] = hostID
+	c.hostGroup, c.err = c.client.UpdateHostGroupHosts(context.TODO(), symID, c.hostGroupID, hostIDs)
+	return nil
+}
+
+func (c *unitContext) iCallUpdateHostGroupName(newName string) error {
+	c.hostGroup, c.err = c.client.UpdateHostGroupName(context.TODO(), symID, c.hostGroupID, newName)
+	c.hostGroupID = newName
+	return nil
+}
+
+func (c *unitContext) iGetAValidHostGroupIfNoError() error {
+	if c.err != nil {
+		return nil
+	}
+	if c.hostGroup.HostGroupID != c.hostGroupID {
+		return fmt.Errorf("Expected to get HostGroup %s, but received %s",
+			c.hostGroup.HostGroupID, c.hostGroupID)
+	}
+	return nil
+}
+
+func (c *unitContext) iHaveAValidHostGroup(hostGroupname string) error {
+	hostIDs := make([]string, 1)
+	c.hostGroupID = hostGroupname
+	hostIDs[0] = testHost
+	hostFlags := &types.HostFlags{
+		VolumeSetAddressing: &types.HostFlag{},
+		DisableQResetOnUA:   &types.HostFlag{},
+		EnvironSet:          &types.HostFlag{},
+		AvoidResetBroadcast: &types.HostFlag{},
+		OpenVMS:             &types.HostFlag{},
+		SCSI3:               &types.HostFlag{},
+		Spc2ProtocolVersion: &types.HostFlag{
+			Enabled:  true,
+			Override: true,
+		},
+		SCSISupport1:  &types.HostFlag{},
+		ConsistentLUN: false,
+	}
+	c.hostGroup, c.err = mock.AddHostGroup(c.hostGroupID, hostIDs, hostFlags)
+	return nil
+}
+
+func (c *unitContext) iCallGetHostGroupByID(hostGroupID string) error {
+	c.hostGroup, c.err = c.client.GetHostGroupByID(context.TODO(), symID, hostGroupID)
+	return nil
+}
+
+func (c *unitContext) iCallDeleteHostGroup(hostGroupName string) error {
+	c.err = c.client.DeleteHostGroup(context.TODO(), symID, hostGroupName)
+	return nil
+}
+
+func (c *unitContext) iCallGetHostGroupList() error {
+	c.hostGroupList, c.err = c.client.GetHostGroupList(context.TODO(), symID)
+	return nil
+}
+
+func (c *unitContext) iGetAValidHostGroupListIfNoError() error {
+	if c.err != nil {
+		return nil
+	}
+	if c.hostGroupList == nil || len(c.hostGroupList.HostGroupIDs) == 0 {
+		return fmt.Errorf("Expected item in HostGroupList but got none")
+	}
+	fmt.Println(c.hostGroupList)
+	return nil
+}
+
 func UnitTestContext(s *godog.Suite) {
 	c := &unitContext{}
 	s.Step(`^I induce error "([^"]*)"$`, c.iInduceError)
@@ -1777,8 +1920,18 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I get a valid InitiatorList if no error$`, c.iGetAValidInitiatorListIfNoError)
 	s.Step(`^I call GetInitiatorByID$`, c.iCallGetInitiatorByID)
 	s.Step(`^I get a valid Initiator if no error$`, c.iGetAValidInitiatorIfNoError)
-	// HostGroup
+	// HostGroup/Host
+	s.Step(`^I call CreateHostGroup "([^"]*)" with flags "([^"]*)"$`, c.iCallCreateHostGroupWithFlags)
+	s.Step(`^I get a valid HostGroup if no error$`, c.iGetAValidHostGroupIfNoError)
 	s.Step(`^I have a HostGroup "([^"]*)"$`, c.iHaveAHostGroup)
+	s.Step(`^I have a valid HostGroup "([^"]*)"$`, c.iHaveAValidHostGroup)
+	s.Step(`^I call GetHostGroupByID "([^"]*)"$`, c.iCallGetHostGroupByID)
+	s.Step(`^I call UpdateHostGroupFlags "([^"]*)" with flags "([^"]*)"$`, c.iCallUpdateHostGroupFlagsWithFlags)
+	s.Step(`^I call UpdateHostGroupHosts "([^"]*)" with hosts "([^"]*)"$`, c.iCallUpdateHostGroupHostsWithHosts)
+	s.Step(`^I call UpdateHostGroupName "([^"]*)"$`, c.iCallUpdateHostGroupName)
+	s.Step(`^I call DeleteHostGroup "([^"]*)"$`, c.iCallDeleteHostGroup)
+	s.Step(`^I call GetHostGroupList$`, c.iCallGetHostGroupList)
+	s.Step(`^I get a valid HostGroupList if no error$`, c.iGetAValidHostGroupListIfNoError)
 	s.Step(`^I call CreateHost "([^"]*)"$`, c.iCallCreateHost)
 	s.Step(`^I call DeleteHost "([^"]*)"$`, c.iCallDeleteHost)
 	s.Step(`^I call AddVolumesToStorageGroup "([^"]*)"$`, c.iCallAddVolumesToStorageGroup)

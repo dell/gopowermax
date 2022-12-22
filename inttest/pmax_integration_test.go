@@ -1949,3 +1949,179 @@ func TestExpandVolumeWithUnit(t *testing.T) {
 	//all ok delete Volume
 	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
 }
+
+func TestHostGroup_CRUDOperation(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+	hostGroupID := "IntTestHostGroup"
+	hostIDs := []string{defaultFCHost}
+	hostFlags := &types.HostFlags{
+		VolumeSetAddressing: &types.HostFlag{
+			Enabled:  false,
+			Override: false,
+		},
+		DisableQResetOnUA: &types.HostFlag{
+			Enabled:  false,
+			Override: false,
+		},
+		EnvironSet: &types.HostFlag{
+			Enabled:  false,
+			Override: false,
+		},
+		AvoidResetBroadcast: &types.HostFlag{
+			Enabled:  false,
+			Override: false,
+		},
+		OpenVMS: &types.HostFlag{
+			Enabled:  false,
+			Override: false,
+		},
+		SCSI3: &types.HostFlag{
+			Enabled:  false,
+			Override: false,
+		},
+		Spc2ProtocolVersion: &types.HostFlag{
+			Enabled:  false,
+			Override: false,
+		},
+		SCSISupport1: &types.HostFlag{
+			Enabled:  false,
+			Override: false,
+		},
+		ConsistentLUN: false,
+	}
+	_, err := client.CreateHostGroup(context.TODO(), symmetrixID, hostGroupID, hostIDs, hostFlags)
+	if err != nil {
+		t.Error("Couldn't create Host group")
+		return
+	}
+	hostGroup, err := client.GetHostGroupByID(context.Background(), symmetrixID, hostGroupID)
+	if err != nil || hostGroup.HostGroupID != hostGroupID {
+		t.Error("Couldn't fetch the created Host group")
+		return
+	}
+
+	hostFlags = &types.HostFlags{
+		VolumeSetAddressing: &types.HostFlag{},
+		DisableQResetOnUA:   &types.HostFlag{},
+		EnvironSet:          &types.HostFlag{},
+		AvoidResetBroadcast: &types.HostFlag{},
+		OpenVMS:             &types.HostFlag{},
+		SCSI3:               &types.HostFlag{},
+		Spc2ProtocolVersion: &types.HostFlag{
+			Enabled:  true,
+			Override: true,
+		},
+		SCSISupport1:  &types.HostFlag{},
+		ConsistentLUN: false,
+	}
+
+	hostGroup, err = client.UpdateHostGroupFlags(context.TODO(), symmetrixID, hostGroupID, hostFlags)
+	if err != nil || hostGroup == nil {
+		t.Error("Failed to Update FC hostflags " + err.Error())
+		return
+	}
+
+	if !strings.Contains(hostGroup.EnabledFlags, "SPC2_Protocol_Version") {
+		t.Error("Expected to Update FC hostflags but didn't: " + err.Error())
+		return
+	}
+
+	newHostGroupID := hostGroupID + "-updated"
+
+	hostGroup, err = client.UpdateHostGroupName(context.TODO(), symmetrixID, hostGroupID, newHostGroupID)
+	if err != nil || hostGroup == nil {
+		t.Error("Failed to rename hostgroup " + err.Error())
+		return
+	}
+
+	if hostGroup.HostGroupID != newHostGroupID {
+		t.Error("Expected to Update FC hostGroup name but didn't: " + err.Error())
+		return
+	}
+
+	hostGroup, err = client.UpdateHostGroupHosts(context.TODO(), symmetrixID, hostGroup.HostGroupID, []string{})
+	if err != nil {
+		t.Error("Failed to Update hosts for the hostgroup " + err.Error())
+		return
+	}
+
+	if len(hostGroup.Hosts) != 0 {
+		t.Error("Expected to Remove FC hostGroup hosts but didn't: " + err.Error())
+		return
+	}
+
+	hostGroup, err = client.UpdateHostGroupHosts(context.TODO(), symmetrixID, hostGroup.HostGroupID, hostIDs)
+	if err != nil {
+		t.Error("Failed to Update hosts for the hostgroup " + err.Error())
+		return
+	}
+
+	if len(hostGroup.Hosts) == 0 {
+		t.Error("Expected to Add FC hostGroup hosts but didn't: " + err.Error())
+		return
+	}
+
+	fmt.Printf("%#v\n, FC hostGroup", hostGroup)
+
+	err = client.DeleteHostGroup(context.TODO(), symmetrixID, hostGroup.HostGroupID)
+	if err != nil {
+		t.Error("Couldn't delete host group")
+		return
+	}
+}
+
+func TestGetHostGroupIDs(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+
+	// Creating a test hostgroup and asserting atleast one hostgroup is returned by the API.
+	hostGroupID := "IntTestHostGroup"
+	hostIDs := []string{defaultFCHost}
+	hostFlags := &types.HostFlags{
+		VolumeSetAddressing: &types.HostFlag{},
+		DisableQResetOnUA:   &types.HostFlag{},
+		EnvironSet:          &types.HostFlag{},
+		AvoidResetBroadcast: &types.HostFlag{},
+		OpenVMS:             &types.HostFlag{},
+		SCSI3:               &types.HostFlag{},
+		Spc2ProtocolVersion: &types.HostFlag{},
+		SCSISupport1:        &types.HostFlag{},
+		ConsistentLUN:       false,
+	}
+	_, err := client.CreateHostGroup(context.TODO(), symmetrixID, hostGroupID, hostIDs, hostFlags)
+	if err != nil {
+		t.Error("Couldn't create Host group")
+		return
+	}
+
+	hostGroupList, err := client.GetHostGroupList(context.TODO(), symmetrixID)
+	for _, id := range hostGroupList.HostGroupIDs {
+		fmt.Printf("HostGroup ID: %s\n", id)
+	}
+	if err != nil || hostGroupList == nil {
+		t.Error("cannot get HostGroup List: ", err.Error())
+		return
+	}
+	if len(hostGroupList.HostGroupIDs) == 0 {
+		t.Error("expected at least one HostGroup ID in list")
+		return
+	}
+
+	err = client.DeleteHostGroup(context.TODO(), symmetrixID, hostGroupID)
+	if err != nil {
+		t.Error("Couldn't delete host group")
+		return
+	}
+
+}

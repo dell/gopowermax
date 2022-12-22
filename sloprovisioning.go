@@ -42,6 +42,7 @@ const (
 	XPortGroup             = "/portgroup"
 	XInitiator             = "/initiator"
 	XHost                  = "/host"
+	XHostGroup             = "/hostgroup"
 	XMaskingView           = "/maskingview"
 	Emulation              = "FBA"
 	MaxVolIdentifierLength = 64
@@ -1753,4 +1754,230 @@ func (c *Client) ModifyMobilityForVolume(ctx context.Context, symID string, volu
 	}
 	log.Info(fmt.Sprintf("Successfully modified mobility for the volume: %s", volumeID))
 	return volume, nil
+}
+
+// CreateHostGroup creates a hostGroup from a list of hostIDs (and optional HostFlags) return returns a types.HostGroup.
+func (c *Client) CreateHostGroup(ctx context.Context, symID string, hostGroupID string, hostIDs []string, hostFlags *types.HostFlags) (*types.HostGroup, error) {
+	defer c.TimeSpent("CreateHostGroup", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	hostGroupParam := &types.CreateHostGroupParam{
+		HostGroupID:     hostGroupID,
+		HostIDs:         hostIDs,
+		HostFlags:       hostFlags,
+		ExecutionOption: types.ExecutionOptionSynchronous,
+	}
+	hostGroup := &types.HostGroup{}
+	Debug = true
+	ifDebugLogPayload(hostGroupParam)
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XHostGroup
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Post(ctx, URL, c.getDefaultHeaders(), hostGroupParam, hostGroup)
+	if err != nil {
+		log.Error("CreateHostGroup failed: " + err.Error())
+		return nil, err
+	}
+	log.Info(fmt.Sprintf("Successfully created HostGroup: %s", hostGroupID))
+	return hostGroup, nil
+}
+
+// GetHostGroupByID returns a HostGroup given the Symmetrix ID and HostGroup ID.
+func (c *Client) GetHostGroupByID(ctx context.Context, symID string, hostGroupID string) (*types.HostGroup, error) {
+	defer c.TimeSpent("GetHostGroupByID", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XHostGroup + "/" + hostGroupID
+	hostGroup := &types.HostGroup{}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), hostGroup)
+	if err != nil {
+		log.Error("GetHostGroupByID failed: " + err.Error())
+		return nil, err
+	}
+	return hostGroup, nil
+}
+
+// GetHostGroupList returns an HostGroupList object, which contains a list of all the HostGroups.
+func (c *Client) GetHostGroupList(ctx context.Context, symID string) (*types.HostGroupList, error) {
+	defer c.TimeSpent("GetHostGroupList", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XHostGroup
+	hostgroupList := &types.HostGroupList{}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), hostgroupList)
+	if err != nil {
+		log.Error("GetHostGroupList failed: " + err.Error())
+		return nil, err
+	}
+	return hostgroupList, nil
+}
+
+// DeleteHostGroup deletes a host entry.
+func (c *Client) DeleteHostGroup(ctx context.Context, symID string, hostGroupID string) error {
+	defer c.TimeSpent("DeleteHostGroup", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return err
+	}
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XHostGroup + "/" + hostGroupID
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Delete(ctx, URL, c.getDefaultHeaders(), nil)
+	if err != nil {
+		log.Error("DeleteHostGroup failed: " + err.Error())
+		return err
+	}
+	log.Info(fmt.Sprintf("Successfully deleted HostGroup: %s", hostGroupID))
+	return nil
+}
+
+// UpdateHostGroupName updates a hostGroup with new hostGroup ID and returns a types.HostGroup.
+func (c *Client) UpdateHostGroupName(ctx context.Context, symID, oldHostGroupID, newHostGroupID string) (*types.HostGroup, error) {
+	defer c.TimeSpent("UpdateHostGroupName", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XHostGroup + "/" + oldHostGroupID
+	updatedHostGroup := &types.HostGroup{}
+
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	if newHostGroupID != "" {
+		hostGroupParam := &types.UpdateHostGroupParam{
+			EditHostGroupAction: &types.EditHostGroupActionParams{
+				RenameHostGroupParam: &types.RenameHostGroupParam{
+					NewHostGroupName: newHostGroupID,
+				},
+			},
+			ExecutionOption: types.ExecutionOptionSynchronous,
+		}
+
+		ifDebugLogPayload(hostGroupParam)
+		err := c.api.Put(ctx, URL, c.getDefaultHeaders(), hostGroupParam, updatedHostGroup)
+		if err != nil {
+			log.Error("UpdateHostGroupName failed: " + err.Error())
+			return nil, err
+		}
+	}
+
+	return updatedHostGroup, nil
+}
+
+// UpdateHostGroupFlags updates the host flags
+func (c *Client) UpdateHostGroupFlags(ctx context.Context, symID string, hostGroupID string, hostFlags *types.HostFlags) (*types.HostGroup, error) {
+	defer c.TimeSpent("UpdateHostGroupFlags", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+
+	hostParam := &types.UpdateHostGroupParam{
+		EditHostGroupAction: &types.EditHostGroupActionParams{
+			SetHostGroupFlags: &types.SetHostFlags{
+				HostFlags: hostFlags,
+			},
+		},
+		ExecutionOption: types.ExecutionOptionSynchronous,
+	}
+
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XHostGroup + "/" + hostGroupID
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	updatedHostGroup := &types.HostGroup{}
+
+	err := c.api.Put(ctx, URL, c.getDefaultHeaders(), hostParam, updatedHostGroup)
+	if err != nil {
+		log.Error("UpdateHostGroupFlags failed: " + err.Error())
+		return nil, err
+	}
+	return updatedHostGroup, nil
+}
+
+// UpdateHostGroupHosts will add/remove the hosts for a host group
+func (c *Client) UpdateHostGroupHosts(ctx context.Context, symID string, hostGroupID string, hostIDs []string) (*types.HostGroup, error) {
+	defer c.TimeSpent("UpdateHostGroupHosts", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	if hostGroupID == "" {
+		return nil, fmt.Errorf("hostgroup ID can't be empty")
+	}
+
+	hostGroup, err := c.GetHostGroupByID(ctx, symID, hostGroupID)
+	if err != nil {
+		return nil, err
+	}
+
+	hostRemove := []string{}
+	hostAdd := []string{}
+	existingHosts := []string{}
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XHostGroup + "/" + hostGroup.HostGroupID
+	updatedHostGroup := &types.HostGroup{}
+
+	for _, host := range hostGroup.Hosts {
+		existingHosts = append(existingHosts, host.HostID)
+	}
+
+	// figure out which hosts are being added
+	for _, hostID := range hostIDs {
+		// if this host is not in the list of current hosts, add it
+		if !stringInSlice(hostID, existingHosts) {
+			hostAdd = append(hostAdd, hostID)
+		}
+	}
+
+	// check for hosts to be removed
+	for _, existingHost := range existingHosts {
+		if !stringInSlice(existingHost, hostIDs) {
+			hostRemove = append(hostRemove, existingHost)
+		}
+	}
+
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+
+	// add hosts if needed
+	if len(hostAdd) > 0 {
+		hostGroupParam := &types.UpdateHostGroupParam{
+			ExecutionOption: types.ExecutionOptionSynchronous,
+			EditHostGroupAction: &types.EditHostGroupActionParams{
+				AddHostParam: &types.EditHostsParam{
+					Host: hostAdd,
+				},
+			},
+		}
+
+		ifDebugLogPayload(hostGroupParam)
+		err := c.api.Put(ctx, URL, c.getDefaultHeaders(), hostGroupParam, updatedHostGroup)
+		if err != nil {
+			log.Error("UpdateHostGroupHosts add failed: " + err.Error())
+			return nil, err
+		}
+	}
+
+	// remove hosts if needed
+	if len(hostRemove) > 0 {
+		hostGroupParam := &types.UpdateHostGroupParam{
+			ExecutionOption: types.ExecutionOptionSynchronous,
+			EditHostGroupAction: &types.EditHostGroupActionParams{
+				RemoveHostParam: &types.EditHostsParam{
+					Host: hostRemove,
+				},
+			},
+		}
+
+		ifDebugLogPayload(hostGroupParam)
+		err := c.api.Put(ctx, URL, c.getDefaultHeaders(), hostGroupParam, updatedHostGroup)
+		if err != nil {
+			log.Error("UpdateHostGroupHosts remove failed: " + err.Error())
+			return nil, err
+		}
+	}
+	return updatedHostGroup, nil
 }

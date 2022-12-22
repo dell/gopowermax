@@ -228,6 +228,20 @@ type Pmax interface {
 	GetListOfTargetAddresses(ctx context.Context, symID string) ([]string, error)
 	// GetISCSITargets returns a list of ISCSI Targets for a given sym id
 	GetISCSITargets(ctx context.Context, symID string) ([]ISCSITarget, error)
+	// CreateHostGroup creates a hostGroup from a list of hostIDs (and optional HostFlags) and  returns a types.HostGroup.
+	CreateHostGroup(ctx context.Context, symID string, hostGroupID string, hostIDs []string, hostFlags *types.HostFlags) (*types.HostGroup, error)
+	// GetHostGroupList returns a list of all the HostGroup ids.
+	GetHostGroupList(ctx context.Context, symID string) (*types.HostGroupList, error)
+	// GetHostGroupByID returns a HostGroup given the HostGroup id.
+	GetHostGroupByID(ctx context.Context, symID string, hostGroupID string) (*types.HostGroup, error)
+	// DeleteHostGroup deletes a hostGroup given the hostGroupID.
+	DeleteHostGroup(ctx context.Context, symID string, hostGroupID string) error
+	// UpdateHostGroupName updates a hostGroup with new hostGroup ID and returns a types.HostGroup.
+	UpdateHostGroupName(ctx context.Context, symID, oldHostGroupID, newHostGroupID string) (*types.HostGroup, error)
+	// UpdateHostGroupFlags updates the hostflags of the hostGroup
+	UpdateHostGroupFlags(ctx context.Context, symID string, hostGroupID string, hostFlags *types.HostFlags) (*types.HostGroup, error)
+	// UpdateHostGroupHosts will add/remove the hosts for a host group
+	UpdateHostGroupHosts(ctx context.Context, symID string, hostGroupID string, hostIDs []string) (*types.HostGroup, error)
 
 	// SetAllowedArrays sets the list of arrays which can be manipulated
 	// an empty list will allow all arrays to be accessed

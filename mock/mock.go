@@ -94,6 +94,7 @@ var Data struct {
 	PortGroupIDToPortGroup        map[string]*types.PortGroup
 	PortIDToSymmetrixPortType     map[string]*types.SymmetrixPortType
 	VolumeIDToVolume              map[string]*types.Volume
+	HostGroupIDToHostGroup        map[string]*types.HostGroup
 	JSONDir                       string
 	InitiatorHost                 string
 
@@ -188,6 +189,11 @@ var InducedErrors struct {
 	FetchResponseError                 bool
 	RemoveVolumesFromSG                bool
 	ModifyMobilityError                bool
+	GetHostGroupError                  bool
+	CreateHostGroupError               bool
+	DeleteHostGroupError               bool
+	UpdateHostGroupError               bool
+	GetHostGroupListError              bool
 }
 
 // hasError checks to see if the specified error (via pointer)
@@ -286,6 +292,11 @@ func Reset() {
 	InducedErrors.GetRemoteVolumeError = false
 	InducedErrors.FetchResponseError = false
 	InducedErrors.RemoveVolumesFromSG = false
+	InducedErrors.GetHostGroupError = false
+	InducedErrors.CreateHostGroupError = false
+	InducedErrors.DeleteHostGroupError = false
+	InducedErrors.UpdateHostGroupError = false
+	InducedErrors.GetHostGroupListError = false
 	Data.JSONDir = "mock"
 	Data.VolumeIDToIdentifier = make(map[string]string)
 	Data.VolumeIDToSize = make(map[string]int)
@@ -310,6 +321,7 @@ func Reset() {
 	Data.VolIDToSnapshots = make(map[string]map[string]*types.Snapshot)
 	Data.SnapIDToLinkedVol = make(map[string]map[string]*types.LinkedVolumes)
 	Data.StorageGroupIDToRDFStorageGroup = make(map[string]*types.RDFStorageGroup)
+	Data.HostGroupIDToHostGroup = make(map[string]*types.HostGroup)
 	Data.RDFGroup = &types.RDFGroup{
 		RdfgNumber:          DefaultRDFGNo,
 		Label:               "RG_13",
@@ -421,6 +433,8 @@ func getRouter() http.Handler {
 	router := mux.NewRouter()
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/host/{id}", handleHost)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/host", handleHost)
+	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/hostgroup/{id}", handleHostGroup)
+	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/hostgroup", handleHostGroup)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/initiator/{id}", handleInitiator)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/initiator", handleInitiator)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/portgroup/{id}", handlePortGroup)
@@ -1691,7 +1705,7 @@ func compareAndCheck(slice1 []string, slice2 []string) bool {
 	return true
 }
 
-//uniqueElements - Removes duplicates from a string slice and returns a slice containing unique elements only
+// uniqueElements - Removes duplicates from a string slice and returns a slice containing unique elements only
 func uniqueElements(slice []string) []string {
 	keys := make(map[string]bool)
 	list := []string{}
@@ -2684,8 +2698,10 @@ func writeError(w http.ResponseWriter, message string, httpStatus int) {
 }
 
 // Return content from a JSON file. Arguments are:
-//   directory, filename  of the file
-//  wrriter ResponseWriter where data is output
+//
+//	 directory, filename  of the file
+//	wrriter ResponseWriter where data is output
+//
 // An optional replacement map. If supplied every instance of a key in the JSON file will be replaced with the corresponding value.
 func returnJSONFile(directory, filename string, w http.ResponseWriter, replacements map[string]string) (jsonBytes []byte) {
 	jsonBytes, err := ioutil.ReadFile(filepath.Join(directory, filename)) // #nosec G20
@@ -2720,7 +2736,7 @@ func returnJSONFile(directory, filename string, w http.ResponseWriter, replaceme
 	return jsonBytes
 }
 
-//AddTempSnapshots adds marked for deletion snapshots into mock to help snapcleanup thread to be functional
+// AddTempSnapshots adds marked for deletion snapshots into mock to help snapcleanup thread to be functional
 func AddTempSnapshots() {
 	for i := 1; i <= 2; i++ {
 		id := fmt.Sprintf("%05d", i)
@@ -3114,7 +3130,7 @@ func unlinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []t
 	returnJobByID(w, jobID)
 }
 
-//check if all the devices exist in the Mock VolumeIDToVolume or check if any unvailable devices
+// check if all the devices exist in the Mock VolumeIDToVolume or check if any unvailable devices
 func fewVolumeUnavalaible(sourceVolumeList []types.VolumeList) bool {
 	for _, volID := range sourceVolumeList {
 		if Data.VolumeIDToVolume[volID.Name] == nil {
@@ -3172,8 +3188,8 @@ func handleSymVolumes(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, symVolumeList)
 }
 
-//GET univmax/restapi/private/APIVersion/replication/symmetrix/{symid}/volume/{volID}/snapshot/
-//GET univmax/restapi/private/APIVersion/replication/symmetrix/{symid}/volume/{volID}/snapshot/{SnapID}
+// GET univmax/restapi/private/APIVersion/replication/symmetrix/{symid}/volume/{volID}/snapshot/
+// GET univmax/restapi/private/APIVersion/replication/symmetrix/{symid}/volume/{volID}/snapshot/{SnapID}
 func handleVolSnaps(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	volID := vars["volID"]
@@ -3243,7 +3259,7 @@ func returnSnapshotObjectList(volID string) ([]types.VolumeSnapshotSource, []int
 	return volumeSnapshotSrc, generations
 }
 
-//returns the List of Linked Volumes to Snapshots of a volume
+// returns the List of Linked Volumes to Snapshots of a volume
 func returnLinkedVolumes(snapIDtoLinkedVolKey string) []types.LinkedVolumes {
 	var linkedVolumes []types.LinkedVolumes
 	for _, volume := range Data.SnapIDToLinkedVol[snapIDtoLinkedVolKey] {
@@ -3252,7 +3268,7 @@ func returnLinkedVolumes(snapIDtoLinkedVolKey string) []types.LinkedVolumes {
 	return linkedVolumes
 }
 
-//returns the List of volumeSnapshotLink to a Snapshot
+// returns the List of volumeSnapshotLink to a Snapshot
 func returnVolumeSnapshotLink(targetVolID string) []types.VolumeSnapshotLink {
 	var snapshotLnk []types.VolumeSnapshotLink
 	for _, volume := range Data.SnapIDToLinkedVol {
@@ -3446,4 +3462,262 @@ func returnSrcSnapshotGenInfo(volID string) []types.SourceSnapshotGenInfo {
 	}
 
 	return srcSnapGenInfo
+}
+
+// /univmax/restapi/100/sloprovisioning/symmetrix/{symid}/hostgroup/{id}
+// /univmax/restapi/100/sloprovisioning/symmetrix/{symid}/hostgroup
+func handleHostGroup(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	hostGroupID := vars["id"]
+	switch r.Method {
+
+	case http.MethodGet:
+		if InducedErrors.GetHostGroupError {
+			writeError(w, "Error retrieving HostGroup: induced error", http.StatusRequestTimeout)
+			return
+		} else if InducedErrors.GetHostGroupListError {
+			writeError(w, "Error retrieving HostGroupList: induced error", http.StatusRequestTimeout)
+			return
+		}
+		returnHostGroup(w, hostGroupID)
+
+	case http.MethodPost:
+		if InducedErrors.CreateHostGroupError {
+			writeError(w, "Error creating HostGroup: induced error", http.StatusRequestTimeout)
+			return
+		}
+		decoder := json.NewDecoder(r.Body)
+		createHostGroupParam := &types.CreateHostGroupParam{}
+		err := decoder.Decode(createHostGroupParam)
+		if err != nil {
+			writeError(w, "InvalidJson", http.StatusBadRequest)
+			return
+		}
+		AddHostGroup(createHostGroupParam.HostGroupID, createHostGroupParam.HostIDs, createHostGroupParam.HostFlags) // #nosec G20
+		ReturnHostGroup(w, createHostGroupParam.HostGroupID)
+
+	case http.MethodPut:
+		if hasError(&InducedErrors.UpdateHostGroupError) {
+			writeError(w, "Error updating HostGroup: induced error", http.StatusRequestTimeout)
+			return
+		}
+		decoder := json.NewDecoder(r.Body)
+		updateHostGroupParam := &types.UpdateHostGroupParam{}
+		err := decoder.Decode(updateHostGroupParam)
+		if err != nil {
+			writeError(w, "InvalidJson", http.StatusBadRequest)
+			return
+		}
+		UpdateHostGroupFromParams(hostGroupID, updateHostGroupParam)
+		ReturnHostGroup(w, hostGroupID)
+
+	case http.MethodDelete:
+		if InducedErrors.DeleteHostGroupError {
+			writeError(w, "Error deleting HostGroup: induced error", http.StatusRequestTimeout)
+			return
+		}
+		RemoveHostGroup(hostGroupID) // #nosec G20
+	default:
+		writeError(w, "Invalid Method", http.StatusBadRequest)
+	}
+}
+
+// ReturnHostGroup - Returns a hostGroup from cache
+func ReturnHostGroup(w http.ResponseWriter, hostGroupID string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	returnHostGroup(w, hostGroupID)
+}
+
+func returnHostGroup(w http.ResponseWriter, hostGroupID string) {
+	if hostGroupID != "" {
+		if hostGroup, ok := Data.HostGroupIDToHostGroup[hostGroupID]; ok {
+			writeJSON(w, hostGroup)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	} else {
+		hostGroupIDs := make([]string, 0)
+		for k := range Data.HostGroupIDToHostGroup {
+			hostGroupIDs = append(hostGroupIDs, k)
+		}
+		hostgroupIDList := &types.HostGroupList{
+			HostGroupIDs: hostGroupIDs,
+		}
+		writeJSON(w, hostgroupIDList)
+	}
+}
+
+// AddHostGroup - Adds a host group to the mock data cache
+func AddHostGroup(hostGroupID string, hostIDs []string, hostFlags *types.HostFlags) (*types.HostGroup, error) {
+	if _, ok := Data.HostGroupIDToHostGroup[hostGroupID]; ok {
+		return nil, errors.New("error! Host Group already exists")
+	}
+	newHostGroup(hostGroupID, hostIDs, hostFlags)
+	return Data.HostGroupIDToHostGroup[hostGroupID], nil
+}
+
+func newHostGroup(hostGroupID string, hostIDs []string, hostFlags *types.HostFlags) {
+	hostSummaries := []types.HostSummary{}
+
+	for _, hostID := range hostIDs {
+		Host := types.HostSummary{
+			HostID: hostID,
+		}
+		hostSummaries = append(hostSummaries, Host)
+	}
+
+	hostGroup := &types.HostGroup{
+		HostGroupID: hostGroupID,
+		Hosts:       hostSummaries,
+	}
+
+	if hostFlags != nil {
+		handleFlags(hostGroup, hostFlags)
+	}
+
+	Data.HostGroupIDToHostGroup[hostGroupID] = hostGroup
+}
+
+// RemoveHostGroup - Removes hostGroup from mock cache
+func RemoveHostGroup(hostGroupID string) error {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	return removeHostGroup(hostGroupID)
+}
+
+// removeHostGroup - Remove a hostGroup from the mock data cache
+func removeHostGroup(hostGroupID string) error {
+	_, ok := Data.HostGroupIDToHostGroup[hostGroupID]
+	if !ok {
+		return errors.New("error! Host doesn't exist")
+	}
+	Data.HostGroupIDToHostGroup[hostGroupID] = nil
+	return nil
+}
+
+// UpdateHostGroupFromParams - Updates HostGroup given an UpdateHostGroupParam payload
+func UpdateHostGroupFromParams(hostGroupID string, updateParams *types.UpdateHostGroupParam) {
+	updateHostGroup(hostGroupID, updateParams.EditHostGroupAction) // #nosec G20
+}
+
+// updateHostGroup - Update HostGroup
+func updateHostGroup(hostGroupID string, editPayload *types.EditHostGroupActionParams) (*types.HostGroup, error) {
+	hostGroup, ok := Data.HostGroupIDToHostGroup[hostGroupID]
+	if !ok {
+		return nil, fmt.Errorf("error! HostGroup %s does not exist", hostGroupID)
+	}
+
+	if editPayload.RemoveHostParam != nil {
+		hostSummaries := []types.HostSummary{}
+		for _, host := range hostGroup.Hosts {
+			if !stringInSlice(host.HostID, editPayload.RemoveHostParam.Host) {
+				hostSummary := types.HostSummary{
+					HostID: host.HostID,
+				}
+				hostSummaries = append(hostSummaries, hostSummary)
+			}
+		}
+		hostGroup.Hosts = hostSummaries
+	}
+
+	if editPayload.AddHostParam != nil {
+		for _, host := range editPayload.AddHostParam.Host {
+			hostSummary := types.HostSummary{
+				HostID: host,
+			}
+			hostGroup.Hosts = append(hostGroup.Hosts, hostSummary)
+		}
+	}
+
+	if editPayload.SetHostGroupFlags != nil {
+		handleFlags(hostGroup, editPayload.SetHostGroupFlags.HostFlags)
+	}
+
+	if editPayload.RenameHostGroupParam != nil {
+		hostGroupID = editPayload.RenameHostGroupParam.NewHostGroupName
+		hostGroup.HostGroupID = hostGroupID
+	}
+
+	// Update the HostGroup mapping with the update HostGroup
+	Data.HostGroupIDToHostGroup[hostGroupID] = hostGroup
+	return hostGroup, nil
+}
+
+func handleFlags(hostGroup *types.HostGroup, flagPayload *types.HostFlags) {
+	var enabledFlags, disabledFlags []string
+	if flagPayload.VolumeSetAddressing.Override {
+		if flagPayload.VolumeSetAddressing.Enabled {
+			enabledFlags = append(enabledFlags, "Volume_Set_Addressing(V)")
+		}
+		disabledFlags = append(disabledFlags, "Volume_Set_Addressing(V)")
+	}
+
+	if flagPayload.AvoidResetBroadcast.Override {
+		if flagPayload.AvoidResetBroadcast.Enabled {
+			enabledFlags = append(enabledFlags, "Avoid_Reset_Broadcast(ARB)")
+		}
+		disabledFlags = append(disabledFlags, "Avoid_Reset_Broadcast(ARB)")
+	}
+
+	if flagPayload.DisableQResetOnUA.Override {
+		if flagPayload.DisableQResetOnUA.Enabled {
+			enabledFlags = append(enabledFlags, "Disable_Q_Reset_on_UA(D)")
+		}
+		disabledFlags = append(disabledFlags, "Disable_Q_Reset_on_UA(D)")
+	}
+
+	if flagPayload.EnvironSet.Override {
+		if flagPayload.EnvironSet.Enabled {
+			enabledFlags = append(enabledFlags, "Environ_Set(E)")
+		}
+		disabledFlags = append(disabledFlags, "Environ_Set(E)")
+	}
+
+	if flagPayload.OpenVMS.Override {
+		if flagPayload.OpenVMS.Enabled {
+			enabledFlags = append(enabledFlags, "OpenVMS(OVMS)")
+		}
+		disabledFlags = append(disabledFlags, "OpenVMS(OVMS)")
+	}
+
+	if flagPayload.SCSI3.Override {
+		if flagPayload.SCSI3.Enabled {
+			enabledFlags = append(enabledFlags, "SCSI_3(SC3)")
+		}
+		disabledFlags = append(disabledFlags, "SCSI_3(SC3)")
+	}
+
+	if flagPayload.SCSISupport1.Override {
+		if flagPayload.SCSISupport1.Enabled {
+			enabledFlags = append(enabledFlags, "SCSI_Support1(OS2007)")
+		}
+		disabledFlags = append(disabledFlags, "SCSI_Support1(OS2007)")
+	}
+
+	if flagPayload.Spc2ProtocolVersion.Override {
+		if flagPayload.Spc2ProtocolVersion.Enabled {
+			enabledFlags = append(enabledFlags, "SPC2_Protocol_Version(SPC2)")
+		}
+		disabledFlags = append(disabledFlags, "SPC2_Protocol_Version(SPC2)")
+	}
+
+	enabledFlag := strings.Join(enabledFlags, ",")
+	disabledFlag := strings.Join(disabledFlags, ",")
+
+	hostGroup.EnabledFlags = enabledFlag
+	hostGroup.DisabledFlags = disabledFlag
+
+	if flagPayload.ConsistentLUN {
+		hostGroup.ConsistentLun = true
+	}
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }

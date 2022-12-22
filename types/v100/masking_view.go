@@ -63,16 +63,6 @@ type HostFlags struct {
 	ConsistentLUN       bool      `json:"consistent_lun"`
 }
 
-// CreateHostGroupParam contains parameters required
-// to create host group
-type CreateHostGroupParam struct {
-	HostGroupID     string            `json:"hostGroupId"`
-	HostIDs         []string          `json:"hostId"`
-	HostFlags       *HostFlags        `json:"hostFlags,omitempty"`
-	ExecutionOption string            `json:"executionOption"`
-	NewHosts        []CreateHostParam `json:"new_hosts"`
-}
-
 // UseExistingHostGroupParam contains ID of the
 // host group
 type UseExistingHostGroupParam struct {
