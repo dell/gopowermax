@@ -2153,6 +2153,17 @@ func TestGetVolumesMetrics(t *testing.T) {
 		}
 	}
 	queryParams := []string{"MBRead"}
+	// Ensure that default SG has at least 1 vol
+	now := time.Now()
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
+	fmt.Printf("volumeName: %s\n", volumeName)
+	volOpts := make(map[string]interface{})
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 10, volOpts)
+	defer cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	metrics, err := client.GetVolumesMetrics(context.TODO(), symmetrixID, defaultStorageGroup, queryParams)
 	if err != nil {
