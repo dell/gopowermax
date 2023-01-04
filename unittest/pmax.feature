@@ -1187,5 +1187,5 @@ Scenario Outline: Test GetHostList
     Examples:
     | arrays           | induced                        | errormsg                          |
     | "000000000000"   | "none"                         | "ignored as it is not managed"    |
-    | "000197900046"   | "GetVolumesMetricsError"        | "induced error"                   |
+    | "000197900046"   | "GetVolumesMetricsError"       | "induced error"                   |
     | "000197900046"   | "none"                         | "none"                            |

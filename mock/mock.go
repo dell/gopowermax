@@ -2686,6 +2686,7 @@ func returnPortGroup(w http.ResponseWriter, portGroupID string) {
 	}
 }
 
+// /univmax/restapi/performance/StorageGroup/metrics
 func handleStorageGroupMetrics(w http.ResponseWriter, r *http.Request) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
@@ -2693,17 +2694,66 @@ func handleStorageGroupMetrics(w http.ResponseWriter, r *http.Request) {
 		writeError(w, "Error getting storage group metrics: induced error", http.StatusRequestTimeout)
 		return
 	}
-	returnJSONFile(Data.JSONDir, "storage_group_metrics.json", w, nil)
+	sgMetric := types.StorageGroupMetric{
+		HostReads:         0.0,
+		HostWrites:        0.0,
+		HostMBReads:       0.0,
+		HostMBWritten:     0.0,
+		ReadResponseTime:  0.0,
+		WriteResponseTime: 0.0,
+		AllocatedCapacity: 0.0,
+		Timestamp:         1671091500000,
+	}
+	metricsIterator := &types.StorageGroupMetricsIterator{
+		ResultList: types.StorageGroupMetricsResultList{
+			Result: []types.StorageGroupMetric{sgMetric},
+			From:   1,
+			To:     1,
+		},
+		ID:             "query_id",
+		Count:          1,
+		ExpirationTime: 1671091597409,
+		MaxPageSize:    1000,
+	}
+	writeJSON(w, metricsIterator)
 }
 
+// /univmax/restapi/performance/Volume/metrics
 func handleVolumeMetrics(w http.ResponseWriter, r *http.Request) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
+	vars := mux.Vars(r)
+	commaSeparatedStorageGroupList := vars["commaSeparatedStorageGroupList"]
 	if InducedErrors.GetVolumesMetricsError {
 		writeError(w, "Error getting volume metrics: induced error", http.StatusRequestTimeout)
 		return
 	}
-	returnJSONFile(Data.JSONDir, "volume_metrics.json", w, nil)
+	volumeMetric := types.VolumeMetric{
+		MBRead:            0.0,
+		MBWritten:         0.0,
+		Reads:             0.0,
+		Writes:            0.0,
+		ReadResponseTime:  0.0,
+		WriteResponseTime: 0.0,
+		Timestamp:         1671091500000,
+	}
+	volumeResult := types.VolumeResult{
+		VolumeResult:  []types.VolumeMetric{volumeMetric},
+		VolumeID:      "002C8",
+		StorageGroups: commaSeparatedStorageGroupList,
+	}
+	metricsIterator := &types.VolumeMetricsIterator{
+		ResultList: types.VolumeMetricsResultList{
+			Result: []types.VolumeResult{volumeResult},
+			From:   1,
+			To:     1,
+		},
+		ID:             "query_id",
+		Count:          1,
+		ExpirationTime: 1671091597409,
+		MaxPageSize:    1000,
+	}
+	writeJSON(w, metricsIterator)
 }
 
 func handleNotFound(w http.ResponseWriter, r *http.Request) {
