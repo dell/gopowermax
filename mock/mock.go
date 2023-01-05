@@ -2769,13 +2769,13 @@ func handleStorageGroupPerfKeys(w http.ResponseWriter, r *http.Request) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	vars := mux.Vars(r)
-	storageGroupId := vars["storageGroupId"]
+	storageGroupID := vars["storageGroupId"]
 	if InducedErrors.GetStorageGroupPerfKeyError {
 		writeError(w, "Error getting storage group perf key: induced error", http.StatusRequestTimeout)
 		return
 	}
 	sgInfo := types.StorageGroupInfo{
-		StorageGroupID:     storageGroupId,
+		StorageGroupID:     storageGroupID,
 		FirstAvailableDate: 0,
 		LastAvailableDate:  1671091597409,
 	}
