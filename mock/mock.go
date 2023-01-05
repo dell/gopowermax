@@ -196,6 +196,8 @@ var InducedErrors struct {
 	GetHostGroupListError              bool
 	GetStorageGroupMetricsError        bool
 	GetVolumesMetricsError             bool
+	GetStorageGroupPerfKeyError        bool
+	GetArrayPerfKeyError               bool
 }
 
 // hasError checks to see if the specified error (via pointer)
@@ -301,6 +303,8 @@ func Reset() {
 	InducedErrors.GetHostGroupListError = false
 	InducedErrors.GetStorageGroupMetricsError = false
 	InducedErrors.GetVolumesMetricsError = false
+	InducedErrors.GetStorageGroupPerfKeyError = false
+	InducedErrors.GetArrayPerfKeyError = false
 	Data.JSONDir = "mock"
 	Data.VolumeIDToIdentifier = make(map[string]string)
 	Data.VolumeIDToSize = make(map[string]int)
@@ -484,9 +488,13 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{id}/rdf_group/{rdf_no}", handleSGRDFInfo)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/rdf_group/{rdf_no}/volume/{volume_id}", handleRDFDevicePair)
 
-	// Storage Group Metrics
+	// Performance Metrics
 	router.HandleFunc(PREFIXNOVERSION+"/performance/StorageGroup/metrics", handleStorageGroupMetrics)
 	router.HandleFunc(PREFIXNOVERSION+"/performance/Volume/metrics", handleVolumeMetrics)
+
+	// Performance Keys
+	router.HandleFunc(PREFIXNOVERSION+"/performance/StorageGroup/keys", handleStorageGroupPerfKeys)
+	router.HandleFunc(PREFIXNOVERSION+"/performance/Array/keys", handleArrayPerfKeys)
 
 	mockRouter = router
 	return router
@@ -2754,6 +2762,48 @@ func handleVolumeMetrics(w http.ResponseWriter, r *http.Request) {
 		MaxPageSize:    1000,
 	}
 	writeJSON(w, metricsIterator)
+}
+
+// /univmax/restapi/performance/StorageGroup/keys
+func handleStorageGroupPerfKeys(w http.ResponseWriter, r *http.Request) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	vars := mux.Vars(r)
+	storageGroupId := vars["storageGroupId"]
+	if InducedErrors.GetStorageGroupPerfKeyError {
+		writeError(w, "Error getting storage group perf key: induced error", http.StatusRequestTimeout)
+		return
+	}
+	sgInfo := types.StorageGroupInfo{
+		StorageGroupID:     storageGroupId,
+		FirstAvailableDate: 0,
+		LastAvailableDate:  1671091597409,
+	}
+	perfKeys := &types.StorageGroupKeysResult{
+		StorageGroupInfos: []types.StorageGroupInfo{sgInfo},
+	}
+	writeJSON(w, perfKeys)
+}
+
+// /univmax/restapi/performance/Array/keys
+func handleArrayPerfKeys(w http.ResponseWriter, r *http.Request) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	vars := mux.Vars(r)
+	symmetrixID := vars["symmetrixId"]
+	if InducedErrors.GetArrayPerfKeyError {
+		writeError(w, "Error getting array perf key: induced error", http.StatusRequestTimeout)
+		return
+	}
+	arrayInfo := types.ArrayInfo{
+		SymmetrixID:        symmetrixID,
+		FirstAvailableDate: 0,
+		LastAvailableDate:  1671091597409,
+	}
+	perfKeys := &types.ArrayKeysResult{
+		ArrayInfos: []types.ArrayInfo{arrayInfo},
+	}
+	writeJSON(w, perfKeys)
 }
 
 func handleNotFound(w http.ResponseWriter, r *http.Request) {

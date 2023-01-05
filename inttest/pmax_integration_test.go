@@ -2126,7 +2126,7 @@ func TestGetHostGroupIDs(t *testing.T) {
 
 }
 
-func TestGetStorageGroupMetrics(t *testing.T) {
+func TestGetStorageGroupPerfKeysAndMetrics(t *testing.T) {
 	if client == nil {
 		err := getClient()
 		if err != nil {
@@ -2135,8 +2135,24 @@ func TestGetStorageGroupMetrics(t *testing.T) {
 		}
 	}
 	queryParams := []string{"HostMBReads"}
-
-	metrics, err := client.GetStorageGroupMetrics(context.TODO(), symmetrixID, defaultStorageGroup, queryParams)
+	perfKeys, err := client.GetStorageGroupPerfKeys(context.TODO(), symmetrixID)
+	if err != nil {
+		t.Errorf("Failed to call perf keys API")
+		return
+	}
+	lastTime := int64(0)
+	firstTime := int64(0)
+	for _, storagePerfKey := range perfKeys.StorageGroupInfos {
+		if storagePerfKey.StorageGroupID == defaultStorageGroup {
+			lastTime = storagePerfKey.LastAvailableDate
+			firstTime = storagePerfKey.LastAvailableDate
+		}
+	}
+	if lastTime == int64(0) || firstTime == int64(0) {
+		t.Errorf("Failed to get storage %s perf keys", defaultStorageGroup)
+		return
+	}
+	metrics, err := client.GetStorageGroupMetrics(context.TODO(), symmetrixID, defaultStorageGroup, queryParams, firstTime, lastTime)
 	if err != nil {
 		t.Errorf("Failed to get storage group %s metrics", defaultStorageGroup)
 		return
@@ -2165,7 +2181,24 @@ func TestGetVolumesMetrics(t *testing.T) {
 		return
 	}
 
-	metrics, err := client.GetVolumesMetrics(context.TODO(), symmetrixID, defaultStorageGroup, queryParams)
+	perfKeys, err := client.GetArrayPerfKeys(context.TODO())
+	if err != nil {
+		t.Errorf("Failed to call perf keys API")
+		return
+	}
+	lastTime := int64(0)
+	firstTime := int64(0)
+	for _, storagePerfKey := range perfKeys.ArrayInfos {
+		if storagePerfKey.SymmetrixID == symmetrixID {
+			lastTime = storagePerfKey.LastAvailableDate
+			firstTime = storagePerfKey.LastAvailableDate
+		}
+	}
+	if lastTime == int64(0) || firstTime == int64(0) {
+		t.Errorf("Failed to get array %s perf keys", symmetrixID)
+		return
+	}
+	metrics, err := client.GetVolumesMetrics(context.TODO(), symmetrixID, defaultStorageGroup, queryParams, firstTime, lastTime)
 	if err != nil {
 		t.Errorf("Failed to get volume in storage group %s Metrics", defaultStorageGroup)
 		return

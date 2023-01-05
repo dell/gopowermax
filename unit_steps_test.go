@@ -109,6 +109,9 @@ type unitContext struct {
 	storageGroupMetrics *types.StorageGroupMetricsIterator
 	volumesMetrics      *types.VolumeMetricsIterator
 
+	storageGroupPerfKeys *types.StorageGroupKeysResult
+	arrayPerfKeys        *types.ArrayKeysResult
+
 	inducedErrors struct {
 		badCredentials bool
 		badPort        bool
@@ -324,6 +327,10 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.GetStorageGroupMetricsError = true
 	case "GetVolumesMetricsError":
 		mock.InducedErrors.GetVolumesMetricsError = true
+	case "GetStorageGroupPerfKeyError":
+		mock.InducedErrors.GetStorageGroupPerfKeyError = true
+	case "GetArrayPerfKeyError":
+		mock.InducedErrors.GetArrayPerfKeyError = true
 	case "none":
 	default:
 		return fmt.Errorf("unknown errorType: %s", errorType)
@@ -1839,7 +1846,7 @@ func (c *unitContext) iGetAValidHostGroupListIfNoError() error {
 
 func (c *unitContext) iCallGetStorageGroupMetrics() error {
 	var metrics *types.StorageGroupMetricsIterator
-	metrics, c.err = c.client.GetStorageGroupMetrics(context.TODO(), symID, mock.DefaultStorageGroup, []string{"HostMBReads"})
+	metrics, c.err = c.client.GetStorageGroupMetrics(context.TODO(), symID, mock.DefaultStorageGroup, []string{"HostMBReads"}, 0, 0)
 	c.storageGroupMetrics = metrics
 	return nil
 }
@@ -1858,7 +1865,7 @@ func (c *unitContext) iGetStorageGroupMetrics() error {
 
 func (c *unitContext) iCallGetVolumesMetrics() error {
 	var metrics *types.VolumeMetricsIterator
-	metrics, c.err = c.client.GetVolumesMetrics(context.TODO(), symID, mock.DefaultStorageGroup, []string{"MBReads"})
+	metrics, c.err = c.client.GetVolumesMetrics(context.TODO(), symID, mock.DefaultStorageGroup, []string{"MBReads"}, 0, 0)
 	c.volumesMetrics = metrics
 	return nil
 }
@@ -1870,6 +1877,38 @@ func (c *unitContext) iGetVolumesMetrics() error {
 		}
 		if len(c.volumesMetrics.ResultList.Result) == 0 {
 			return fmt.Errorf("no metric in volumesMetrics")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iCallGetStorageGroupPerfKeys() error {
+	var perfKeys *types.StorageGroupKeysResult
+	perfKeys, c.err = c.client.GetStorageGroupPerfKeys(context.TODO(), symID)
+	c.storageGroupPerfKeys = perfKeys
+	return nil
+}
+
+func (c *unitContext) iGetStorageGroupPerfKeys() error {
+	if c.err == nil {
+		if c.storageGroupPerfKeys == nil {
+			return fmt.Errorf("storage group performance keys nil")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iCallGetArrayPerfKeys() error {
+	var perfKeys *types.ArrayKeysResult
+	perfKeys, c.err = c.client.GetArrayPerfKeys(context.TODO())
+	c.arrayPerfKeys = perfKeys
+	return nil
+}
+
+func (c *unitContext) iGetArrayPerfKeys() error {
+	if c.err == nil {
+		if c.arrayPerfKeys == nil {
+			return fmt.Errorf("array performance keys nil")
 		}
 	}
 	return nil
@@ -2041,4 +2080,10 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I get StorageGroupMetrics$`, c.iGetStorageGroupMetrics)
 	s.Step(`^I call GetVolumesMetrics$`, c.iCallGetVolumesMetrics)
 	s.Step(`^I get VolumesMetrics$`, c.iGetVolumesMetrics)
+
+	// Performance keys
+	s.Step(`^I call GetStorageGroupPerfKeys$`, c.iCallGetStorageGroupPerfKeys)
+	s.Step(`^I get StorageGroupPerfKeys$`, c.iGetStorageGroupPerfKeys)
+	s.Step(`^I call GetArrayPerfKeys$`, c.iCallGetArrayPerfKeys)
+	s.Step(`^I get ArrayPerfKeys$`, c.iGetArrayPerfKeys)
 }

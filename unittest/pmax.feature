@@ -1189,3 +1189,30 @@ Scenario Outline: Test GetHostList
     | "000000000000"   | "none"                         | "ignored as it is not managed"    |
     | "000197900046"   | "GetVolumesMetricsError"       | "induced error"                   |
     | "000197900046"   | "none"                         | "none"                            |
+
+  Scenario Outline: Test GetStorageGroupPerfKeys
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    When I call GetStorageGroupPerfKeys
+    Then the error message contains <errormsg>
+    And I get StorageGroupPerfKeys
+
+    Examples:
+    | arrays           | induced                        | errormsg                          |
+    | "000000000000"   | "none"                         | "ignored as it is not managed"    |
+    | "000197900046"   | "GetStorageGroupPerfKeyError"  | "induced error"                   |
+    | "000197900046"   | "none"                         | "none"                            |
+
+
+  Scenario Outline: Test GetArrayPerfKeys
+    Given a valid connection
+    And I induce error <induced>
+    When I call GetArrayPerfKeys
+    Then the error message contains <errormsg>
+    And I get ArrayPerfKeys
+
+    Examples:
+    | arrays           | induced                        | errormsg                          |
+    | "000197900046"   | "GetArrayPerfKeyError"         | "induced error"                   |
+    | "000197900046"   | "none"                         | "none"                            |

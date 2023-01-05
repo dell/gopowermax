@@ -335,8 +335,14 @@ type Pmax interface {
 	GetLocalRDFPortDetails(ctx context.Context, localSymID string, rdfDir string, rdfPort int) (*types.RDFPortDetails, error)
 
 	//GetStorageGroupMetrics returns the list of required metrics
-	GetStorageGroupMetrics(ctx context.Context, symID string, storageGroupID string, metricsQuery []string) (*types.StorageGroupMetricsIterator, error)
+	GetStorageGroupMetrics(ctx context.Context, symID string, storageGroupID string, metricsQuery []string, firstAvailableDate int64, lastAvailableTime int64) (*types.StorageGroupMetricsIterator, error)
 
 	//GetVolumesMetrics returns the list of volume metrics for specific storage groups
-	GetVolumesMetrics(ctx context.Context, symID string, storageGroups string, metricsQuery []string) (*types.VolumeMetricsIterator, error)
+	GetVolumesMetrics(ctx context.Context, symID string, storageGroups string, metricsQuery []string, firstAvailableDate int64, lastAvailableTime int64) (*types.VolumeMetricsIterator, error)
+
+	//GetStorageGroupPerfKeys returns the performance keys of storage group
+	GetStorageGroupPerfKeys(ctx context.Context, symID string) (*types.StorageGroupKeysResult, error)
+
+	//GetArrayPerfKeys returns the performance keys of array
+	GetArrayPerfKeys(ctx context.Context) (*types.ArrayKeysResult, error)
 }

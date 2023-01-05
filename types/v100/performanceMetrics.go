@@ -95,3 +95,32 @@ type VolumeMetric struct {
 	WriteResponseTime float64 `json:"WriteResponseTime"`
 	Timestamp         int64   `json:"timestamp"`
 }
+
+// StorageGroupKeysParam is the parameter of keys query
+type StorageGroupKeysParam struct {
+	SymmetrixID string `json:"symmetrixId"`
+}
+
+// StorageGroupKeysResult is the list of storage group info
+type StorageGroupKeysResult struct {
+	StorageGroupInfos []StorageGroupInfo `json:"storageGroupInfo"`
+}
+
+// StorageGroupInfo is the information of the storage group key
+type StorageGroupInfo struct {
+	StorageGroupID     string `json:"storageGroupId"`
+	FirstAvailableDate int64  `json:"firstAvailableDate"`
+	LastAvailableDate  int64  `json:"lastAvailableDate"`
+}
+
+// ArrayKeysResult is the list of array info
+type ArrayKeysResult struct {
+	ArrayInfos []ArrayInfo `json:"arrayInfo"`
+}
+
+// ArrayInfo is the information of the array key
+type ArrayInfo struct {
+	SymmetrixID        string `json:"symmetrixId"`
+	FirstAvailableDate int64  `json:"firstAvailableDate"`
+	LastAvailableDate  int64  `json:"lastAvailableDate"`
+}
