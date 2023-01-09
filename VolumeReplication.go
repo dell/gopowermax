@@ -221,8 +221,8 @@ func (c *Client) GetRDFGroupList(ctx context.Context, symID string, queryParams 
 		URL += "?"
 		for key, val := range queryParams {
 			switch val := val.(type) {
-			case bool:
-				URL += fmt.Sprintf("%s=%s", key, strconv.FormatBool(val))
+			case int:
+				URL += fmt.Sprintf("%s=%s", key, strconv.Itoa(val))
 			case string:
 				URL += fmt.Sprintf("%s=%s", key, val)
 			}
@@ -276,26 +276,21 @@ func (c *Client) GetProtectedStorageGroup(ctx context.Context, symID, storageGro
 }
 
 // ExecuteCreateRDFGroup creates the RDF Group
-func (c *Client) ExecuteCreateRDFGroup(ctx context.Context, symID string, CreateRDFPayload *types.RDFGroupCreate) bool {
+func (c *Client) ExecuteCreateRDFGroup(ctx context.Context, symID string, CreateRDFPayload *types.RDFGroupCreate) error {
 	defer c.TimeSpent("ExecuteCreateRDFGroup", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
-		return false
+		return err
 	}
 	URL := c.urlPrefix() + ReplicationX + SymmetrixX + symID + XRDFGroup
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
-	resp, err := c.api.DoAndGetResponseBody(
-		ctx, http.MethodPost, URL, c.getDefaultHeaders(), CreateRDFPayload)
-	if err = c.checkResponse(resp); err != nil {
-		return false
+	err := c.api.Post(ctx, URL, c.getDefaultHeaders(), CreateRDFPayload, nil)
+	if err != nil {
+		log.Error("Error in ExecuteCreateRDFGroup: " + err.Error())
+		return err
 	}
-	// Is there any CSI spec to say we need to parse the output and send it instead of just bool
-	//defer resp.Body.Close()
-	//decoder := json.NewDecoder(resp.Body)
-	//if err = decoder.Decode(rdfSG); err != nil {
-	//	return nil, err
-	//}
-	return true
+	log.Debugf("sucessfully created RDF group")
+	return nil
 }
 
 // ExecuteReplicationActionOnSG executes supported replication based actions on the protected SG

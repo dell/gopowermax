@@ -208,6 +208,13 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.GetHostGroupError = false
 	mock.InducedErrors.UpdateHostGroupError = false
 	mock.InducedErrors.DeleteHostGroupError = false
+	mock.InducedErrors.GetFreeRDFGError = false
+	mock.InducedErrors.GetLocalOnlineRDFDirsError = false
+	mock.InducedErrors.GetRemoteRDFPortOnSANError = false
+	mock.InducedErrors.GetLocalOnlineRDFPortsError = false
+	mock.InducedErrors.GetLocalRDFPortDetailsError = false
+	mock.InducedErrors.CreateRDFGroupError = false
+	mock.InducedErrors.GetRDFGroupError = false
 	switch errorType {
 	case "InvalidJSON":
 		mock.InducedErrors.InvalidJSON = true
@@ -331,6 +338,20 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.GetStorageGroupPerfKeyError = true
 	case "GetArrayPerfKeyError":
 		mock.InducedErrors.GetArrayPerfKeyError = true
+	case "GetFreeRDFGError":
+		mock.InducedErrors.GetFreeRDFGError = true
+	case "GetLocalOnlineRDFDirsError":
+		mock.InducedErrors.GetLocalOnlineRDFDirsError = true
+	case "GetRemoteRDFPortOnSANError":
+		mock.InducedErrors.GetRemoteRDFPortOnSANError = true
+	case "GetLocalOnlineRDFPortsError":
+		mock.InducedErrors.GetLocalOnlineRDFPortsError = true
+	case "GetLocalRDFPortDetailsError":
+		mock.InducedErrors.GetLocalRDFPortDetailsError = true
+	case "CreateRDFGroupError":
+		mock.InducedErrors.CreateRDFGroupError = true
+	case "GetRDFGroupError":
+		mock.InducedErrors.GetRDFGroupError = true
 	case "none":
 	default:
 		return fmt.Errorf("unknown errorType: %s", errorType)
@@ -1702,6 +1723,14 @@ func (c *unitContext) iCallAddVolumesToProtectedStorageGroup() error {
 	return nil
 }
 
+func (c *unitContext) iCallCreateVolumeInProtectedStorageGroupSWithNameAndSize(volumeName string, sizeInCylinders int) error {
+	volOpts := make(map[string]interface{})
+	volOpts["capacityUnit"] = "CYL"
+	volOpts["enableMobility"] = "false"
+	c.vol, c.err = c.client.CreateVolumeInProtectedStorageGroupS(context.TODO(), symID, mock.DefaultRemoteSymID, mock.DefaultProtectedStorageGroup, mock.DefaultProtectedStorageGroup, volumeName, sizeInCylinders, volOpts)
+	return nil
+}
+
 func (c *unitContext) iCallRemoveVolumesFromProtectedStorageGroup() error {
 	_, c.err = c.client.RemoveVolumesFromProtectedStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, mock.DefaultRemoteSymID, mock.DefaultStorageGroup, false, c.volIDList...)
 	return nil
@@ -1714,6 +1743,71 @@ func (c *unitContext) iCallCreateRDFPair() error {
 
 func (c *unitContext) iCallExecuteAction(action string) error {
 	c.err = c.client.ExecuteReplicationActionOnSG(context.TODO(), symID, action, mock.DefaultStorageGroup, fmt.Sprintf("%d", mock.DefaultRDFGNo), false, false, false)
+	return nil
+}
+
+func (c *unitContext) iCallGetFreeLocalAndRemoteRDFg() error {
+	_, c.err = c.client.GetFreeLocalAndRemoteRDFg(context.TODO(), mock.DefaultSymmetrixID, mock.DefaultRemoteSymID)
+	return nil
+}
+
+func (c *unitContext) iCallGetLocalOnlineRDFDirs() error {
+	_, c.err = c.client.GetLocalOnlineRDFDirs(context.TODO(), mock.DefaultSymmetrixID)
+	return nil
+}
+
+func (c *unitContext) iCallGetLocalOnlineRDFPorts() error {
+	_, c.err = c.client.GetLocalOnlineRDFPorts(context.TODO(), mock.DefaultRDFDir, mock.DefaultRemoteSymID)
+	return nil
+}
+func (c *unitContext) iCallGetLocalRDFPortDetails() error {
+	_, c.err = c.client.GetLocalRDFPortDetails(context.TODO(), mock.DefaultSymmetrixID, mock.DefaultRDFDir, mock.DefaultRDFPort)
+	return nil
+}
+func (c *unitContext) iCallGetRDFGroupListWithQuery(query string) error {
+	if query != "" {
+		switch query {
+		case "remote_symmetrix_id":
+			_, c.err = c.client.GetRDFGroupList(context.TODO(), mock.DefaultSymmetrixID, types.QueryParams{query: mock.DefaultRemoteSymID})
+		case "volume_count":
+			_, c.err = c.client.GetRDFGroupList(context.TODO(), mock.DefaultSymmetrixID, types.QueryParams{query: 1})
+		}
+	} else {
+		_, c.err = c.client.GetRDFGroupList(context.TODO(), mock.DefaultSymmetrixID, nil)
+	}
+	return nil
+}
+func (c *unitContext) iCallGetRemoteRDFPortOnSAN() error {
+	_, c.err = c.client.GetRemoteRDFPortOnSAN(context.TODO(), mock.DefaultSymmetrixID, mock.DefaultRDFDir, fmt.Sprintf("%d", mock.DefaultRDFPort))
+	return nil
+}
+
+func (c *unitContext) iCallExecuteCreateRDFGroup() error {
+	createRDFgPayload := new(types.RDFGroupCreate)
+	createRDFgPayload.LocalPorts = []types.RDFPortDetails{
+		{
+			SymmID:     mock.DefaultSymmetrixID,
+			DirNum:     33,
+			DirID:      mock.DefaultRDFDir,
+			PortNum:    mock.DefaultRDFPort,
+			PortOnline: true,
+			PortWWN:    "5000097200007003",
+		},
+	}
+	createRDFgPayload.RemotePorts = []types.RDFPortDetails{
+		{
+			SymmID:     mock.DefaultRemoteSymID,
+			DirNum:     33,
+			DirID:      mock.DefaultRDFDir,
+			PortNum:    mock.DefaultRDFPort,
+			PortOnline: true,
+			PortWWN:    "5000097200007003",
+		},
+	}
+	createRDFgPayload.Label = mock.DefaultRDFLabel
+	createRDFgPayload.LocalRDFNum = mock.DefaultRDFGNo
+	createRDFgPayload.RemoteRDFNum = mock.DefaultRemoteRDFGNo
+	c.err = c.client.ExecuteCreateRDFGroup(context.TODO(), mock.DefaultSymmetrixID, createRDFgPayload)
 	return nil
 }
 
@@ -2070,6 +2164,7 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call GetProtectedStorageGroup$`, c.iCallGetProtectedStorageGroup)
 	s.Step(`^I call GetRDFGroup$`, c.iCallGetRDFGroup)
 	s.Step(`^I call AddVolumesToProtectedStorageGroup$`, c.iCallAddVolumesToProtectedStorageGroup)
+	s.Step(`^I call CreateVolumeInProtectedStorageGroupS with name "([^"]*)" and size (\d+)$`, c.iCallCreateVolumeInProtectedStorageGroupSWithNameAndSize)
 	s.Step(`^the volumes should "([^"]*)" be replicated$`, c.theVolumesShouldBeReplicated)
 	s.Step(`^I call RemoveVolumesFromProtectedStorageGroup$`, c.iCallRemoveVolumesFromProtectedStorageGroup)
 	s.Step(`^I call CreateRDFPair$`, c.iCallCreateRDFPair)
@@ -2086,4 +2181,11 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I get StorageGroupPerfKeys$`, c.iGetStorageGroupPerfKeys)
 	s.Step(`^I call GetArrayPerfKeys$`, c.iCallGetArrayPerfKeys)
 	s.Step(`^I get ArrayPerfKeys$`, c.iGetArrayPerfKeys)
+	s.Step(`^I call GetFreeLocalAndRemoteRDFg$`, c.iCallGetFreeLocalAndRemoteRDFg)
+	s.Step(`^I call ExecuteCreateRDFGroup$`, c.iCallExecuteCreateRDFGroup)
+	s.Step(`^I call GetLocalOnlineRDFDirs$`, c.iCallGetLocalOnlineRDFDirs)
+	s.Step(`^I call GetLocalOnlineRDFPorts$`, c.iCallGetLocalOnlineRDFPorts)
+	s.Step(`^I call GetLocalRDFPortDetails$`, c.iCallGetLocalRDFPortDetails)
+	s.Step(`^^I call GetRDFGroupList with query "([^"]*)"$`, c.iCallGetRDFGroupListWithQuery)
+	s.Step(`^I call GetRemoteRDFPortOnSAN$`, c.iCallGetRemoteRDFPortOnSAN)
 }

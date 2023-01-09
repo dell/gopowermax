@@ -39,6 +39,7 @@ const (
 	PREFIX                       = "/univmax/restapi/" + APIVersion
 	PREFIXNOVERSION              = "/univmax/restapi"
 	PRIVATEPREFIX                = "/univmax/restapi/private/" + APIVersion
+	INTERNALPREFIX               = "/univmax/restapi/internal/100"
 	defaultUsername              = "username"
 	defaultPassword              = "password"
 	Debug                        = false
@@ -47,12 +48,15 @@ const (
 	DefaultProtectedStorageGroup = "CSI-no-srp-async-test-13"
 	DefaultSymmetrixID           = "000197900046"
 	DefaultRemoteSymID           = "000000000013"
+	DefaultRDFDir                = "OR-1C"
+	DefaultRDFPort               = 3
 	PostELMSRSymmetrixID         = "000197900047"
 	DefaultStoragePool           = "SRP_1"
 	DefaultServiceLevel          = "Optimized"
 	DefaultFcStoragePortWWN      = "5000000000000001"
 	DefaultRDFGNo                = 13
 	DefaultRemoteRDFGNo          = 13
+	DefaultRDFLabel              = "csi-mock-test"
 	RemoteArrayHeaderKey         = "RemoteArray"
 	RemoteArrayHeaderValue       = "true"
 )
@@ -198,6 +202,12 @@ var InducedErrors struct {
 	GetVolumesMetricsError             bool
 	GetStorageGroupPerfKeyError        bool
 	GetArrayPerfKeyError               bool
+	GetFreeRDFGError                   bool
+	GetLocalOnlineRDFDirsError         bool
+	GetRemoteRDFPortOnSANError         bool
+	GetLocalOnlineRDFPortsError        bool
+	GetLocalRDFPortDetailsError        bool
+	CreateRDFGroupError                bool
 }
 
 // hasError checks to see if the specified error (via pointer)
@@ -305,6 +315,12 @@ func Reset() {
 	InducedErrors.GetVolumesMetricsError = false
 	InducedErrors.GetStorageGroupPerfKeyError = false
 	InducedErrors.GetArrayPerfKeyError = false
+	InducedErrors.GetFreeRDFGError = false
+	InducedErrors.GetLocalOnlineRDFDirsError = false
+	InducedErrors.GetRemoteRDFPortOnSANError = false
+	InducedErrors.GetLocalOnlineRDFPortsError = false
+	InducedErrors.GetLocalRDFPortDetailsError = false
+	InducedErrors.CreateRDFGroupError = false
 	Data.JSONDir = "mock"
 	Data.VolumeIDToIdentifier = make(map[string]string)
 	Data.VolumeIDToSize = make(map[string]int)
@@ -332,13 +348,13 @@ func Reset() {
 	Data.HostGroupIDToHostGroup = make(map[string]*types.HostGroup)
 	Data.RDFGroup = &types.RDFGroup{
 		RdfgNumber:          DefaultRDFGNo,
-		Label:               "RG_13",
+		Label:               DefaultRDFLabel,
 		RemoteRdfgNumber:    DefaultRDFGNo,
 		RemoteSymmetrix:     DefaultRemoteSymID,
 		NumDevices:          0,
 		TotalDeviceCapacity: 0.0,
 		Modes:               []string{"Asynchronous"},
-		Type:                "VASA_ASYNC",
+		Type:                "Dynamic",
 		Async:               true,
 	}
 	Data.SGRDFInfo = &types.SGRDFInfo{
@@ -481,12 +497,18 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIX+"/replication/capabilities/symmetrix", handleCapabilities)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symID}/snapshot_policy/{snapshotPolicyID}/storagegroup/{storageGroupID}", handleStorageGroupSnapshotPolicy)
 
-	// SRDF
+	//SRDF
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/rdf_group", handleRDFGroup)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/rdf_group/{rdf_no}", handleRDFGroup)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{id}", handleRDFStorageGroup)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{id}/rdf_group", handleRDFStorageGroup)
-	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{id}/rdf_group/{rdf_no}", handleSGRDFInfo)
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{id}/rdf_group/{rdf_no}", handleSGRDF)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/rdf_group/{rdf_no}/volume/{volume_id}", handleRDFDevicePair)
+	router.HandleFunc(INTERNALPREFIX+"/file/symmetrix/{symID}/rdf_group_numbers_free", handleFreeRDF)
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symID}/rdf_director", handleRDFDirector)
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symID}/rdf_director/{dir}/port", handleRDFPort)
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symID}/rdf_director/{dir}/port/{port}", handleRDFPort)
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symID}/rdf_director/{dir}/port/{port}/remote_port", handleRDFRemotePort)
 
 	// Performance Metrics
 	router.HandleFunc(PREFIXNOVERSION+"/performance/StorageGroup/metrics", handleStorageGroupMetrics)
@@ -498,6 +520,103 @@ func getRouter() http.Handler {
 
 	mockRouter = router
 	return router
+}
+
+// GET univmax/restapi/100/replication/symmetrix/{symID}/rdf_director/{dir}/port?online=true
+// GET univmax/restapi/100/replication/symmetrix/{symID}/rdf_director/{dir}/port/{port}
+func handleRDFPort(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if InducedErrors.GetLocalOnlineRDFPortsError {
+		writeError(w, "Could not retrieve local online RDF ports: induced error", http.StatusBadRequest)
+		return
+	}
+	if InducedErrors.GetLocalRDFPortDetailsError {
+		writeError(w, "Could not retrieve local RDF port: induced error", http.StatusBadRequest)
+		return
+	}
+	routeParams := mux.Vars(r)
+	portID := routeParams["port"]
+	if portID != "" {
+		rdfPorts := &types.RDFPortDetails{
+			SymmID:     DefaultSymmetrixID,
+			DirNum:     33,
+			DirID:      DefaultRDFDir,
+			PortNum:    DefaultRDFPort,
+			PortOnline: true,
+			PortWWN:    "5000097200007003",
+		}
+		writeJSON(w, rdfPorts)
+	} else {
+		rdfPorts := &types.RDFPortList{RdfPorts: []string{"3"}}
+		writeJSON(w, rdfPorts)
+	}
+}
+
+// GET univmax/restapi/100/replication/symmetrix/{symID}/rdf_director/{dir}/port/{port}/remote_port
+func handleRDFRemotePort(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if InducedErrors.GetRemoteRDFPortOnSANError {
+		writeError(w, "Could not retrieve remote RDF port: induced error", http.StatusBadRequest)
+		return
+	}
+	routeParams := mux.Vars(r)
+	portID := routeParams["port"]
+	if portID == "" {
+		writeError(w, "portID is nil in request, can not retrieve remote port details", http.StatusBadRequest)
+		return
+	}
+	remotePorts := &types.RemoteRDFPortDetails{
+		RemotePorts: []types.RDFPortDetails{
+			{
+				SymmID:     DefaultRemoteSymID,
+				DirNum:     33,
+				DirID:      DefaultRDFDir,
+				PortNum:    DefaultRDFPort,
+				PortOnline: true,
+				PortWWN:    "5000097200007003",
+			},
+		},
+	}
+	writeJSON(w, remotePorts)
+}
+
+// GET univmax/restapi/100/replication/symmetrix/{symID}/rdf_director?online=true
+func handleRDFDirector(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if InducedErrors.GetLocalOnlineRDFDirsError {
+		writeError(w, "Could not retrieve RDF director: induced error", http.StatusBadRequest)
+		return
+	}
+	dir := &types.RDFDirList{
+		RdfDirs: []string{DefaultRDFDir, "OR-2C"},
+	}
+	writeJSON(w, dir)
+}
+
+// GET univmax/restapi/internal/100/file/symmetrix/{symID}/rdf_group_numbers_free?remote_symmetrix_id={remoteSymID}
+func handleFreeRDF(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if InducedErrors.GetFreeRDFGError {
+		writeError(w, "Could not retrieve free RDF group: induced error", http.StatusBadRequest)
+		return
+	}
+	nxtFreeRDFG := &types.NextFreeRDFGroup{
+		LocalRdfGroup:  []int{DefaultRDFGNo},
+		RemoteRdfGroup: []int{DefaultRDFGNo},
+	}
+	writeJSON(w, nxtFreeRDFG)
 }
 
 // NewVolume creates a new mock volume with the specified characteristics.
@@ -576,25 +695,60 @@ func handleRDFDevicePairInfo(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, rdfDevicePairInfo)
 }
 
+// GET, POST /univmax/restapi/APIVersion/replication/symmetrix/{symID}/rdf_group/
 // GET /univmax/restapi/APIVersion/replication/symmetrix/{symID}/rdf_group/{rdf_no}
 func handleRDFGroup(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
+	if InducedErrors.CreateRDFGroupError {
+		writeError(w, "error creating RDF group: induced error", http.StatusNotFound)
 		return
 	}
 	if InducedErrors.GetRDFGroupError {
 		writeError(w, "the specified RA group does not exist: induced error", http.StatusNotFound)
 		return
 	}
-	routeParams := mux.Vars(r)
-	rdfGroupNumber := routeParams["rdf_no"]
-	if rdfGroupNumber != fmt.Sprintf("%d", Data.RDFGroup.RdfgNumber) {
-		writeError(w, "The specified RA group is not valid", http.StatusNotFound)
-	} else {
-		if InducedErrors.RDFGroupHasPairError {
-			Data.RDFGroup.NumDevices = 1
-		}
+	switch r.Method {
+	case http.MethodGet:
+		routeParams := mux.Vars(r)
+		rdfGroupNumber := routeParams["rdf_no"]
+		ReturnRDFGroup(w, rdfGroupNumber)
+	case http.MethodPost:
 		writeJSON(w, Data.RDFGroup)
+	default:
+		writeError(w, "Method["+r.Method+"] not allowed", http.StatusMethodNotAllowed)
+	}
+
+}
+
+// ReturnRDFGroup - Returns RDF group information from mock cache
+func ReturnRDFGroup(w http.ResponseWriter, rdfg string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	returnRDFGroup(w, rdfg)
+}
+
+func returnRDFGroup(w http.ResponseWriter, rdfg string) {
+	if rdfg != "" {
+		if rdfg != fmt.Sprintf("%d", Data.RDFGroup.RdfgNumber) {
+			writeError(w, "The specified RA group is not valid", http.StatusNotFound)
+		} else {
+			if InducedErrors.RDFGroupHasPairError {
+				Data.RDFGroup.NumDevices = 1
+			}
+			writeJSON(w, Data.RDFGroup)
+		}
+	} else {
+		rdflist := &types.RDFGroupList{
+			RDFGroupCount: 1,
+			RDFGroupIDs: []types.RDFGroupIDL{
+				{
+					RDFGNumber:  1,
+					Label:       "mock",
+					RemoteSymID: DefaultRemoteSymID,
+					GroupType:   "Dynamic",
+				},
+			},
+		}
+		writeJSON(w, rdflist)
 	}
 }
 

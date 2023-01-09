@@ -319,13 +319,13 @@ type Pmax interface {
 	//GetFreeLocalAndRemoteRDFg returns list of Local and Remote Free RDFg in the array
 	GetFreeLocalAndRemoteRDFg(ctx context.Context, localSymmID string, remoteSymmID string) (*types.NextFreeRDFGroup, error)
 
-	// ExecuteCreateRDFGroup fetches Next Free RDFGroup across the arrays. Returns Free RDFGroup from R1 and R2
-	ExecuteCreateRDFGroup(ctx context.Context, symID string, CreateRDFPayload *types.RDFGroupCreate) bool
+	// ExecuteCreateRDFGroup creates a new RDF group based on payload
+	ExecuteCreateRDFGroup(ctx context.Context, symID string, CreateRDFPayload *types.RDFGroupCreate) error
 
-	//GetLocalOnlineRDFDirs returs a List of ONLINE RDF Directors for a given array
+	//GetLocalOnlineRDFDirs returns a List of ONLINE RDF Directors for a given array
 	GetLocalOnlineRDFDirs(ctx context.Context, localSymID string) (*types.RDFDirList, error)
 
-	//GetLocalOnlineRDFPorts returs List of ONLINE RDF Ports associated for a given ONLINE RDF Director
+	//GetLocalOnlineRDFPorts returns List of ONLINE RDF Ports associated for a given ONLINE RDF Director
 	GetLocalOnlineRDFPorts(ctx context.Context, rdfDir string, localSymID string) (*types.RDFPortList, error)
 
 	//GetRemoteRDFPortOnSAN returns an array of Remote RDF Ports on the SAN that are connected to given local RDF Dir:Port
