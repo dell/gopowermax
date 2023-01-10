@@ -109,7 +109,7 @@ func (c *Client) GetStorageGroupMetrics(ctx context.Context, symID string, stora
 
 // GetVolumesMetrics returns a list of Volume performance metrics
 func (c *Client) GetVolumesMetrics(ctx context.Context, symID string, storageGroups string, metricsQuery []string, firstAvailableTime, lastAvailableTime int64) (*types.VolumeMetricsIterator, error) {
-	defer c.TimeSpent("GetStorageGroupMetrics", time.Now())
+	defer c.TimeSpent("GetVolumesMetrics", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
