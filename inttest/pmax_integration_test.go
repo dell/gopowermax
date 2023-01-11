@@ -2125,3 +2125,83 @@ func TestGetHostGroupIDs(t *testing.T) {
 	}
 
 }
+
+func TestGetStorageGroupPerfKeysAndMetrics(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+	}
+	queryParams := []string{"HostMBReads"}
+	perfKeys, err := client.GetStorageGroupPerfKeys(context.TODO(), symmetrixID)
+	if err != nil {
+		t.Errorf("Failed to call perf keys API")
+		return
+	}
+	lastTime := int64(0)
+	firstTime := int64(0)
+	for _, storagePerfKey := range perfKeys.StorageGroupInfos {
+		if storagePerfKey.StorageGroupID == defaultStorageGroup {
+			lastTime = storagePerfKey.LastAvailableDate
+			firstTime = storagePerfKey.LastAvailableDate
+		}
+	}
+	if lastTime == int64(0) || firstTime == int64(0) {
+		t.Errorf("Failed to get storage %s perf keys", defaultStorageGroup)
+		return
+	}
+	metrics, err := client.GetStorageGroupMetrics(context.TODO(), symmetrixID, defaultStorageGroup, queryParams, firstTime, lastTime)
+	if err != nil {
+		t.Errorf("Failed to get storage group %s metrics", defaultStorageGroup)
+		return
+	}
+	fmt.Printf("HostMBReads of storage group %s: %f \n", defaultStorageGroup, metrics.ResultList.Result[0].HostMBReads)
+}
+
+func TestGetVolumesMetrics(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+	}
+	queryParams := []string{"MBRead"}
+	// Ensure that default SG has at least 1 vol
+	now := time.Now()
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
+	fmt.Printf("volumeName: %s\n", volumeName)
+	volOpts := make(map[string]interface{})
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 10, volOpts)
+	defer cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	perfKeys, err := client.GetArrayPerfKeys(context.TODO())
+	if err != nil {
+		t.Errorf("Failed to call perf keys API")
+		return
+	}
+	lastTime := int64(0)
+	firstTime := int64(0)
+	for _, storagePerfKey := range perfKeys.ArrayInfos {
+		if storagePerfKey.SymmetrixID == symmetrixID {
+			lastTime = storagePerfKey.LastAvailableDate
+			firstTime = storagePerfKey.LastAvailableDate
+		}
+	}
+	if lastTime == int64(0) || firstTime == int64(0) {
+		t.Errorf("Failed to get array %s perf keys", symmetrixID)
+		return
+	}
+	metrics, err := client.GetVolumesMetrics(context.TODO(), symmetrixID, defaultStorageGroup, queryParams, firstTime, lastTime)
+	if err != nil {
+		t.Errorf("Failed to get volume in storage group %s Metrics", defaultStorageGroup)
+		return
+	}
+	fmt.Printf("MBRead of volume %s: %f \n", metrics.ResultList.Result[0].VolumeID, metrics.ResultList.Result[0].VolumeResult[0].MBRead)
+}
