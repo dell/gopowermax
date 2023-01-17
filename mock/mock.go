@@ -2864,6 +2864,7 @@ func handleStorageGroupMetrics(w http.ResponseWriter, r *http.Request) {
 		ReadResponseTime:  0.0,
 		WriteResponseTime: 0.0,
 		AllocatedCapacity: 0.0,
+		AvgIOSize:         0.0,
 		Timestamp:         1671091500000,
 	}
 	metricsIterator := &types.StorageGroupMetricsIterator{

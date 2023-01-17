@@ -49,6 +49,7 @@ type StorageGroupMetric struct {
 	ReadResponseTime  float64 `json:"ReadResponseTime"`
 	WriteResponseTime float64 `json:"WriteResponseTime"`
 	AllocatedCapacity float64 `json:"AllocatedCapacity"`
+	AvgIOSize         float64 `json:"AvgIOSize"`
 	Timestamp         int64   `json:"timestamp"`
 }
 
