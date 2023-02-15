@@ -68,7 +68,7 @@ func (c *Client) GetSnapVolumeList(ctx context.Context, symID string, queryParam
 		log.Error("GetSnapVolumeList failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
@@ -76,6 +76,10 @@ func (c *Client) GetSnapVolumeList(ctx context.Context, symID string, queryParam
 	snapVolList := &types.SymVolumeList{}
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(snapVolList); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return snapVolList, nil
@@ -95,14 +99,17 @@ func (c *Client) GetVolumeSnapInfo(ctx context.Context, symID string, volumeID s
 		log.Error("GetVolumeSnapInfo failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
-
 	snapinfo := &types.SnapshotVolumeGeneration{}
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(snapinfo); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return snapinfo, nil
@@ -122,13 +129,16 @@ func (c *Client) GetSnapshotInfo(ctx context.Context, symID, volumeID, snapID st
 		log.Error("GetSnapshotInfo failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 
 	snapshotInfo := new(types.VolumeSnapshot)
 	if err := json.NewDecoder(resp.Body).Decode(snapshotInfo); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return snapshotInfo, nil
@@ -390,7 +400,6 @@ func (c *Client) GetPrivVolumeByID(ctx context.Context, symID string, volumeID s
 		log.Error("GetPrivVolumeByID failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
@@ -399,6 +408,10 @@ func (c *Client) GetPrivVolumeByID(ctx context.Context, symID string, volumeID s
 	privateVolumeIterator := new(types.PrivVolumeIterator)
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(privateVolumeIterator); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return &privateVolumeIterator.ResultList.PrivVolumeList[0], nil

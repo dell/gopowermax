@@ -17,9 +17,10 @@ package pmax
 import (
 	"context"
 	"encoding/json"
-	types "github.com/dell/gopowermax/v2/types/v100"
 	"net/http"
 	"time"
+
+	types "github.com/dell/gopowermax/v2/types/v100"
 )
 
 // The following constants are for the query of performance metrics for pmax
@@ -46,13 +47,16 @@ func (c *Client) GetStorageGroupPerfKeys(ctx context.Context, symID string) (*ty
 		SymmetrixID: symID,
 	}
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodPost, URL, c.getDefaultHeaders(), params)
-	defer resp.Body.Close()
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 	storageGroupInfo := &types.StorageGroupKeysResult{}
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(storageGroupInfo); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return storageGroupInfo, nil
@@ -65,13 +69,16 @@ func (c *Client) GetArrayPerfKeys(ctx context.Context) (*types.ArrayKeysResult, 
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
-	defer resp.Body.Close()
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 	ArrayInfo := &types.ArrayKeysResult{}
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(ArrayInfo); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return ArrayInfo, nil
@@ -95,13 +102,16 @@ func (c *Client) GetStorageGroupMetrics(ctx context.Context, symID string, stora
 		Metrics:        metricsQuery,
 	}
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodPost, URL, c.getDefaultHeaders(), params)
-	defer resp.Body.Close()
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 	metricsList := &types.StorageGroupMetricsIterator{}
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(metricsList); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return metricsList, nil
@@ -125,13 +135,16 @@ func (c *Client) GetVolumesMetrics(ctx context.Context, symID string, storageGro
 		Metrics:                        metricsQuery,
 	}
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodPost, URL, c.getDefaultHeaders(), params)
-	defer resp.Body.Close()
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 	metricsList := &types.VolumeMetricsIterator{}
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(metricsList); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return metricsList, nil

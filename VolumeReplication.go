@@ -57,13 +57,17 @@ func (c *Client) GetFreeLocalAndRemoteRDFg(ctx context.Context, localSymID strin
 		log.Error("GetFreeLocalAndRemoteRDFg failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 
 	freeRdfGroups := new(types.NextFreeRDFGroup)
 	if err := json.NewDecoder(resp.Body).Decode(freeRdfGroups); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return freeRdfGroups, nil
@@ -85,13 +89,17 @@ func (c *Client) GetLocalOnlineRDFDirs(ctx context.Context, localSymID string) (
 		log.Error("GetLocalOnlineRDFDirs failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 
 	rdfDirList := new(types.RDFDirList)
 	if err := json.NewDecoder(resp.Body).Decode(rdfDirList); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return rdfDirList, nil
@@ -114,13 +122,17 @@ func (c *Client) GetLocalOnlineRDFPorts(ctx context.Context, rdfDir string, loca
 		log.Error("GetLocalOnlineRDFPorts failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 
 	rdfPortList := new(types.RDFPortList)
 	if err := json.NewDecoder(resp.Body).Decode(rdfPortList); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return rdfPortList, nil
@@ -143,13 +155,17 @@ func (c *Client) GetRemoteRDFPortOnSAN(ctx context.Context, localSymID string, r
 		log.Error("GetRemoteRDFPortOnSAN failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 
 	remoteRDFPortDetails := new(types.RemoteRDFPortDetails)
 	if err := json.NewDecoder(resp.Body).Decode(remoteRDFPortDetails); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return remoteRDFPortDetails, nil
@@ -172,13 +188,17 @@ func (c *Client) GetLocalRDFPortDetails(ctx context.Context, localSymID string, 
 		log.Error("GetLocalRDFportDetails failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 
 	LocalRDFPortDetails := new(types.RDFPortDetails)
 	if err := json.NewDecoder(resp.Body).Decode(LocalRDFPortDetails); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return LocalRDFPortDetails, nil
@@ -198,13 +218,17 @@ func (c *Client) GetRDFGroupByID(ctx context.Context, symID, rdfGroupNo string) 
 		log.Error("GetRdfGroup failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 
 	rdfGrpInfo := new(types.RDFGroup)
 	if err := json.NewDecoder(resp.Body).Decode(rdfGrpInfo); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return rdfGrpInfo, nil
@@ -237,13 +261,17 @@ func (c *Client) GetRDFGroupList(ctx context.Context, symID string, queryParams 
 		log.Error("GetRdfGroupList failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 
 	rdfGrpList := new(types.RDFGroupList)
 	if err := json.NewDecoder(resp.Body).Decode(rdfGrpList); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return rdfGrpList, nil
@@ -263,13 +291,17 @@ func (c *Client) GetProtectedStorageGroup(ctx context.Context, symID, storageGro
 		log.Error("GetProtectedStorageGroup failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 
 	rdfSgInfo := new(types.RDFStorageGroup)
 	if err := json.NewDecoder(resp.Body).Decode(rdfSgInfo); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return rdfSgInfo, nil
@@ -471,13 +503,17 @@ func (c *Client) CreateSGReplica(ctx context.Context, symID, remoteSymID, rdfMod
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	rdfSG := &types.SGRDFInfo{}
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(rdfSG); err != nil {
 		return nil, err
 	}
 	log.Info(fmt.Sprintf("Successfully created SG replica for %s", sourceSG))
+	err = resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
 	return rdfSG, nil
 }
 
@@ -541,13 +577,17 @@ func (c *Client) CreateRDFPair(ctx context.Context, symID, rdfGroupNo, deviceID,
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	rdfPairList := &types.RDFDevicePairList{}
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(rdfPairList); err != nil {
 		return nil, err
 	}
 	log.Info(fmt.Sprintf("Successfully created volume replica for %s", deviceID))
+	err = resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
 	return rdfPairList, nil
 }
 
@@ -566,13 +606,17 @@ func (c *Client) GetRDFDevicePairInfo(ctx context.Context, symID, rdfGroup, volu
 		log.Error("GetRDFDevicePairInfo failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 
 	rdfDevPairInfo := new(types.RDFDevicePair)
 	if err := json.NewDecoder(resp.Body).Decode(rdfDevPairInfo); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return rdfDevPairInfo, nil
@@ -593,13 +637,17 @@ func (c *Client) GetStorageGroupRDFInfo(ctx context.Context, symID, sgName, rdfG
 		log.Error("GetStorageGroupRDFInfo failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
 
 	sgRdfInfo := new(types.StorageGroupRDFG)
 	if err := json.NewDecoder(resp.Body).Decode(sgRdfInfo); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return sgRdfInfo, nil

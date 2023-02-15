@@ -18,10 +18,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	types "github.com/dell/gopowermax/v2/types/v100"
 	"net/http"
 	"strings"
 	"time"
+
+	types "github.com/dell/gopowermax/v2/types/v100"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -76,7 +77,7 @@ func (c *Client) GetSymmetrixIDList(ctx context.Context) (*types.SymmetrixIDList
 		log.Error("GetSymmetrixIDList failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
@@ -96,6 +97,10 @@ func (c *Client) GetSymmetrixIDList(ctx context.Context) (*types.SymmetrixIDList
 		}
 		symIDList.SymmetrixIDs = allowed
 	}
+	err = resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
 	return symIDList, nil
 }
 
@@ -113,7 +118,6 @@ func (c *Client) GetSymmetrixByID(ctx context.Context, id string) (*types.Symmet
 		log.Error("GetSymmetrixIDList failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
@@ -121,6 +125,10 @@ func (c *Client) GetSymmetrixByID(ctx context.Context, id string) (*types.Symmet
 	symmetrix := &types.Symmetrix{}
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(symmetrix); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return symmetrix, nil

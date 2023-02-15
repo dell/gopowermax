@@ -22,13 +22,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	types "github.com/dell/gopowermax/v2/types/v100"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	types "github.com/dell/gopowermax/v2/types/v100"
+	log "github.com/sirupsen/logrus"
 )
 
 // constants
@@ -253,7 +254,7 @@ func (c *client) DoWithHeaders(
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
+	defer res.Body.Close() // #nosec G307
 
 	// parse the response
 	switch {
@@ -317,7 +318,7 @@ func (c *client) DoAndGetResponseBody(
 	// marshal the message body (assumes json format)
 	if r, ok := body.(io.ReadCloser); ok {
 		req, err = http.NewRequest(method, u.String(), r)
-		defer r.Close()
+		defer r.Close() // #nosec G307
 		if v, ok := headers[HeaderKeyContentType]; ok {
 			req.Header.Set(HeaderKeyContentType, v)
 		} else {
