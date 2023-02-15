@@ -107,14 +107,17 @@ func (c *Client) getVolumeIDsIteratorBase(ctx context.Context, symID string, que
 		log.Error("GetVolumeIDList failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
-
 	iter := &types.VolumeIterator{}
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(iter); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return iter, nil
@@ -140,17 +143,19 @@ func (c *Client) GetVolumeIDsIteratorPage(ctx context.Context, iter *types.Volum
 		log.Error("GetVolumeIDsIteratorPage failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
-
 	result := &types.VolumeResultList{}
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(result); err != nil {
 		return nil, err
 	}
-
+	err = resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
 	volumeIDList := make([]string, to-from+1)
 	for i := range result.VolumeList {
 		volumeIDList[i] = result.VolumeList[i].VolumeIDs
@@ -199,7 +204,12 @@ func (c *Client) GetVolumeIDListInStorageGroup(ctx context.Context, symID string
 func (c *Client) volumeIteratorToVolIDList(ctx context.Context, iter *types.VolumeIterator) ([]string, error) {
 	if iter.MaxPageSize < iter.Count {
 		// The iterator only needs to be deleted if there are more entries than MaxPageSize?
-		defer c.DeleteVolumeIDsIterator(ctx, iter)
+		defer func(c *Client, ctx context.Context, iter *types.VolumeIterator) {
+			err := c.DeleteVolumeIDsIterator(ctx, iter)
+			if err != nil {
+
+			}
+		}(c, ctx, iter)
 	}
 
 	// Get the initial results
@@ -209,7 +219,7 @@ func (c *Client) volumeIteratorToVolIDList(ctx context.Context, iter *types.Volu
 		volumeIDList[i] = result.VolumeList[i].VolumeIDs
 	}
 
-	// Iterate through addiional pages
+	// Iterate through additional pages
 	for from := result.To + 1; from <= iter.Count; {
 		idlist, err := c.GetVolumeIDsIteratorPage(ctx, iter, from, 0)
 		if err != nil {
@@ -239,14 +249,16 @@ func (c *Client) GetVolumeByID(ctx context.Context, symID string, volumeID strin
 		log.Error("GetVolumeByID failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
-
 	volume := &types.Volume{}
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(volume); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return volume, nil
@@ -268,14 +280,16 @@ func (c *Client) GetStorageGroupIDList(ctx context.Context, symID string) (*type
 		log.Error("GetStorageGroupIDList failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
-
 	sgIDList := &types.StorageGroupIDList{}
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(sgIDList); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return sgIDList, nil
@@ -339,13 +353,16 @@ func (c *Client) CreateStorageGroup(ctx context.Context, symID, storageGroupID, 
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 	storageGroup := &types.StorageGroup{}
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(storageGroup); err != nil {
 		return nil, err
 	}
 	log.Info(fmt.Sprintf("Successfully created SG: %s", storageGroupID))
+	err = resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
 	return storageGroup, nil
 }
 
@@ -400,14 +417,18 @@ func (c *Client) GetStorageGroup(ctx context.Context, symID string, storageGroup
 		log.Error("GetStorageGroup failed: " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+
 	if err = c.checkResponse(resp); err != nil {
 		return nil, err
 	}
-
 	storageGroup := &types.StorageGroup{}
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(storageGroup); err != nil {
+		return nil, err
+	}
+
+	err = resp.Body.Close()
+	if err != nil {
 		return nil, err
 	}
 	return storageGroup, nil
@@ -700,7 +721,7 @@ func (c *Client) ExpandVolume(ctx context.Context, symID string, volumeID string
 		},
 	}
 	if rdfGNo > 0 {
-		// This expand is for replicated volume
+		// This expands is for replicated volume
 		payload.EditVolumeActionParam.ExpandVolumeParam.RDFGroupNumber = rdfGNo
 	}
 
@@ -1131,9 +1152,6 @@ func (c *Client) GetInitiatorList(ctx context.Context, symID string, initiatorHB
 	}
 	filter := "?"
 	if inHost {
-		if len(filter) > 1 {
-			filter += "&"
-		}
 		filter += "in_a_host=true"
 	}
 	if initiatorHBA != "" {

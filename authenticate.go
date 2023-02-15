@@ -74,7 +74,6 @@ func (c *Client) Authenticate(ctx context.Context, configConnect *ConfigConnect)
 		doLog(log.WithError(err).Error, "")
 		return err
 	}
-	defer resp.Body.Close()
 
 	// parse the response
 	switch {
@@ -84,6 +83,10 @@ func (c *Client) Authenticate(ctx context.Context, configConnect *ConfigConnect)
 		return c.api.ParseJSONError(resp)
 	}
 	doLog(log.Infoln, "authentication successful")
+	err = resp.Body.Close()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
