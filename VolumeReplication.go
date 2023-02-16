@@ -38,6 +38,7 @@ const (
 	ASYNC          = "ASYNC"
 	METRO          = "METRO"
 	SYNC           = "SYNC"
+	XMigration     = "migration/"
 )
 
 // GetFreeLocalAndRemoteRDFg  gets the next free RDFg available

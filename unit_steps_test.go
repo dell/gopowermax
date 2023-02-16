@@ -586,7 +586,7 @@ func (c *unitContext) iValidateVolumeSize(volumeID string, sizeStr string) error
 }
 
 func (c *unitContext) iCallGetStorageGroupIDList() error {
-	c.storageGroupIDList, c.err = c.client.GetStorageGroupIDList(context.TODO(), symID)
+	c.storageGroupIDList, c.err = c.client.GetStorageGroupIDList(context.TODO(), symID, "", false)
 	return nil
 }
 
