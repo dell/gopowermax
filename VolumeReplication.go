@@ -29,7 +29,7 @@ import (
 // The following constants are for internal use within the pmax library.
 const (
 	XRDFGroup      = "/rdf_group"
-	XFREERDFG      = "/rdf_group_numbers_free?remote_symmetrix_id="
+	XFREERDFG      = "/rdf_group_numbers_free"
 	XRDFDIR        = "/rdf_director/"
 	XRDFONLINEDIR  = "/rdf_director?online=true"
 	XRDFPORT       = "/port/"
@@ -39,6 +39,7 @@ const (
 	METRO          = "METRO"
 	SYNC           = "SYNC"
 	XMigration     = "migration/"
+	XRemoteSymID   = "?remote_symmetrix_id="
 )
 
 // GetFreeLocalAndRemoteRDFg  gets the next free RDFg available
@@ -52,7 +53,10 @@ func (c *Client) GetFreeLocalAndRemoteRDFg(ctx context.Context, localSymID strin
 	defer cancel()
 
 	//Eg: univmax/restapi/internal/100/file/symmetrix/<LocalSID>/rdf_group_numbers_free?remote_symmetrix_id=<remoteSID>
-	URL := c.urlInternalPrefix() + SymmetrixX + localSymID + XFREERDFG + remoteSymID
+	URL := c.urlInternalPrefix() + SymmetrixX + localSymID + XFREERDFG
+	if remoteSymID != "" {
+		URL = fmt.Sprintf("%s?%s%s", URL, XRemoteSymID, remoteSymID)
+	}
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
 		log.Error("GetFreeLocalAndRemoteRDFg failed: " + err.Error())

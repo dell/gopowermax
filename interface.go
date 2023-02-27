@@ -348,7 +348,7 @@ type Pmax interface {
 	//CreateSGMigration create migration session on a storage group
 	CreateSGMigration(ctx context.Context, localSymID, remoteSymID, storageGroup string) (*types.MigrationSession, error)
 	//ModifyMigrationSession updates a migration session on a storage group
-	ModifyMigrationSession(ctx context.Context, localSymID, action, storageGroup string) (*types.MigrationSession, error)
+	ModifyMigrationSession(ctx context.Context, localSymID, action, storageGroup string) error
 	//DeleteMigrationEnvironment deletes a migration environment
 	DeleteMigrationEnvironment(ctx context.Context, localSymID, remoteSymID string) error
 	//GetMigrationEnvironment returns a migration environment

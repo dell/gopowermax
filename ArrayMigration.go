@@ -35,10 +35,10 @@ const (
 
 // ModifyMigrationSession does modification to storage group migration session
 // this is used to do commit, sync, cut over on a migration session
-func (c *Client) ModifyMigrationSession(ctx context.Context, localSymID, action, storageGroup string) (*types.MigrationSession, error) {
+func (c *Client) ModifyMigrationSession(ctx context.Context, localSymID, action, storageGroup string) error {
 	defer c.TimeSpent("ModifyMigrationSession", time.Now())
 	if _, err := c.IsAllowedArray(localSymID); err != nil {
-		return nil, err
+		return err
 	}
 	commitEnvPayload := &types.ModifyMigrationSessionRequest{
 		Action:          action,
@@ -49,22 +49,12 @@ func (c *Client) ModifyMigrationSession(ctx context.Context, localSymID, action,
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 
-	resp, err := c.api.DoAndGetResponseBody(
+	_, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodPut, URL, c.getDefaultHeaders(), commitEnvPayload)
-	if err = c.checkResponse(resp); err != nil {
-		return nil, err
-	}
-
-	decoder := json.NewDecoder(resp.Body)
-	modifiedMgrSession := new(types.MigrationSession)
-	if err = decoder.Decode(modifiedMgrSession); err != nil {
-		return nil, err
-	}
-	err = resp.Body.Close()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return modifiedMgrSession, nil
+	return nil
 }
 
 // CreateMigrationEnvironment validates existence of or creates migration environment between local and remote arrays
