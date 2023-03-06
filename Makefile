@@ -20,7 +20,7 @@ TEST_PATHS=unittest
 debug_port=55555
 
 # These lists contain applicable files 
-srcfiles=		authenticate.go interface.go system.go sloprovisioning.go VolumeSnapshot.go VolumeReplication.go metrics.go
+srcfiles=		authenticate.go interface.go system.go sloprovisioning.go VolumeSnapshot.go VolumeReplication.go metrics.go ArrayMigration.go
 integrationfiles=	inttest/pmax_integration_test.go inttest/pmax_replication_integration_test.go
 unitfiles=		unit_test.go unit_steps_test.go
 
