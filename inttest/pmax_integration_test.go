@@ -421,6 +421,25 @@ func TestGetVolumeIDs(t *testing.T) {
 	fmt.Printf("%d CSI volume IDs\n", len(volumeIDList))
 }
 
+func TestGetVolumeIDsWithParams(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+	params := map[string]string{
+		"tdev": "true",
+	}
+	volumeIDList, err := client.GetVolumeIDListWithParams(context.TODO(), symmetrixID, params)
+	if err != nil || volumeIDList == nil {
+		t.Error("cannot get volumeIDList with params", err.Error())
+		return
+	}
+	fmt.Printf("%d Volume IDs with params\n", len(volumeIDList))
+}
+
 func TestGetVolume(t *testing.T) {
 	if client == nil {
 		err := getClient()

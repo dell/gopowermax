@@ -522,6 +522,17 @@ func (c *unitContext) iCallGetVolumeIDList(volumeIdentifier string) error {
 	return nil
 }
 
+func (c *unitContext) iCallGetVolumeIDListWithParams() error {
+	param := map[string]string{
+		"tdev":   "true",
+		"status": "Ready,<like>Read",
+		"cap_gb": ">10.0",
+		"cap_tb": "=1.0",
+	}
+	c.volList, c.err = c.client.GetVolumeIDListWithParams(context.TODO(), symID, param)
+	return nil
+}
+
 func (c *unitContext) iGetAValidVolumeIDListWithIfNoError(nvols int) error {
 	if c.err != nil {
 		return nil
@@ -2024,6 +2035,7 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I get a valid Volume Object "([^"]*)" if no error$`, c.iGetAValidVolumeObjectIfNoError)
 	s.Step(`^I call GetVolumeIDList "([^"]*)"$`, c.iCallGetVolumeIDList)
 	s.Step(`^I get a valid VolumeIDList with (\d+) if no error$`, c.iGetAValidVolumeIDListWithIfNoError)
+	s.Step(`^I call GetVolumeIDListWithParams`, c.iCallGetVolumeIDListWithParams)
 	s.Step(`^I call GetStorageGroupIDList$`, c.iCallGetStorageGroupIDList)
 	s.Step(`^I get a valid StorageGroupIDList if no errors$`, c.iGetAValidStorageGroupIDListIfNoErrors)
 	s.Step(`^I call GetStorageGroup "([^"]*)"$`, c.iCallGetStorageGroup)
