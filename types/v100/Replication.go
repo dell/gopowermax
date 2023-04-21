@@ -206,7 +206,7 @@ type CreateSGSRDF struct {
 	ExecutionOption        string `json:"executionOption"`
 }
 
-//SGRDFInfo contains parameters to hold srdf information of a storage group {in u4p a.k.a "storageGroupRDFg"}
+// SGRDFInfo contains parameters to hold srdf information of a storage group {in u4p a.k.a "storageGroupRDFg"}
 type SGRDFInfo struct {
 	SymmetrixID               string   `json:"symmetrixId"`
 	StorageGroupName          string   `json:"storageGroupName"`
@@ -233,12 +233,12 @@ type SGRDFInfo struct {
 	ConsistencyProtectionHop2 string   `json:"consistency_protection_hop2"`
 }
 
-//SGRDFGList contains list of all RDF enabled storage groups {in u4p a.k.a "storageGroupRDFg"}
+// SGRDFGList contains list of all RDF enabled storage groups {in u4p a.k.a "storageGroupRDFg"}
 type SGRDFGList struct {
 	RDFGList []string `json:"rdfgs"`
 }
 
-//RDFStorageGroup contains information about protected SG {in u4p a.k.a "StorageGroup"}
+// RDFStorageGroup contains information about protected SG {in u4p a.k.a "StorageGroup"}
 type RDFStorageGroup struct {
 	Name                        string                  `json:"name"`
 	SymmetrixID                 string                  `json:"symmetrixId"`
