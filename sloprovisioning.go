@@ -29,6 +29,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// TODO: Remove
 // The follow constants are for internal use within the pmax library.
 const (
 	SLOProvisioningX       = "sloprovisioning/"
