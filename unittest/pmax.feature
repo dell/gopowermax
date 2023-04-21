@@ -1161,6 +1161,19 @@ Scenario Outline: Test GetHostList
     | "Test-HostGroup-1"    | "GetHostGroupListError"            | "induced error"                                       | ""        |
     | "Test-HostGroup-1"    | "none"                             | "ignored as it is not managed"                        | "ignored" |
 
+  Scenario Outline: Test cases for GetVolumeIDList
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I have <nvols> volumes
+    And I induce error <induced>
+    When I call GetVolumeIDListWithParams
+    Then the error message contains <errormsg>
+    And I get a valid VolumeIDList with <vols> if no error
+
+    Examples:
+    | nvols      | vols  | induced                    | errormsg                      | arrays    |
+    | 7          | 7     | "none"                     | "none"                        | ""        |
+    | 5          | 5     | "none"                     | "ignored as it is not managed"| "ignore"  |
 
   Scenario Outline: Test GetStorageGroupMetrics
     Given a valid connection

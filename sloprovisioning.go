@@ -93,6 +93,37 @@ func (c *Client) GetVolumesInStorageGroupIterator(ctx context.Context, symID str
 	return c.getVolumeIDsIteratorBase(ctx, symID, query)
 }
 
+// GetVolumeIDsIteratorWithParams returns an iterator of a list of volumes with query parameters
+// For multiple parameters in single field, use ',' to separate the values
+func (c *Client) GetVolumeIDsIteratorWithParams(ctx context.Context, symID string, queryParams map[string]string) (*types.VolumeIterator, error) {
+	defer c.TimeSpent("GetVolumeIDsIteratorWithParams", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+
+	query := ""
+	if queryParams != nil {
+		query += "?"
+		for key, val := range queryParams {
+			for _, subVal := range strings.Split(val, ",") {
+				// if value starts with > or <, directly add it
+				if regexp.MustCompile("^[><]\\d+(\\.\\d+)?$").MatchString(subVal) {
+					query += fmt.Sprintf("%s%s", key, val)
+				} else {
+					// remove the first '='
+					if subVal[0] == '=' {
+						subVal = subVal[1:]
+					}
+					query += fmt.Sprintf("%s=%s", key, subVal)
+				}
+				query += "&"
+			}
+		}
+		query = query[:len(query)-1]
+	}
+	return c.getVolumeIDsIteratorBase(ctx, symID, query)
+}
+
 // GetVolumeIDsIterator returns a VolumeIDs Iterator. It generally fetches the first page in the result as part of the operation.
 func (c *Client) getVolumeIDsIteratorBase(ctx context.Context, symID string, query string) (*types.VolumeIterator, error) {
 	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XVolume
@@ -196,6 +227,19 @@ func (c *Client) GetVolumeIDList(ctx context.Context, symID string, volumeIdenti
 // GetVolumeIDListInStorageGroup - Gets a list of volume in a SG
 func (c *Client) GetVolumeIDListInStorageGroup(ctx context.Context, symID string, storageGroupID string) ([]string, error) {
 	iter, err := c.GetVolumesInStorageGroupIterator(ctx, symID, storageGroupID)
+	if err != nil {
+		return nil, err
+	}
+	return c.volumeIteratorToVolIDList(ctx, iter)
+}
+
+// GetVolumeIDListWithParams - Gets a list of volume ids with parameters
+func (c *Client) GetVolumeIDListWithParams(ctx context.Context, symID string, queryParams map[string]string) ([]string, error) {
+	defer c.TimeSpent("GetVolumeIDListWithParams", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	iter, err := c.GetVolumeIDsIteratorWithParams(ctx, symID, queryParams)
 	if err != nil {
 		return nil, err
 	}

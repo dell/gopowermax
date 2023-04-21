@@ -70,6 +70,9 @@ type Pmax interface {
 	// GetVolumesInStorageGroupIterator returns a list of volumes for a given StorageGroup
 	GetVolumesInStorageGroupIterator(ctx context.Context, symID string, storageGroupID string) (*types.VolumeIterator, error)
 
+	// GetVolumeIDsIteratorWithParams returns an iterator of a list of volumes with query parameters
+	GetVolumeIDsIteratorWithParams(ctx context.Context, symID string, queryParams map[string]string) (*types.VolumeIterator, error)
+
 	// GetVolumeIDsIteraotrPage gets a page of volume ids from a Volume iterator.
 	GetVolumeIDsIteratorPage(ctx context.Context, iter *types.VolumeIterator, from, to int) ([]string, error)
 
@@ -84,6 +87,9 @@ type Pmax interface {
 
 	// GetVolumeIDListInStorageGroup returns a list of volume IDs that are associated with the StorageGroup
 	GetVolumeIDListInStorageGroup(ctx context.Context, symID string, storageGroupID string) ([]string, error)
+
+	// GetVolumeIDListWithParams - Gets a list of volume ids with parameters
+	GetVolumeIDListWithParams(ctx context.Context, symID string, queryParams map[string]string) ([]string, error)
 
 	// GetVolumeByID returns a Volume given the volumeID.
 	GetVolumeByID(ctx context.Context, symID string, volumeID string) (*types.Volume, error)

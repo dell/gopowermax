@@ -1,6 +1,6 @@
 package v100
 
-//MigrationEnv related data types
+// MigrationEnv related data types
 type MigrationEnv struct {
 	ArrayID               string `json:"arrayId"`
 	StorageGroupCount     int    `json:"storageGroupCount"`
@@ -8,13 +8,13 @@ type MigrationEnv struct {
 	Local                 bool   `json:"local"`
 }
 
-//MigrationStorageGroups contains list of storage group for migration
+// MigrationStorageGroups contains list of storage group for migration
 type MigrationStorageGroups struct {
 	StorageGroupIDList []string `json:"name"`
 	MigratingNameList  []string `json:"migratingName"`
 }
 
-//MigrationSession contains information about device pairs, source and target masking views
+// MigrationSession contains information about device pairs, source and target masking views
 type MigrationSession struct {
 	SourceArray       string                 `json:"sourceArray"`
 	TargetArray       string                 `json:"targetArray"`
@@ -29,19 +29,19 @@ type MigrationSession struct {
 	Type              string                 `json:"type"`
 }
 
-//ModifyMigrationSessionRequest contains param to modify a migration session
+// ModifyMigrationSessionRequest contains param to modify a migration session
 type ModifyMigrationSessionRequest struct {
 	Action          string `json:"action"`
 	ExecutionOption string `json:"executionOption"`
 }
 
-//CreateMigrationEnv param creates migration environment
+// CreateMigrationEnv param creates migration environment
 type CreateMigrationEnv struct {
 	OtherArrayID    string `json:"otherArrayId"`
 	ExecutionOption string `json:"executionOption"`
 }
 
-//MigrationDevicePairs contains device pair information amidst migration
+// MigrationDevicePairs contains device pair information amidst migration
 type MigrationDevicePairs struct {
 	SrcVolumeName string `json:"srcVolumeName"`
 	InvalidSrc    bool   `json:"invalidSrc"`
@@ -51,7 +51,7 @@ type MigrationDevicePairs struct {
 	MissingTgt    bool   `json:"missingTgt"`
 }
 
-//SourceMaskingView contains source masking view information
+// SourceMaskingView contains source masking view information
 type SourceMaskingView struct {
 	Name           string         `json:"name"`
 	Invalid        bool           `json:"invalid"`
@@ -61,7 +61,7 @@ type SourceMaskingView struct {
 	PortGroup      PortGroups     `json:"portGroup"`
 }
 
-//TargetMaskingView contains target masking view information
+// TargetMaskingView contains target masking view information
 type TargetMaskingView struct {
 	Name           string         `json:"name"`
 	Invalid        bool           `json:"invalid"`
@@ -71,7 +71,7 @@ type TargetMaskingView struct {
 	PortGroup      PortGroups     `json:"portGroup"`
 }
 
-//InitiatorGroup contains initiator group information
+// InitiatorGroup contains initiator group information
 type InitiatorGroup struct {
 	Name         string       `json:"name"`
 	Invalid      bool         `json:"invalid"`
@@ -80,14 +80,14 @@ type InitiatorGroup struct {
 	Initiator    []Initiators `json:"initiator"`
 }
 
-//Initiators contains initiator group information
+// Initiators contains initiator group information
 type Initiators struct {
 	Name    string `json:"name"`
 	WWN     string `json:"wwn"`
 	Invalid bool   `json:"invalid"`
 }
 
-//PortGroups contains port group information
+// PortGroups contains port group information
 type PortGroups struct {
 	Name         string  `json:"name"`
 	Invalid      bool    `json:"invalid"`
@@ -96,7 +96,7 @@ type PortGroups struct {
 	Ports        []Ports `json:"ports"`
 }
 
-//Ports contains port information
+// Ports contains port information
 type Ports struct {
 	Name    string `json:"name"`
 	Invalid bool   `json:"invalid"`
