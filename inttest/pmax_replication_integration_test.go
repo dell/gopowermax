@@ -953,3 +953,164 @@ func TestGetLocalOnlineRDFDirs(t *testing.T) {
 	}
 	fmt.Printf("Local Online RDF Dirs fetched successfully: %v\n", rdfGrpInfo)
 }
+
+func TestCreateSnapshotPolicy(t *testing.T) {
+
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+	localSnapshotPolicyDetails := &types.LocalSnapshotPolicyDetails{
+		Secure:        false,
+		SnapshotCount: 24,
+	}
+
+	optionalPayload := make(map[string]interface{})
+	optionalPayload["localSnapshotPolicyDetails"] = localSnapshotPolicyDetails
+
+	targets, err := client.CreateSnapshotPolicy(context.TODO(), symmetrixID, "WeeklyDefaultnewTest", "1 Hour", 10, 2, 2, optionalPayload)
+	if err != nil {
+		t.Error("Error Creating snapshot policy" + err.Error())
+		return
+	}
+	fmt.Printf("Created snapshot policy: %v\n", targets.SnapshotPolicyName)
+}
+
+func TestGetSnapshotPolicy(t *testing.T) {
+
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	targets, err := client.GetSnapshotPolicy(context.TODO(), symmetrixID, "WeeklyDefaultnewTest")
+	if err != nil {
+		t.Error("Error calling GetSnapshotPolicy " + err.Error())
+		return
+	}
+	fmt.Printf("Snapshot Policy name: %v\n", targets.SnapshotPolicyName)
+}
+
+func TestUpdateSnapshotPolicyForModify(t *testing.T) {
+
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+	modifySnapshotPolicyParam := &types.ModifySnapshotPolicyParam{
+		SnapshotPolicyName: "WeeklyDefaultnewTest1",
+		IntervalMinutes:    60,
+		OffsetMins:         10,
+	}
+
+	optionalPayload := make(map[string]interface{})
+	optionalPayload["modify"] = modifySnapshotPolicyParam
+
+	error := client.UpdateSnapshotPolicy(context.TODO(), symmetrixID, "Modify", "WeeklyDefaultnewTest", optionalPayload)
+	if error != nil {
+		t.Error("Error Updating snapshot policy " + error.Error())
+		return
+	}
+	fmt.Printf("Updated Snapshot Policy: Modify")
+}
+
+func TestUpdateSnapshotPolicyForAddStorageGroup(t *testing.T) {
+
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+	snapshotPolicySgName := "test-snapshot-policy-sg"
+	// Create a storage group
+	_, err := createStorageGroup(symmetrixID, snapshotPolicySgName, "None", defaultServiceLevel, false, nil)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	associateStorageGroupParam := &types.AssociateStorageGroupParam{
+		StorageGroupName: []string{snapshotPolicySgName},
+	}
+
+	optionalPayload := make(map[string]interface{})
+	optionalPayload["associateStorageGroupParam"] = associateStorageGroupParam
+
+	error := client.UpdateSnapshotPolicy(context.TODO(), symmetrixID, "AssociateToStorageGroups", "WeeklyDefaultnewTest1", optionalPayload)
+	if error != nil {
+		t.Error("Error Updating snapshot policy " + error.Error())
+		deleteStorageGroup(symmetrixID, snapshotPolicySgName)
+		return
+	}
+	fmt.Printf("Updated Snapshot Policy: AssociateToStorageGroups")
+}
+func TestUpdateSnapshotPolicyForRemoveStorageGroup(t *testing.T) {
+
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+	snapshotPolicySgName := "test-snapshot-policy-sg"
+	disassociateStorageGroupParam := &types.DisassociateStorageGroupParam{
+		StorageGroupName: []string{snapshotPolicySgName},
+	}
+
+	optionalPayload := make(map[string]interface{})
+	optionalPayload["disassociateStorageGroupParam"] = disassociateStorageGroupParam
+
+	error := client.UpdateSnapshotPolicy(context.TODO(), symmetrixID, "DisassociateFromStorageGroups", "WeeklyDefaultnewTest1", optionalPayload)
+	if error != nil {
+		t.Error("Error Updating snapshot policy " + error.Error())
+		return
+	}
+	fmt.Printf("Updated Snapshot Policy: DisassociateFromStorageGroups")
+}
+
+func TestGetSnapshotPolicyList(t *testing.T) {
+
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+	targets, err := client.GetSnapshotPolicyList(context.TODO(), symmetrixID)
+	if err != nil {
+		t.Error("Error calling GetSnapshotPolicyList " + err.Error())
+		return
+	}
+	fmt.Printf("Snapshot Policy names: %v\n", targets.SnapshotPolicyIds)
+}
+
+func TestDeleteSnapshotPolicy(t *testing.T) {
+
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	error := client.DeleteSnapshotPolicy(context.TODO(), symmetrixID, "WeeklyDefaultnewTest1")
+	if error != nil {
+		t.Error("Error Deleting Snapshot Policy " + error.Error())
+		return
+	}
+	fmt.Printf("Deleted snapshot policy")
+}

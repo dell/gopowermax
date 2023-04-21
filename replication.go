@@ -256,3 +256,172 @@ func (c *Client) DeleteStorageGroupSnapshot(ctx context.Context, symID string, s
 	}
 	return err
 }
+
+// GetSnapshotPolicy returns a SnapshotPolicy given the Symmetrix ID and SnapshotPolicy ID (which is really a name).
+func (c *Client) GetSnapshotPolicy(ctx context.Context, symID string, snapshotPolicyID string) (*types.SnapshotPolicy, error) {
+	defer c.TimeSpent("GetSnapshotPolicy", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	URL := c.urlPrefix() + Replication + SymmetrixX + symID + SnapshotPolicy + "/" + snapshotPolicyID
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	resp, err := c.api.DoAndGetResponseBody(
+		ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	if err != nil {
+		log.Error("GetSnapshotPolicy failed: " + err.Error())
+		return nil, err
+	}
+
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+	snapshotPolicy := &types.SnapshotPolicy{}
+	decoder := json.NewDecoder(resp.Body)
+	if err = decoder.Decode(snapshotPolicy); err != nil {
+		return nil, err
+	}
+
+	err = resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	return snapshotPolicy, nil
+}
+
+// DeleteSnapshotPolicy deletes a SnapshotPolicy entry.
+func (c *Client) DeleteSnapshotPolicy(ctx context.Context, symID string, snapshotPolicyID string) error {
+	defer c.TimeSpent("DeleteSnapshotPolicy", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return err
+	}
+	URL := c.urlPrefix() + Replication + SymmetrixX + symID + SnapshotPolicy + "/" + snapshotPolicyID
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Delete(ctx, URL, c.getDefaultHeaders(), nil)
+	if err != nil {
+		log.Error("DeleteSnapshotPolicy failed: " + err.Error())
+		return err
+	}
+	log.Info(fmt.Sprintf("Successfully deleted SnapshotPolicy: %s", snapshotPolicyID))
+	return nil
+}
+
+// CreateSnapshotPolicy creates a Snapshot policy and returns a types.SnapshotPolicy.
+func (c *Client) CreateSnapshotPolicy(ctx context.Context, symID string, snapshotPolicyID string, interval string, offsetMins int32, complianceCountWarn int64,
+	complianceCountCritical int64, optionalPayload map[string]interface{}) (*types.SnapshotPolicy, error) {
+	defer c.TimeSpent("CreateSnapshotPolicy", time.Now())
+
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+
+	snapshotPolicyParam := &types.CreateSnapshotPolicyParam{
+		SnapshotPolicyName:      snapshotPolicyID,
+		ExecutionOption:         types.ExecutionOptionSynchronous,
+		Interval:                interval,
+		OffsetMins:              offsetMins,
+		ComplianceCountWarning:  complianceCountWarn,
+		ComplianceCountCritical: complianceCountCritical,
+	}
+
+	if len(optionalPayload) > 0 {
+		cloudSnapshotPolicyDetails, okCloud := optionalPayload["cloudSnapshotPolicyDetails"]
+		if okCloud {
+			snapshotPolicyParam.CloudSnapshotPolicyDetails = cloudSnapshotPolicyDetails.(*types.CloudSnapshotPolicyDetails)
+		}
+		localSnapshotPolicyDetails, okLocal := optionalPayload["localSnapshotPolicyDetails"]
+		if okLocal {
+			snapshotPolicyParam.LocalSnapshotPolicyDetails = localSnapshotPolicyDetails.(*types.LocalSnapshotPolicyDetails)
+		}
+	}
+
+	snapshotPolicy := &types.SnapshotPolicy{}
+	Debug = true
+	ifDebugLogPayload(snapshotPolicyParam)
+	URL := c.urlPrefix() + Replication + SymmetrixX + symID + SnapshotPolicy
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Post(ctx, URL, c.getDefaultHeaders(), snapshotPolicyParam, snapshotPolicy)
+	if err != nil {
+		log.Error("Create Snapshot Policy failed: " + err.Error())
+		return nil, err
+	}
+	log.Info(fmt.Sprintf("Successfully created Snapshot Policy: %s", snapshotPolicyID))
+	return snapshotPolicy, nil
+}
+
+// UpdateSnapshotPolicy is a general method to update a SnapshotPolicy (PUT operation) based on the action using a UpdateSnapshotPolicyPayload.
+func (c *Client) UpdateSnapshotPolicy(ctx context.Context, symID string, action string, snapshotPolicyID string, optionalPayload map[string]interface{}) error {
+	defer c.TimeSpent("UpdateSnapshotPolicy", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return err
+	}
+
+	updateSnapshotPolicyParam := &types.UpdateSnapshotPolicyParam{
+		Action:          action,
+		ExecutionOption: types.ExecutionOptionSynchronous,
+	}
+
+	if len(optionalPayload) > 0 {
+		modifySnapshotPolicyParam, okModify := optionalPayload["modify"]
+		if okModify {
+			updateSnapshotPolicyParam.ModifySnapshotPolicyParam = modifySnapshotPolicyParam.(*types.ModifySnapshotPolicyParam)
+		}
+		associateStorageGroupParam, okAssociate := optionalPayload["associateStorageGroupParam"]
+		if okAssociate {
+			updateSnapshotPolicyParam.AssociateStorageGroupParam = associateStorageGroupParam.(*types.AssociateStorageGroupParam)
+		}
+		disassociateStorageGroupParam, okDisassociate := optionalPayload["disassociateStorageGroupParam"]
+		if okDisassociate {
+			updateSnapshotPolicyParam.DisassociateStorageGroupParam = disassociateStorageGroupParam.(*types.DisassociateStorageGroupParam)
+		}
+	}
+
+	URL := c.urlPrefix() + Replication + SymmetrixX + symID + SnapshotPolicy + "/" + snapshotPolicyID
+	fields := map[string]interface{}{
+		http.MethodPut: URL,
+	}
+
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Put(
+		ctx, URL, c.getDefaultHeaders(), updateSnapshotPolicyParam, nil)
+	if err != nil {
+		log.WithFields(fields).Error("Error in UpdateSnapshotPolicy: " + err.Error())
+		return err
+	}
+	return nil
+}
+
+// GetSnapshotPolicyList returns all the SnapshotPolicy names given the Symmetrix ID
+func (c *Client) GetSnapshotPolicyList(ctx context.Context, symID string) (*types.SnapshotPolicyList, error) {
+	defer c.TimeSpent("GetSnapshotPolicyList", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	URL := c.urlPrefix() + Replication + SymmetrixX + symID + SnapshotPolicy
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	resp, err := c.api.DoAndGetResponseBody(
+		ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	if err != nil {
+		log.Error("GetSnapshotPolicyList failed: " + err.Error())
+		return nil, err
+	}
+
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+	snapshotPolicies := &types.SnapshotPolicyList{}
+	decoder := json.NewDecoder(resp.Body)
+	if err = decoder.Decode(snapshotPolicies); err != nil {
+		return nil, err
+	}
+
+	err = resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	return snapshotPolicies, nil
+}

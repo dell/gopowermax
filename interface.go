@@ -381,4 +381,16 @@ type Pmax interface {
 	GetStorageGroupMigration(ctx context.Context, localSymID string) (*types.MigrationStorageGroups, error)
 	// GetStorageGroupMigrationByID returns migration details for a storage group
 	GetStorageGroupMigrationByID(ctx context.Context, localSymID, storageGroupID string) (*types.MigrationSession, error)
+
+	// GetSnapshotPolicy returns a SnapshotPolicy given the Symmetrix ID and SnapshotPolicy ID (which is really a name).
+	GetSnapshotPolicy(ctx context.Context, symID string, snapshotPolicyID string) (*types.SnapshotPolicy, error)
+	// GetSnapshotPolicyList returns all the SnapshotPolicy names given the Symmetrix ID
+	GetSnapshotPolicyList(ctx context.Context, symID string) (*types.SnapshotPolicyList, error)
+	// DeleteSnapshotPolicy deletes a SnapshotPolicy entry.
+	DeleteSnapshotPolicy(ctx context.Context, symID string, snapshotPolicyID string) error
+	// CreateSnapshotPolicy creates a Snapshot policy and returns a types.SnapshotPolicy.
+	CreateSnapshotPolicy(ctx context.Context, symID string, snapshotPolicyID string, interval string, offsetMins int32, complianceCountWarn int64,
+		complianceCountCritical int64, optionalPayload map[string]interface{}) (*types.SnapshotPolicy, error)
+	// UpdateSnapshotPolicy is a general method to update a SnapshotPolicy (PUT operation) based on the action using a UpdateSnapshotPolicyPayload.
+	UpdateSnapshotPolicy(ctx context.Context, symID string, action string, snapshotPolicyID string, optionalPayload map[string]interface{}) error
 }

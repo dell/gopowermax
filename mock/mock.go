@@ -209,9 +209,15 @@ var InducedErrors struct {
 	GetLocalRDFPortDetailsError            bool
 	CreateRDFGroupError                    bool
 	GetStorageGroupSnapshotError           bool
+	DeleteStorageGroupSnapshotError        bool
 	GetStorageGroupSnapshotSnapError       bool
 	GetStorageGroupSnapshotSnapDetailError bool
 	GetStorageGroupSnapshotSnapModifyError bool
+	GetSnapshotPolicyError                 bool
+	GetSnapshotPolicyListError             bool
+	CreateSnapshotPolicyError              bool
+	ModifySnapshotPolicyError              bool
+	DeleteSnapshotPolicyError              bool
 }
 
 // hasError checks to see if the specified error (via pointer)
@@ -326,6 +332,11 @@ func Reset() {
 	InducedErrors.GetLocalRDFPortDetailsError = false
 	InducedErrors.CreateRDFGroupError = false
 	InducedErrors.GetStorageGroupSnapshotSnapDetailError = false
+	InducedErrors.GetSnapshotPolicyError = false
+	InducedErrors.GetSnapshotPolicyListError = false
+	InducedErrors.CreateSnapshotPolicyError = false
+	InducedErrors.ModifySnapshotPolicyError = false
+	InducedErrors.DeleteSnapshotPolicyError = false
 	Data.JSONDir = "mock"
 	Data.VolumeIDToIdentifier = make(map[string]string)
 	Data.VolumeIDToSize = make(map[string]int)
@@ -528,6 +539,10 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIXNOVERSION+"/performance/StorageGroup/keys", handleStorageGroupPerfKeys)
 	router.HandleFunc(PREFIXNOVERSION+"/performance/Array/keys", handleArrayPerfKeys)
 
+	//Snapshot Policy
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/snapshot_policy/{snapshotPolicyId}", handleGetSnapshotPolicy)
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/snapshot_policy", handleCreateSnapshotPolicy)
+
 	mockRouter = router
 	return router
 }
@@ -536,7 +551,7 @@ func getRouter() http.Handler {
 // PUT /replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot/{snapshotId}/snapid/{snapID}
 // DELETE /replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot/{snapshotId}/snapid/{snapID}
 func handleGetStorageGroupSnapshotsSnapsDetails(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("HANDLING GET STORAGE GROUPS SNAPs Details!!!! \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+
 	if r.Method != http.MethodGet && r.Method != http.MethodPut && r.Method != http.MethodDelete {
 		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -547,6 +562,10 @@ func handleGetStorageGroupSnapshotsSnapsDetails(w http.ResponseWriter, r *http.R
 	}
 	if InducedErrors.GetStorageGroupSnapshotSnapModifyError {
 		writeError(w, "Could not get StorageGroup Snapshots Snap Ids: induced error", http.StatusBadRequest)
+		return
+	}
+	if InducedErrors.DeleteStorageGroupSnapshotError {
+		writeError(w, "Could not delete StorageGroup Snapshots Snap Ids: induced error", http.StatusBadRequest)
 		return
 	}
 	if r.Method == http.MethodGet {
@@ -625,6 +644,103 @@ func handleGetStorageGroupSnapshots(w http.ResponseWriter, r *http.Request) {
 			Timestamp:  "1234",
 		}
 		writeJSON(w, sgCreateSnap)
+	}
+}
+
+// GET /replication/symmetrix/{symid}/snapshot_policy/{snapshotPolicyId}
+// PUT /replication/symmetrix/{symid}/snapshot_policy/{snapshotPolicyId}
+// DELETE /replication/symmetrix/{symid}/snapshot_policy/{snapshotPolicyId}
+func handleGetSnapshotPolicy(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodPut && r.Method != http.MethodDelete {
+		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if InducedErrors.GetSnapshotPolicyError {
+		writeError(w, "Could not get Snapshot Policy : induced error", http.StatusBadRequest)
+		return
+	}
+	if InducedErrors.ModifySnapshotPolicyError {
+		writeError(w, "Could not update Snapshot Policy : induced error", http.StatusBadRequest)
+		return
+	}
+	if InducedErrors.DeleteSnapshotPolicyError {
+		writeError(w, "Could not delete Snapshot Policy : induced error", http.StatusBadRequest)
+		return
+	}
+	if r.Method == http.MethodGet {
+
+		snapPolicy := &types.SnapshotPolicy{
+			SymmetrixID:            "000197902572",
+			SnapshotPolicyName:     "WeeklyDefault",
+			SnapshotCount:          13,
+			IntervalMinutes:        10080,
+			OffsetMinutes:          10074,
+			Suspended:              false,
+			Secure:                 false,
+			LastTimeUsed:           "23:53:15 Sun, 07 May 2023 +0000",
+			StorageGroupCount:      1,
+			ComplianceCountWarning: 10,
+			Type:                   "local",
+		}
+		writeJSON(w, snapPolicy)
+	}
+	if r.Method == http.MethodPut {
+		snapPolicy := &types.SnapshotPolicy{
+			SymmetrixID:            "000197902572",
+			SnapshotPolicyName:     "WeeklyDefault",
+			SnapshotCount:          13,
+			IntervalMinutes:        10080,
+			OffsetMinutes:          10074,
+			Suspended:              false,
+			Secure:                 false,
+			LastTimeUsed:           "23:53:15 Sun, 07 May 2023 +0000",
+			StorageGroupCount:      1,
+			ComplianceCountWarning: 10,
+			Type:                   "local",
+		}
+		writeJSON(w, snapPolicy)
+	}
+}
+
+// POST /replication/symmetrix/{symid}/snapshot_policy
+// GET /replication/symmetrix/{symid}/snapshot_policy
+func handleCreateSnapshotPolicy(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if InducedErrors.CreateSnapshotPolicyError {
+		writeError(w, "Could not Create Snapshot Policy : induced error", http.StatusBadRequest)
+		return
+	}
+	if InducedErrors.GetSnapshotPolicyListError {
+		writeError(w, "Could not get Snapshot Policy List: induced error", http.StatusBadRequest)
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		ids := []string{"Test123", "Test345"}
+		snapPolicyList := &types.SnapshotPolicyList{
+			SnapshotPolicyIds: ids,
+		}
+		writeJSON(w, snapPolicyList)
+	}
+	if r.Method == http.MethodPost {
+
+		snapPolicy := &types.SnapshotPolicy{
+			SymmetrixID:            "000197902572",
+			SnapshotPolicyName:     "WeeklyDefault",
+			SnapshotCount:          13,
+			IntervalMinutes:        10080,
+			OffsetMinutes:          10074,
+			Suspended:              false,
+			Secure:                 false,
+			LastTimeUsed:           "23:53:15 Sun, 07 May 2023 +0000",
+			StorageGroupCount:      1,
+			ComplianceCountWarning: 10,
+			Type:                   "local",
+		}
+		writeJSON(w, snapPolicy)
 	}
 }
 

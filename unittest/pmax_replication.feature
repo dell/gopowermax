@@ -342,3 +342,80 @@ Feature: PMAX replication test
     | "sg_1"           | "123"      | "321"  | "secure"     | "none"               |   ""      | "none"                                   |
     | "sg_1"           | "123"      | "321"  | "persist"    | "none"               |   ""      | "none"                                   |
     | "sg_1"           | "123"      | "321"  | "rename"     | "induced error"      |   ""      | "GetStorageGroupSnapshotSnapModifyError" |
+
+    Scenario Outline: Testing DeleteStorageGroupSnapshot
+    Given a valid connection
+    And I call CreateStorageGroupSnapshot with "sg_1"
+    And I induce error <induced>
+    When I call DeleteStorageGroupSnapshot with <storageGroupID> and <snapshotID> and <snapID>
+    Then the error message contains <errormsg>
+
+    Examples:
+    | storageGroupID  |snapshotID | snapID    | errormsg                 | induced                            |
+    | "sg_1"          |"snapshot_1" | "snap_1"    | "induced error"          | "DeleteStorageGroupSnapshotError"  |
+
+    Scenario Outline: Testing GetSnapshotPolicy
+    Given a valid connection
+    And I call CreateSnapshotPolicy with "sp_1"
+    And I induce error <induced>
+    When I call GetSnapshotPolicy with <snapshotPolicyID>
+    Then the error message contains <errormsg>
+    And I should get snapshot policy information if no error
+
+    Examples:
+    | snapshotPolicyID   | errormsg            | induced                        |
+    | "sp_1"           | "none"                    | "none"                         |
+    | "sp_1"           | "induced error"           | "GetSnapshotPolicyError" |
+
+    
+ Scenario Outline: Testing ModifySnapshotPolicy
+    Given a valid connection
+    And I call CreateSnapshotPolicy with "sp_1"
+    And I induce error <induced>
+    When I call ModifySnapshotPolicy with  <snapshotPolicyID> and <action> and <updatedName>
+    Then the error message contains <errormsg>
+    And I should modify snapshot policy if no error
+
+    Examples:
+    | snapshotPolicyID    | action       | errormsg             | updatedName          | induced                     |        
+    | "sp_1"              | "Modify"     | "none"               |   "sp_1_updated"     |  "none"                     |           
+    | "sp_1"              | "modify"     | "induced error"      |   "sp_1_updated"     | "ModifySnapshotPolicyError" |
+
+Scenario Outline: Testing AddRemoveStorageGrpFromSnapshotPolicy
+    Given a valid connection
+    And I call CreateSnapshotPolicy with "sp_1"
+    And I induce error <induced>
+    When I call AddRemoveStorageGrpFromSnapshotPolicy with  <snapshotPolicyID> and <action> and <sgName>
+    Then the error message contains <errormsg>
+    And I should modify snapshot policy if no error
+
+    Examples:
+    | snapshotPolicyID    | action                          | errormsg    | sgName      | induced   |   
+    | "sp_1"              | "AssociateToStorageGroups"      | "none"      | "sg_1"      |  "none"   |          
+    | "sp_1"              | "DisassociateFromStorageGroups" | "none"      | "sg_1"      |  "none"   |
+    | "sp_1"              | "AssociateToStorageGroups"      | "induced error" |   "sg_1"     |  "ModifySnapshotPolicyError" |
+    | "sp_1"              | "DisassociateFromStorageGroups" | "induced error" |   "sg_1"     |  "ModifySnapshotPolicyError" |
+
+Scenario Outline: Testing Delete Snapshot Policy
+    Given a valid connection
+    And I call CreateSnapshotPolicy with "sp_1"
+    And I induce error <induced>
+    When I call DeleteSnapshotPolicy <snapshotPolicyID>
+    Then the error message contains <errormsg>
+
+    Examples:
+    | snapshotPolicyID   | errormsg                 | induced                        |
+    | "sp_1"           | "none"                    | "none"                         |
+    | "sp_1"           | "induced error"           | "DeleteSnapshotPolicyError" |
+
+ Scenario Outline: Testing GetSnapshotPolicyList
+    Given a valid connection
+    And I induce error <induced>
+    When I call GetSnapshotPolicyList 
+    Then the error message contains <errormsg>
+    And I should get list of snapshot policies  if no error
+
+    Examples:
+    | snapshotPolicyID   | errormsg               | induced                        |
+    | "sp_1"           | "none"                    | "none"                         |
+    | "sp_1"           | "induced error"           | "GetSnapshotPolicyListError" |
