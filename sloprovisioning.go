@@ -32,7 +32,6 @@ import (
 // The follow constants are for internal use within the pmax library.
 const (
 	SLOProvisioningX       = "sloprovisioning/"
-	Replication            = "replication/"
 	SnapshotPolicy         = "/snapshot_policy"
 	SymmetrixX             = "symmetrix/"
 	IteratorX              = "common/Iterator/"

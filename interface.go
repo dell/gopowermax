@@ -133,6 +133,24 @@ type Pmax interface {
 	// This is done synchronously and no jobs are created. HTTP header argument is optional
 	CreateVolumeInProtectedStorageGroupS(ctx context.Context, symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, volumeSize interface{}, volOpts map[string]interface{}, opts ...http.Header) (*types.Volume, error)
 
+	// Get All Storage Group Snapshots
+	GetStorageGroupSnapshots(ctx context.Context, symID string, storageGroupID string, exludeManualSnaps bool, exludeSlSnaps bool) (*types.StorageGroupSnapshot, error)
+
+	// Get a list of Snapids for a particular snapshot
+	GetStorageGroupSnapshotSnapIds(ctx context.Context, symID string, storageGroupID string, snapshotID string) (*types.SnapID, error)
+
+	// Get the details of a storage group snapshot snap
+	GetStorageGroupSnapshotSnap(ctx context.Context, symID string, storageGroupID string, snapshotID, snapID string) (*types.StorageGroupSnap, error)
+
+	// Create a Storage Group Snapshot
+	CreateStorageGroupSnapshot(ctx context.Context, symID string, storageGroupID string, payload *types.CreateStorageGroupSnapshot) (*types.StorageGroupSnap, error)
+
+	//  Modify a Storage Group Snapshot snap
+	ModifyStorageGroupSnapshot(ctx context.Context, symID string, storageGroupID string, snapshotID string, snapID string, payload *types.ModifyStorageGroupSnapshot) (*types.StorageGroupSnap, error)
+
+	// Delete a Storage Group Snapshot snap
+	DeleteStorageGroupSnapshot(ctx context.Context, symID string, storageGroupID string, snapshotID string, snapID string) error
+
 	// DeleteStorageGroup deletes a storage group given a storage group id
 	DeleteStorageGroup(ctx context.Context, symID string, storageGroupID string) error
 

@@ -281,3 +281,64 @@ Feature: PMAX replication test
     | "00007" | "cannot be found"              |   ""      | "none"                   |
     | "00001" | "ignored as it is not managed" | "ignored" | "none"                   |
     | "00001" | "induced error"                |   ""      | "GetPrivVolumeByIDError" |
+
+  Scenario Outline: Testing GetStorageGroupSnapshots
+    Given a valid connection
+    And I call CreateStorageGroupSnapshot with "sg_1"
+    And I induce error <induced>
+    When I call GetStorageGroupSnapshots with <storageGroupID>
+    Then the error message contains <errormsg>
+    And I should get storage group snapshot information if no error
+  
+    Examples:
+    | storageGroupID   | errormsg             | arrays    | induced                        |
+    | "sg_1"           | "none"               |   ""      | "none"                         |
+    | "sg_1"           | "induced error"      |   ""      | "GetStorageGroupSnapshotError" |
+
+  Scenario Outline: Testing GetStorageGroupSnapshotSnapIds
+    Given a valid connection
+    And I call CreateStorageGroupSnapshot with "sg_1"
+    And I induce error <induced>
+    When I call GetStorageGroupSnapshotSnapIds with <storageGroupID> and <snapshotID>
+    Then the error message contains <errormsg>
+    And I should get storage group snapshot snap ids if no error
+  
+    Examples:
+    | storageGroupID   | snapshotID | errormsg             | arrays    | induced                            |
+    | "sg_1"           | "123"      | "none"               |   ""      | "none"                             |
+    | "sg_1"           | "123"      | "induced error"      |   ""      | "GetStorageGroupSnapshotSnapError" |
+
+  Scenario Outline: Testing GetStorageGroupSnapshotSnap
+    Given a valid connection
+    And I call CreateStorageGroupSnapshot with "sg_1"
+    And I induce error <induced>
+    When I call GetStorageGroupSnapshotSnap with <storageGroupID> and <snapshotID> and <snapID>
+    Then the error message contains <errormsg>
+    And I should get storage group snapshot snap detail information if no error
+  
+    Examples:
+    | storageGroupID   | snapshotID | snapID | errormsg             | arrays    | induced                                  |
+    | "sg_1"           | "123"      | "321"  | "none"               |   ""      | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "induced error"      |   ""      | "GetStorageGroupSnapshotSnapDetailError" |
+
+    
+  Scenario Outline: Testing ModifyStorageGroupSnapshot
+    Given a valid connection
+    And I call CreateStorageGroupSnapshot with "sg_1"
+    And I induce error <induced>
+    When I call ModifyStorageGroupSnapshot with <storageGroupID> and <snapshotID> and <snapID> and action <action>
+    Then the error message contains <errormsg>
+    And I should modify storage group snapshot snap if no error
+  
+    Examples:
+    | storageGroupID   | snapshotID | snapID | action       | errormsg             | arrays    | induced                                  |
+    | "sg_1"           | "123"      | "321"  | "rename"     | "none"               |   ""      | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "restore"    | "none"               |   ""      | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "link"       | "none"               |   ""      | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "relink"     | "none"               |   ""      | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "unlink"     | "none"               |   ""      | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "setmode"    | "none"               |   ""      | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "timeToLive" | "none"               |   ""      | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "secure"     | "none"               |   ""      | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "persist"    | "none"               |   ""      | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "rename"     | "induced error"      |   ""      | "GetStorageGroupSnapshotSnapModifyError" |
