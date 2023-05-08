@@ -17,6 +17,7 @@ package inttest
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -94,6 +95,154 @@ func getOrCreateSnapshot(volumeID string, client pmax.Pmax) (string, error) {
 		snapID, err = createSnapshot(sourceVolumeList)
 	}
 	return snapID, err
+}
+
+func TestCrudStorageGroupSnapshot(t *testing.T) {
+	snapshotSgName := "integration-test-snapshot-sg"
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+	// Create a storage group
+	_, err := createStorageGroup(symmetrixID, snapshotSgName, defaultSRP, defaultServiceLevel, false, nil)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	// Create a volume inside the storage group
+	now := time.Now()
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
+	capUnit := "TB"
+	fmt.Printf("volumeName: %s\n", volumeName)
+	volopts := make(map[string]interface{})
+	volopts["capacityUnit"] = capUnit
+	vol, errr := client.CreateVolumeInStorageGroupS(context.TODO(), symmetrixID, snapshotSgName, volumeName, "1", volopts)
+	if errr != nil {
+		fmt.Println(errr.Error())
+		return
+	}
+
+	// Start tests
+	optionalPayload := &types.CreateStorageGroupSnapshot{
+		SnapshotName:    defaultSnapshotName,
+		ExecutionOption: types.ExecutionOptionSynchronous,
+	}
+	// Create the new Snapshot
+	sgSnap, err := client.CreateStorageGroupSnapshot(context.TODO(), symmetrixID, snapshotSgName, optionalPayload)
+	if err != nil {
+		t.Error("Error creating a storage group snapshot: " + err.Error())
+		// Cleanup temp sg
+		cleanupVolume(vol.VolumeID, volumeName, snapshotSgName, t)
+		deleteStorageGroup(symmetrixID, snapshotSgName)
+		return
+	}
+	fmt.Printf("Successfully created snapshot (%v)\n", sgSnap)
+
+	// Get the list of SnapIds
+	sgSnapIds, err := client.GetStorageGroupSnapshotSnapIds(context.TODO(), symmetrixID, snapshotSgName, defaultSnapshotName)
+	if err != nil {
+		t.Error("Error getting the snapshot snapid details on storage group: " + err.Error())
+		// Cleanup temp sg
+		cleanupVolume(vol.VolumeID, volumeName, snapshotSgName, t)
+		deleteStorageGroup(symmetrixID, snapshotSgName)
+		return
+	}
+	fmt.Printf("Successfully fetched snapshot ids (%v) \n\n", sgSnapIds)
+
+	snapid := strconv.FormatInt(sgSnapIds.SnapIds[0], 10)
+
+	// Link snap
+	modifyPayloadLink := &types.ModifyStorageGroupSnapshot{
+		Action:          string(pmax.Link),
+		ExecutionOption: types.ExecutionOptionSynchronous,
+		Link: types.LinkSnapshotAction{
+			StorageGroupName: snapshotSgName + "02",
+		},
+	}
+	modLinkSnap, err := client.ModifyStorageGroupSnapshot(context.TODO(), symmetrixID, snapshotSgName, defaultSnapshotName, snapid, modifyPayloadLink)
+	if err != nil {
+		t.Error("Error linking the snapshot: " + err.Error())
+		//Cleanup temp sg
+		cleanupVolume(vol.VolumeID, volumeName, snapshotSgName, t)
+		deleteStorageGroup(symmetrixID, snapshotSgName)
+		return
+	}
+	fmt.Printf("Successfully linked snapshot (%v)\n\n", modLinkSnap)
+
+	// TTL snap
+	modifyPayloadTTL := &types.ModifyStorageGroupSnapshot{
+		Action:          string(pmax.SetTimeToLive),
+		ExecutionOption: types.ExecutionOptionSynchronous,
+		TimeToLive: types.TimeToLiveSnapshotAction{
+			TimeToLive:  2,
+			TimeInHours: true,
+		},
+	}
+	modTTLSnap, err := client.ModifyStorageGroupSnapshot(context.TODO(), symmetrixID, snapshotSgName, defaultSnapshotName, snapid, modifyPayloadTTL)
+	if err != nil {
+		t.Error("Error setting TTL for the snapshot: " + err.Error())
+		// Cleanup temp sg
+		cleanupVolume(vol.VolumeID, volumeName, snapshotSgName, t)
+		deleteStorageGroup(symmetrixID, snapshotSgName)
+		return
+	}
+	fmt.Printf("Successfully set the TTL snapshot (%v)\n\n", modTTLSnap)
+
+	// Unlink snap
+	modifyPayloadUnlink := &types.ModifyStorageGroupSnapshot{
+		Action:          string(pmax.Unlink),
+		ExecutionOption: types.ExecutionOptionSynchronous,
+		Unlink: types.UnlinkSnapshotAction{
+			StorageGroupName: snapshotSgName + "02",
+			Symforce:         true,
+		},
+	}
+	modUnlinkSnap, err := client.ModifyStorageGroupSnapshot(context.TODO(), symmetrixID, snapshotSgName, defaultSnapshotName, snapid, modifyPayloadUnlink)
+	if err != nil {
+		t.Error("Error unlinking the snapshot: " + err.Error())
+		// Cleanup temp sg
+		cleanupVolume(vol.VolumeID, volumeName, snapshotSgName, t)
+		deleteStorageGroup(symmetrixID, snapshotSgName)
+		return
+	}
+	fmt.Printf("Successfully unlinked snapshot (%v)\n\n", modUnlinkSnap)
+
+	// Rename Snap
+	modifyPayloadRename := &types.ModifyStorageGroupSnapshot{
+		Action:          string(pmax.Rename),
+		ExecutionOption: types.ExecutionOptionSynchronous,
+		Rename: types.RenameSnapshotAction{
+			NewStorageGroupSnapshotName: "update-snapshot",
+		},
+	}
+
+	modRenameSnap, err := client.ModifyStorageGroupSnapshot(context.TODO(), symmetrixID, snapshotSgName, defaultSnapshotName, snapid, modifyPayloadRename)
+	if err != nil {
+		t.Error("Error renaming the snapshot" + err.Error())
+		// Cleanup temp sg
+		cleanupVolume(vol.VolumeID, volumeName, snapshotSgName, t)
+		deleteStorageGroup(symmetrixID, snapshotSgName)
+		return
+	}
+	fmt.Printf("Successfully renamed snapshot (%v)\n\n", modRenameSnap)
+
+	// Delete Snap
+	err = client.DeleteStorageGroupSnapshot(context.TODO(), symmetrixID, snapshotSgName, "update-snapshot", snapid)
+	if err != nil {
+		t.Error("Error deleting snapshot group: " + err.Error())
+		// Cleanup temp sg
+		cleanupVolume(vol.VolumeID, volumeName, snapshotSgName, t)
+		deleteStorageGroup(symmetrixID, snapshotSgName)
+		return
+	}
+	fmt.Printf("Successfully deleted snapshot\n")
+	// Cleanup temp sg
+	cleanupVolume(vol.VolumeID, volumeName, snapshotSgName, t)
+	deleteStorageGroup(symmetrixID, snapshotSgName)
+
 }
 
 func TestGetSnapVolumeList(t *testing.T) {

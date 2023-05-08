@@ -105,9 +105,13 @@ type unitContext struct {
 	volSnapGenerationList *types.VolumeSnapshotGenerations
 	volSnapGenerationInfo *types.VolumeSnapshotGeneration
 	volResultPrivate      *types.VolumeResultPrivate
+	storageGroupMetrics   *types.StorageGroupMetricsIterator
+	volumesMetrics        *types.VolumeMetricsIterator
 
-	storageGroupMetrics *types.StorageGroupMetricsIterator
-	volumesMetrics      *types.VolumeMetricsIterator
+	sgSnapshot              *types.StorageGroupSnapshot
+	storageGroupSnapSetting *types.CreateStorageGroupSnapshot
+	storageGroupSnap        *types.StorageGroupSnap
+	storageGroupSnapIds     *types.SnapID
 
 	storageGroupPerfKeys *types.StorageGroupKeysResult
 	arrayPerfKeys        *types.ArrayKeysResult
@@ -310,6 +314,14 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.GetVolSnapsError = true
 	case "GetPrivVolumeByIDError":
 		mock.InducedErrors.GetPrivVolumeByIDError = true
+	case "GetStorageGroupSnapshotError":
+		mock.InducedErrors.GetStorageGroupSnapshotError = true
+	case "GetStorageGroupSnapshotSnapError":
+		mock.InducedErrors.GetStorageGroupSnapshotSnapError = true
+	case "GetStorageGroupSnapshotSnapDetailError":
+		mock.InducedErrors.GetStorageGroupSnapshotSnapDetailError = true
+	case "GetStorageGroupSnapshotSnapModifyError":
+		mock.InducedErrors.GetStorageGroupSnapshotSnapModifyError = true
 	case "CreatePortGroupError":
 		mock.InducedErrors.CreatePortGroupError = true
 	case "UpdatePortGroupError":
@@ -1558,6 +1570,129 @@ func (c *unitContext) iCallGetPrivVolumeByIDWith(volID string) error {
 	return nil
 }
 
+func (c *unitContext) iCallGetStorageGroupSnapshotsWith(storageGroupID string) error {
+	c.sgSnapshot, c.err = c.client.GetStorageGroupSnapshots(context.TODO(), symID, storageGroupID, false, false)
+	return nil
+}
+
+func (c *unitContext) iCallCreateStorageGroupSnapshotWith(storageGroupID string) error {
+	c.storageGroupSnap, c.err = c.client.CreateStorageGroupSnapshot(context.TODO(), symID, storageGroupID, c.storageGroupSnapSetting)
+	return nil
+}
+
+func (c *unitContext) iShouldGetStorageGroupSnapshotInformationIfNoError() error {
+	if c.err != nil {
+		return nil
+	}
+	if c.sgSnapshot == nil {
+		return fmt.Errorf("The storage group snapshot does not exist")
+	}
+	return nil
+}
+
+func (c *unitContext) iCallGetStorageGroupSnapshotSnapIdsWithAnd(storageGroupID string, snapshotID string) error {
+	c.storageGroupSnapIds, c.err = c.client.GetStorageGroupSnapshotSnapIds(context.TODO(), symID, storageGroupID, snapshotID)
+	return nil
+}
+
+func (c *unitContext) iShouldGetStorageGroupSnapshotSnapIdsIfNoError() error {
+	if c.err != nil {
+		return nil
+	}
+	if c.storageGroupSnapIds == nil {
+		return fmt.Errorf("The storage group snapshot snap does not exist")
+	}
+	return nil
+}
+
+func (c *unitContext) iCallGetStorageGroupSnapshotSnapWithAndAnd(storageGroupID string, snapshotID string, snapID string) error {
+	c.storageGroupSnap, c.err = c.client.GetStorageGroupSnapshotSnap(context.TODO(), symID, storageGroupID, snapshotID, snapID)
+	return nil
+}
+
+func (c *unitContext) iShouldGetStorageGroupSnapshotSnapDetailInformationIfNoError() error {
+	if c.err != nil {
+		return nil
+	}
+	if c.storageGroupSnap == nil {
+		return fmt.Errorf("The storage group snapshot snap details does not exist")
+	}
+	return nil
+}
+
+func (c *unitContext) iCallModifyStorageGroupSnapshotWithAndAndAndAction(storageGroupID string, snapshotID string, snapID string, action string) error {
+	var payload *types.ModifyStorageGroupSnapshot
+	switch action {
+	case "rename":
+		payload = &types.ModifyStorageGroupSnapshot{
+			Action: "Rename",
+			Rename: types.RenameSnapshotAction{
+				NewStorageGroupSnapshotName: "sg_1_snap_2",
+			},
+		}
+	case "restore":
+		payload = &types.ModifyStorageGroupSnapshot{
+			Action:  "Restore",
+			Restore: types.RestoreSnapshotAction{},
+		}
+	case "link":
+		payload = &types.ModifyStorageGroupSnapshot{
+			Action: "Link",
+			Link: types.LinkSnapshotAction{
+				StorageGroupName: "sg_1_2",
+			},
+		}
+	case "relink":
+		payload = &types.ModifyStorageGroupSnapshot{
+			Action: "Relink",
+			Relink: types.RelinkSnapshotAction{
+				StorageGroupName: "sg_1_2",
+			},
+		}
+	case "unlink":
+		payload = &types.ModifyStorageGroupSnapshot{
+			Action: "Unlink",
+			Unlink: types.UnlinkSnapshotAction{
+				StorageGroupName: "sg_1_2",
+			},
+		}
+	case "setmode":
+		payload = &types.ModifyStorageGroupSnapshot{
+			Action: "SetMode",
+			SetMode: types.SetModeSnapshotAction{
+				StorageGroupName: "sg_1_snap_2",
+			},
+		}
+	case "timeToLive":
+		payload = &types.ModifyStorageGroupSnapshot{
+			Action:     "SetTimeToLive",
+			TimeToLive: types.TimeToLiveSnapshotAction{},
+		}
+	case "secure":
+		payload = &types.ModifyStorageGroupSnapshot{
+			Action: "SetSecure",
+			Secure: types.SecureSnapshotAction{},
+		}
+	case "persist":
+		payload = &types.ModifyStorageGroupSnapshot{
+			Action:  "Persist",
+			Persist: types.PresistSnapshotAction{},
+		}
+	}
+	c.storageGroupSnap, c.err = c.client.ModifyStorageGroupSnapshot(context.TODO(), symID, storageGroupID, snapshotID, snapID, payload)
+	return nil
+}
+
+func (c *unitContext) iShouldModifyStorageGroupSnapshotSnapIfNoError() error {
+	if c.err != nil {
+		return nil
+	}
+	if c.storageGroupSnap == nil {
+		return fmt.Errorf("The storage group snapshot snap details does not exist")
+	}
+	return nil
+}
+
 func (c *unitContext) iShouldGetAPrivateVolumeInformationIfNoError() error {
 	if c.err != nil {
 		return nil
@@ -2141,6 +2276,17 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^should not include "([^"]*)"$`, c.shouldNotInclude)
 
 	s.Step(`^I get a valid Symmetrix ID List that contains "([^"]*)" and does not contains "([^"]*)"$`, c.iGetAValidSymmetrixIDListThatContainsAndDoesNotContains)
+
+	//SG Snapshot
+	s.Step(`^I call GetStorageGroupSnapshots with "([^"]*)"$`, c.iCallGetStorageGroupSnapshotsWith)
+	s.Step(`^I should get storage group snapshot information if no error$`, c.iShouldGetStorageGroupSnapshotInformationIfNoError)
+	s.Step(`^I call CreateStorageGroupSnapshot with "([^"]*)"$`, c.iCallCreateStorageGroupSnapshotWith)
+	s.Step(`^I call GetStorageGroupSnapshotSnapIds with "([^"]*)" and "([^"]*)"$`, c.iCallGetStorageGroupSnapshotSnapIdsWithAnd)
+	s.Step(`^I should get storage group snapshot snap ids if no error$`, c.iShouldGetStorageGroupSnapshotSnapIdsIfNoError)
+	s.Step(`^I call GetStorageGroupSnapshotSnap with "([^"]*)" and "([^"]*)" and "([^"]*)"$`, c.iCallGetStorageGroupSnapshotSnapWithAndAnd)
+	s.Step(`^I should get storage group snapshot snap detail information if no error$`, c.iShouldGetStorageGroupSnapshotSnapDetailInformationIfNoError)
+	s.Step(`^I call ModifyStorageGroupSnapshot with "([^"]*)" and "([^"]*)" and "([^"]*)" and action "([^"]*)"$`, c.iCallModifyStorageGroupSnapshotWithAndAndAndAction)
+	s.Step(`^I should modify storage group snapshot snap if no error$`, c.iShouldModifyStorageGroupSnapshotSnapIfNoError)
 
 	//Snapshot
 	s.Step(`^I excute the capabilities on the symmetrix array$`, c.iExcuteTheCapabilitiesOnTheSymmetrixArray)

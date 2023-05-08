@@ -65,6 +65,7 @@ var (
 	csiPrefix               = "csi"
 	// the test run will create these for the run and clean up in the end
 	defaultStorageGroup          = "csi-Integration-Test"
+	defaultSnapshotName          = "integration-test-snapshot"
 	defaultProtectedStorageGroup = "csi-Integration-Test-Protected-SG"
 	nonFASTManagedSG             = "csi-Integration-No-FAST"
 	defaultSGWithSnapshotPolicy  = "csi-Integration-Test-With-Snapshot-Policy"

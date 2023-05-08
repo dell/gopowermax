@@ -171,6 +171,231 @@ type VolumeSnapshotGenerations struct {
 	VolumeSnapshotLink   []VolumeSnapshotLink   `json:"snapshotLnk,omitempty"`
 }
 
+// SnapshotNameAndCounts object for storage group snapshots
+type SnapshotNameAndCounts struct {
+	Name               string `json:"name"`
+	SnapshotCount      int64  `json:"snapshot_count"`
+	NewestTimestampUtc int64  `json:"newest_timestamp_utc"`
+}
+
+// StorageGroupSnapshot contains a list of storage group snapshots
+type StorageGroupSnapshot struct {
+	Name                   []string                `json:"name"`
+	SlSnapshotName         []string                `json:"sl_snapshot_name"`
+	SnapshotNamesAndCounts []SnapshotNameAndCounts `json:"snapshot_names_and_counts"`
+}
+
+// StorageGroupSnap a PowerMax Snap Object
+type StorageGroupSnap struct {
+	Name                    string               `json:"name"`
+	Generation              int64                `json:"generation"`
+	SnapID                  int64                `json:"snapid"`
+	Timestamp               string               `json:"timestamp"`
+	TimestampUtc            int64                `json:"timestamp_utc"`
+	State                   []string             `json:"state"`
+	NumSourceVolumes        int32                `json:"num_source_volumes"`
+	SourceVolume            []SourceVolume       `json:"source_volume"`
+	NumStorageGroupVolumes  int32                `json:"num_storage_group_volumes"`
+	Tracks                  int64                `json:"tracks"`
+	NotSharedTracks         int64                `json:"non_shared_tracks"`
+	TimeToLiveExpiryDate    string               `json:"time_to_live_expiry_date"`
+	SecureExpiryDate        string               `json:"secure_expiry_date"`
+	Expired                 bool                 `json:"expired"`
+	Linked                  bool                 `json:"linked"`
+	Restored                bool                 `json:"restored"`
+	LinkedStorageGroupNames []string             `json:"linked_storage_group_names"`
+	Persistent              bool                 `json:"persistent"`
+	LinkedStorageGroups     []LinkedStorageGroup `json:"linked_storage_group"`
+}
+
+// LinkedStorageGroup linked storage group
+type LinkedStorageGroup struct {
+	Name                       string `json:"name"`
+	SourceVolumeName           string `json:"source_volume_name"`
+	LinkedVolumeName           string `json:"linked_volume_name"`
+	Tracks                     int64  `json:"tracks"`
+	TrackSize                  int64  `json:"trackSize"`
+	PercentageCopied           int64  `json:"percentageCopied"`
+	Defined                    bool   `json:"defined"`
+	BackgroundDefineInProgress bool   `json:"background_define_in_progress"`
+}
+
+// SourceVolume the source of a volume
+type SourceVolume struct {
+	Name       string  `json:"name"`
+	Capacity   int64   `json:"capacity"`
+	CapacityGb float64 `json:"capacity_gb"`
+}
+
+// CreateStorageGroupSnapshot object to create a storage group snapshot
+type CreateStorageGroupSnapshot struct {
+	SnapshotName    string `json:"snapshotName"`
+	ExecutionOption string `json:"executionOption"`
+	TimeToLive      int32  `json:"timeToLive,omitempty"`
+	Secure          int32  `json:"secure,omitempty"`
+	TimeInHours     bool   `json:"force,omitempty"`
+	Star            bool   `json:"start,omitempty"`
+	Bothsides       bool   `json:"bothsides,omitempty"`
+}
+
+// ModifyStorageGroupSnapshot Modify a Storage Group snap
+type ModifyStorageGroupSnapshot struct {
+	ExecutionOption string                   `json:"executionOption,omitempty"`
+	Action          string                   `json:"action"`
+	Restore         RestoreSnapshotAction    `json:"restore,omitempty"`
+	Link            LinkSnapshotAction       `json:"link,omitempty"`
+	Relink          RelinkSnapshotAction     `json:"relink,omitempty"`
+	Unlink          UnlinkSnapshotAction     `json:"unlink,omitempty"`
+	SetMode         SetModeSnapshotAction    `json:"set_mode,omitempty"`
+	Rename          RenameSnapshotAction     `json:"rename,omitempty"`
+	TimeToLive      TimeToLiveSnapshotAction `json:"time_to_live,omitempty"`
+	Secure          SecureSnapshotAction     `json:"secure,omitempty"`
+	Persist         PresistSnapshotAction    `json:"persist,omitempty"`
+}
+
+// RenameStorageGroupSnapshot Modify a Storage Group snap to rename
+type RenameStorageGroupSnapshot struct {
+	ExecutionOption string               `json:"executionOption,omitempty"`
+	Action          string               `json:"action"`
+	Rename          RenameSnapshotAction `json:"rename"`
+}
+
+// RestoreStorageGroupSnapshot Modify a Storage Group snap to restore
+type RestoreStorageGroupSnapshot struct {
+	ExecutionOption string                `json:"executionOption,omitempty"`
+	Action          string                `json:"action"`
+	Restore         RestoreSnapshotAction `json:"restore"`
+}
+
+// LinkStorageGroupSnapshot Modify a Storage Group snap to link
+type LinkStorageGroupSnapshot struct {
+	ExecutionOption string             `json:"executionOption,omitempty"`
+	Action          string             `json:"action"`
+	Link            LinkSnapshotAction `json:"link"`
+}
+
+// RelinkStorageGroupSnapshot Modify a Storage Group snap to relink
+type RelinkStorageGroupSnapshot struct {
+	ExecutionOption string               `json:"executionOption,omitempty"`
+	Action          string               `json:"action"`
+	Relink          RelinkSnapshotAction `json:"relink"`
+}
+
+// UnlinkStorageGroupSnapshot Modify a Storage Group snap to unlink
+type UnlinkStorageGroupSnapshot struct {
+	ExecutionOption string               `json:"executionOption,omitempty"`
+	Action          string               `json:"action"`
+	Unlink          UnlinkSnapshotAction `json:"unlink"`
+}
+
+// SetModeStorageGroupSnapshot Modify a Storage Group snaps set mode
+type SetModeStorageGroupSnapshot struct {
+	ExecutionOption string                `json:"executionOption,omitempty"`
+	Action          string                `json:"action"`
+	SetMode         SetModeSnapshotAction `json:"set_mode"`
+}
+
+// TimeToLiveStorageGroupSnapshot Modify a Storage Group snaps time to live
+type TimeToLiveStorageGroupSnapshot struct {
+	ExecutionOption string                   `json:"executionOption,omitempty"`
+	Action          string                   `json:"action"`
+	TimeToLive      TimeToLiveSnapshotAction `json:"time_to_live"`
+}
+
+// SecureStorageGroupSnapshot Modify a Storage Group snap be secure
+type SecureStorageGroupSnapshot struct {
+	ExecutionOption string               `json:"executionOption,omitempty"`
+	Action          string               `json:"action"`
+	Secure          SecureSnapshotAction `json:"secure"`
+}
+
+// PersistStorageGroupSnapshot Modify a Storage Group snap to persist
+type PersistStorageGroupSnapshot struct {
+	ExecutionOption string                `json:"executionOption,omitempty"`
+	Action          string                `json:"action"`
+	Persist         PresistSnapshotAction `json:"persist"`
+}
+
+// RestoreSnapshotAction an action on a Storage Group snap
+type RestoreSnapshotAction struct {
+	Force  bool `json:"force,omitempty"`
+	Star   bool `json:"star,omitempty"`
+	Remote bool `json:"remote,omitempty"`
+}
+
+// LinkSnapshotAction an action on a Storage Group snap
+type LinkSnapshotAction struct {
+	Force            bool   `json:"force,omitempty"`
+	Star             bool   `json:"star,omitempty"`
+	Remote           bool   `json:"remote,omitempty"`
+	StorageGroupName string `json:"storage_group_name"`
+	NoCompression    bool   `json:"no_compression,omitempty"`
+	Exact            bool   `json:"exact,omitempty"`
+	Copy             bool   `json:"copy,omitempty"`
+}
+
+// RelinkSnapshotAction an action on a Storage Group snap
+type RelinkSnapshotAction struct {
+	Force            bool   `json:"force,omitempty"`
+	Star             bool   `json:"star,omitempty"`
+	Remote           bool   `json:"remote,omitempty"`
+	StorageGroupName string `json:"storage_group_name"`
+	Exact            bool   `json:"exact,omitempty"`
+	Copy             bool   `json:"copy,omitempty"`
+}
+
+// UnlinkSnapshotAction an action on a Storage Group snap
+type UnlinkSnapshotAction struct {
+	Force            bool   `json:"force,omitempty"`
+	Star             bool   `json:"star,omitempty"`
+	Symforce         bool   `json:"symforce,omitempty"`
+	StorageGroupName string `json:"storage_group_name"`
+}
+
+// SetModeSnapshotAction an action on a Storage Group snap
+type SetModeSnapshotAction struct {
+	Force            bool   `json:"force,omitempty"`
+	Star             bool   `json:"star,omitempty"`
+	StorageGroupName string `json:"storage_group_name"`
+	Copy             bool   `json:"copy,omitempty"`
+}
+
+// RenameSnapshotAction an action on a Storage Group snap
+type RenameSnapshotAction struct {
+	Force                       bool   `json:"force,omitempty"`
+	Star                        bool   `json:"star,omitempty"`
+	NewStorageGroupSnapshotName string `json:"new_snapshot_name"`
+}
+
+// TimeToLiveSnapshotAction an action on a Storage Group snap
+type TimeToLiveSnapshotAction struct {
+	Force       bool  `json:"force,omitempty"`
+	Star        bool  `json:"star,omitempty"`
+	TimeToLive  int32 `json:"time_to_live,omitempty"`
+	TimeInHours bool  `json:"time_in_hours,omitempty"`
+}
+
+// SecureSnapshotAction an action on a Storage Group snap
+type SecureSnapshotAction struct {
+	Force       bool  `json:"force,omitempty"`
+	Star        bool  `json:"star,omitempty"`
+	Secure      int32 `json:"secure,omitempty"`
+	TimeInHours bool  `json:"time_in_hours,omitempty"`
+}
+
+// PresistSnapshotAction an action on a Storage Group snap
+type PresistSnapshotAction struct {
+	Force   bool `json:"force,omitempty"`
+	Star    bool `json:"star,omitempty"`
+	Remote  bool `json:"remote,omitempty"`
+	Persist bool `json:"persist,omitempty"`
+}
+
+// SnapID list of snap ids related to a Storage Group snapshot
+type SnapID struct {
+	SnapIds []int64 `json:"snapids"`
+}
+
 // SymDevice list of devices on a particular symmetrix system
 type SymDevice struct {
 	SymmetrixID string     `json:"symmetrixId"`
