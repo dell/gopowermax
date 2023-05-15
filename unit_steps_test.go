@@ -116,6 +116,11 @@ type unitContext struct {
 	storageGroupPerfKeys *types.StorageGroupKeysResult
 	arrayPerfKeys        *types.ArrayKeysResult
 
+	snapshotPolicy            *types.SnapshotPolicy
+	createSnapshotPolicy      *types.CreateSnapshotPolicyParam
+	modifySnapshotPolicyParam *types.ModifySnapshotPolicyParam
+	snapshotPolicyList        *types.SnapshotPolicyList
+
 	inducedErrors struct {
 		badCredentials bool
 		badPort        bool
@@ -174,6 +179,7 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.DeviceInSGError = false
 	mock.InducedErrors.GetStorageGroupError = false
 	mock.InducedErrors.GetStorageGroupSnapshotPolicyError = false
+	mock.InducedErrors.DeleteStorageGroupSnapshotError = false
 	mock.InducedErrors.InvalidResponse = false
 	mock.InducedErrors.UpdateStorageGroupError = false
 	mock.InducedErrors.GetJobError = false
@@ -240,6 +246,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.GetStorageGroupError = true
 	case "GetStorageGroupSnapshotPolicyError":
 		mock.InducedErrors.GetStorageGroupSnapshotPolicyError = true
+	case "DeleteStorageGroupSnapshotError":
+		mock.InducedErrors.DeleteStorageGroupSnapshotError = true
 	case "InvalidResponse":
 		mock.InducedErrors.InvalidResponse = true
 	case "UpdateStorageGroupError":
@@ -364,6 +372,14 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.CreateRDFGroupError = true
 	case "GetRDFGroupError":
 		mock.InducedErrors.GetRDFGroupError = true
+	case "GetSnapshotPolicyError":
+		mock.InducedErrors.GetSnapshotPolicyError = true
+	case "GetSnapshotPolicyListError":
+		mock.InducedErrors.GetSnapshotPolicyListError = true
+	case "ModifySnapshotPolicyError":
+		mock.InducedErrors.ModifySnapshotPolicyError = true
+	case "DeleteSnapshotPolicyError":
+		mock.InducedErrors.DeleteSnapshotPolicyError = true
 	case "none":
 	default:
 		return fmt.Errorf("unknown errorType: %s", errorType)
@@ -1693,6 +1709,11 @@ func (c *unitContext) iShouldModifyStorageGroupSnapshotSnapIfNoError() error {
 	return nil
 }
 
+func (c *unitContext) iCallDeleteStorageGroupSnapshotWithAndAnd(storageGroupID string, snapshotID string, snapID string) error {
+	c.err = c.client.DeleteStorageGroupSnapshot(context.TODO(), symID, storageGroupID, snapshotID, snapID)
+	return nil
+}
+
 func (c *unitContext) iShouldGetAPrivateVolumeInformationIfNoError() error {
 	if c.err != nil {
 		return nil
@@ -2154,6 +2175,94 @@ func (c *unitContext) iGetArrayPerfKeys() error {
 	return nil
 }
 
+func (c *unitContext) iCallGetSnapshotPolicyWith(snapshotPolicyID string) error {
+	c.snapshotPolicy, c.err = c.client.GetSnapshotPolicy(context.TODO(), symID, snapshotPolicyID)
+	return nil
+}
+
+func (c *unitContext) iCallCreateSnapshotPolicyWith(snapshotPolicyID string) error {
+	c.snapshotPolicy, c.err = c.client.CreateSnapshotPolicy(context.TODO(), symID, snapshotPolicyID, "1 Hour", 10, 2, 2, nil)
+	return nil
+}
+
+func (c *unitContext) iShouldGetSnapshotPolicytInformationIfNoError() error {
+	if c.err != nil {
+		return nil
+	}
+	if c.snapshotPolicy == nil {
+		return fmt.Errorf("The snapshot policy does not exist")
+	}
+	return nil
+}
+
+func (c *unitContext) iCallModifySnapshotPolicyWithAndAnd(snapshotPolicyID string, action string, updatedName string) error {
+	optionalPayload := make(map[string]interface{})
+	modifySnapshotPolicyParam := &types.ModifySnapshotPolicyParam{
+		SnapshotPolicyName: updatedName,
+	}
+	optionalPayload["modify"] = modifySnapshotPolicyParam
+
+	c.err = c.client.UpdateSnapshotPolicy(context.TODO(), symID, action, snapshotPolicyID, optionalPayload)
+	return nil
+}
+
+func (c *unitContext) iShouldModifySnapshotPolicyIfNoError() error {
+	if c.err != nil {
+		return nil
+	}
+	if c.snapshotPolicy == nil {
+		return fmt.Errorf("The snapshot policy could not be modified")
+	}
+	return nil
+}
+
+func (c *unitContext) iCallAddRemoveStorageGrpFromSnapshotPolicyAndAnd(snapshotPolicyID string, action string, sgName string) error {
+	optionalPayload := make(map[string]interface{})
+	if action == "AssociateToStorageGroups" {
+		associateStorageGroupParam := &types.AssociateStorageGroupParam{
+			StorageGroupName: []string{sgName},
+		}
+		optionalPayload["associateStorageGroupParam"] = associateStorageGroupParam
+	} else {
+		disassociateStorageGroupParam := &types.DisassociateStorageGroupParam{
+			StorageGroupName: []string{sgName},
+		}
+		optionalPayload["disassociateStorageGroupParam"] = disassociateStorageGroupParam
+	}
+
+	c.err = c.client.UpdateSnapshotPolicy(context.TODO(), symID, action, snapshotPolicyID, optionalPayload)
+	return nil
+}
+
+func (c *unitContext) iShoulAddRemoveStorageGrpFromSnapshotPolicyIfNoError() error {
+	if c.err != nil {
+		return nil
+	}
+	if c.snapshotPolicy == nil {
+		return fmt.Errorf("The snapshot policy could not be modified")
+	}
+	return nil
+}
+
+func (c *unitContext) iCallDeleteSnapshotPolicy(snapshotPolicyID string) error {
+	c.err = c.client.DeleteSnapshotPolicy(context.TODO(), symID, snapshotPolicyID)
+	return nil
+}
+
+func (c *unitContext) iCallGetSnapshotPolicyList() error {
+	c.snapshotPolicyList, c.err = c.client.GetSnapshotPolicyList(context.TODO(), symID)
+	return nil
+}
+func (c *unitContext) iShouldGetListOfSnapshotPoliciesIfNoError() error {
+	if c.err != nil {
+		return nil
+	}
+	if c.snapshotPolicyList == nil {
+		return fmt.Errorf("Could not get the list of snapshot policies")
+	}
+	return nil
+}
+
 func UnitTestContext(s *godog.Suite) {
 	c := &unitContext{}
 	s.Step(`^I induce error "([^"]*)"$`, c.iInduceError)
@@ -2286,6 +2395,7 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call GetStorageGroupSnapshotSnap with "([^"]*)" and "([^"]*)" and "([^"]*)"$`, c.iCallGetStorageGroupSnapshotSnapWithAndAnd)
 	s.Step(`^I should get storage group snapshot snap detail information if no error$`, c.iShouldGetStorageGroupSnapshotSnapDetailInformationIfNoError)
 	s.Step(`^I call ModifyStorageGroupSnapshot with "([^"]*)" and "([^"]*)" and "([^"]*)" and action "([^"]*)"$`, c.iCallModifyStorageGroupSnapshotWithAndAndAndAction)
+	s.Step(`^I call DeleteStorageGroupSnapshot with "([^"]*)" and "([^"]*)" and "([^"]*)"$`, c.iCallDeleteStorageGroupSnapshotWithAndAnd)
 	s.Step(`^I should modify storage group snapshot snap if no error$`, c.iShouldModifyStorageGroupSnapshotSnapIfNoError)
 
 	//Snapshot
@@ -2346,4 +2456,16 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call GetLocalRDFPortDetails$`, c.iCallGetLocalRDFPortDetails)
 	s.Step(`^^I call GetRDFGroupList with query "([^"]*)"$`, c.iCallGetRDFGroupListWithQuery)
 	s.Step(`^I call GetRemoteRDFPortOnSAN$`, c.iCallGetRemoteRDFPortOnSAN)
+
+	// Snapshot Policy
+	s.Step(`^I call CreateSnapshotPolicy with "([^"]*)"$`, c.iCallCreateSnapshotPolicyWith)
+	s.Step(`^I call GetSnapshotPolicy with "([^"]*)"$`, c.iCallGetSnapshotPolicyWith)
+	s.Step(`^I should get snapshot policy information if no error$`, c.iShouldGetSnapshotPolicytInformationIfNoError)
+	s.Step(`^I call ModifySnapshotPolicy with  "([^"]*)" and "([^"]*)" and "([^"]*)"$`, c.iCallModifySnapshotPolicyWithAndAnd)
+	s.Step(`^I should modify snapshot policy if no error$`, c.iShouldModifySnapshotPolicyIfNoError)
+	s.Step(`^I call AddRemoveStorageGrpFromSnapshotPolicy with  "([^"]*)" and "([^"]*)" and "([^"]*)"$`, c.iCallAddRemoveStorageGrpFromSnapshotPolicyAndAnd)
+	s.Step(`^I call DeleteSnapshotPolicy "([^"]*)"$`, c.iCallDeleteSnapshotPolicy)
+	s.Step(`^I call GetSnapshotPolicyList`, c.iCallGetSnapshotPolicyList)
+	s.Step(`^I should get list of snapshot policies  if no error$`, c.iShouldGetListOfSnapshotPoliciesIfNoError)
+
 }
