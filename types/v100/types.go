@@ -228,7 +228,7 @@ type PortGroup struct {
 	PortGroupID        string    `json:"portGroupId"`
 	SymmetrixPortKey   []PortKey `json:"symmetrixPortKey"`
 	NumberPorts        int64     `json:"num_of_ports"`
-	NumberMaskingViews int64     `json:"number_of_masking_views"`
+	NumberMaskingViews int64     `json:"num_of_masking_views"`
 	PortGroupType      string    `json:"type"`
 	MaskingView        []string  `json:"maskingview"`
 	TestID             string    `json:"testId"`
@@ -269,7 +269,7 @@ type Initiator struct {
 	FlagsInEffect        string    `json:"flags_in_effect"`
 	NumberVols           int64     `json:"num_of_vols"`
 	NumberHostGroups     int64     `json:"num_of_host_groups"`
-	NumberMaskingViews   int64     `json:"number_of_masking_views"`
+	NumberMaskingViews   int64     `json:"num_of_masking_views"`
 	MaskingView          []string  `json:"maskingview"`
 	PowerPathHosts       []string  `json:"powerpathhosts"`
 	NumberPowerPathHosts int64     `json:"num_of_powerpath_hosts"`
