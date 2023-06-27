@@ -124,31 +124,31 @@ type Pmax interface {
 	// This method creates a job and waits on the job to complete.
 	CreateVolumeInStorageGroup(ctx context.Context, symID string, storageGroupID string, volumeName string, volumeSize interface{}, volOpts map[string]interface{}) (*types.Volume, error)
 
-	// CreateVolumeInStorageGroup takes simplified input arguments to create a volume of a give name and size in a particular storage group.
+	// CreateVolumeInStorageGroupS takes simplified input arguments to create a volume of a give name and size in a particular storage group.
 	// This is done synchronously and no jobs are created. HTTP header argument is optional
 	CreateVolumeInStorageGroupS(ctx context.Context, symID, storageGroupID string, volumeName string, volumeSize interface{}, volOpts map[string]interface{}, opts ...http.Header) (*types.Volume, error)
 
-	// CreateVolumeInProtectedStorageGroup takes simplified input arguments to create a volume of a give name and size in a protected storage group.
+	// CreateVolumeInProtectedStorageGroupS takes simplified input arguments to create a volume of a give name and size in a protected storage group.
 	// This will add volume in both Local and Remote Storage group
 	// This is done synchronously and no jobs are created. HTTP header argument is optional
 	CreateVolumeInProtectedStorageGroupS(ctx context.Context, symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, volumeSize interface{}, volOpts map[string]interface{}, opts ...http.Header) (*types.Volume, error)
 
-	// Get All Storage Group Snapshots
+	// GetStorageGroupSnapshots Gets All Storage Group Snapshots
 	GetStorageGroupSnapshots(ctx context.Context, symID string, storageGroupID string, exludeManualSnaps bool, exludeSlSnaps bool) (*types.StorageGroupSnapshot, error)
 
-	// Get a list of Snapids for a particular snapshot
+	// GetStorageGroupSnapshotSnapIds Gets a list of SnapIDs for a particular snapshot
 	GetStorageGroupSnapshotSnapIds(ctx context.Context, symID string, storageGroupID string, snapshotID string) (*types.SnapID, error)
 
-	// Get the details of a storage group snapshot snap
+	// GetStorageGroupSnapshotSnap Gets the details of a storage group snapshot snap
 	GetStorageGroupSnapshotSnap(ctx context.Context, symID string, storageGroupID string, snapshotID, snapID string) (*types.StorageGroupSnap, error)
 
-	// Create a Storage Group Snapshot
+	// CreateStorageGroupSnapshot Creates a Storage Group Snapshot
 	CreateStorageGroupSnapshot(ctx context.Context, symID string, storageGroupID string, payload *types.CreateStorageGroupSnapshot) (*types.StorageGroupSnap, error)
 
-	//  Modify a Storage Group Snapshot snap
+	// ModifyStorageGroupSnapshot Modify a Storage Group Snapshot snap
 	ModifyStorageGroupSnapshot(ctx context.Context, symID string, storageGroupID string, snapshotID string, snapID string, payload *types.ModifyStorageGroupSnapshot) (*types.StorageGroupSnap, error)
 
-	// Delete a Storage Group Snapshot snap
+	// DeleteStorageGroupSnapshot Deletes a Storage Group Snapshot snap
 	DeleteStorageGroupSnapshot(ctx context.Context, symID string, storageGroupID string, snapshotID string, snapID string) error
 
 	// DeleteStorageGroup deletes a storage group given a storage group id
@@ -160,30 +160,30 @@ type Pmax interface {
 	// RenameMaskingView renames masking view given it's identifier (which is the name)
 	RenameMaskingView(ctx context.Context, symID string, maskingViewID string, newName string) (*types.MaskingView, error)
 
-	// Get the list of Storage Pools
+	// GetStoragePoolList Gets the list of Storage Pools
 	GetStoragePoolList(ctx context.Context, symID string) (*types.StoragePoolList, error)
 
-	// Rename a Volume given the volumeID
+	// RenameVolume Rename a Volume given the volumeID
 	RenameVolume(ctx context.Context, symID string, volumeID string, newName string) (*types.Volume, error)
 
-	// Add volume(s) asynchronously to a StorageGroup
+	// AddVolumesToStorageGroup Add volume(s) asynchronously to a StorageGroup
 	AddVolumesToStorageGroup(ctx context.Context, symID, storageGroupID string, force bool, volumeIDs ...string) error
-	// Add volume(s) synchronously to a StorageGroup
+	// AddVolumesToStorageGroupS Add volume(s) synchronously to a StorageGroup
 	// This is a blocking call and will only return once the volumes have been added to storage group
 	AddVolumesToStorageGroupS(ctx context.Context, symID, storageGroupID string, force bool, volumeIDs ...string) error
-	// Adds one or more volumes (given by their volumeIDs) to a Protected StorageGroup
+	// AddVolumesToProtectedStorageGroup Adds one or more volumes (given by their volumeIDs) to a Protected StorageGroup
 	AddVolumesToProtectedStorageGroup(ctx context.Context, symID, storageGroupID, remoteSymID, remoteStorageGroupID string, force bool, volumeIDs ...string) error
 
-	// Remove volume(s) synchronously from a StorageGroup
+	// RemoveVolumesFromStorageGroup Removes volume(s) synchronously from a StorageGroup
 	RemoveVolumesFromStorageGroup(ctx context.Context, symID string, storageGroupID string, force bool, volumeIDs ...string) (*types.StorageGroup, error)
 
 	// RemoveVolumesFromProtectedStorageGroup removes one or more volumes (given by their volumeIDs) from a Protected StorageGroup.
 	RemoveVolumesFromProtectedStorageGroup(ctx context.Context, symID string, storageGroupID, remoteSymID, remoteStorageGroupID string, force bool, volumeIDs ...string) (*types.StorageGroup, error)
 
-	// Initiate a job to remove storage space from the volume.
+	// InitiateDeallocationOfTracksFromVolume Initiate a job to remove storage space from the volume.
 	InitiateDeallocationOfTracksFromVolume(ctx context.Context, symID string, volumeID string) (*types.Job, error)
 
-	// Deletes a volume
+	// DeleteVolume Deletes a volume
 	DeleteVolume(ctx context.Context, symID string, volumeID string) error
 
 	// GetMaskingViewList  returns a list of the MaskingView names.
@@ -393,4 +393,35 @@ type Pmax interface {
 		complianceCountCritical int64, optionalPayload map[string]interface{}) (*types.SnapshotPolicy, error)
 	// UpdateSnapshotPolicy is a general method to update a SnapshotPolicy (PUT operation) based on the action using a UpdateSnapshotPolicyPayload.
 	UpdateSnapshotPolicy(ctx context.Context, symID string, action string, snapshotPolicyID string, optionalPayload map[string]interface{}) error
+
+	// GetFileSystemList get file system list on a symID
+	GetFileSystemList(ctx context.Context, symID string, query types.QueryParams) (*types.FileSystemIterator, error)
+	// GetFileSystemByID get file system  on a symID
+	GetFileSystemByID(ctx context.Context, symID, fsID string) (*types.FileSystem, error)
+	// CreateFileSystem creates a file system
+	CreateFileSystem(ctx context.Context, symID, name, nasServer, serviceLevel string, sizeInMiB int64) (*types.FileSystem, error)
+	// ModifyFileSystem  updates a File system
+	ModifyFileSystem(ctx context.Context, symID, fsID string, payload types.ModifyFileSystem) (*types.FileSystem, error)
+	// DeleteFileSystem deletes a file system
+	DeleteFileSystem(ctx context.Context, symID, fsID string) error
+	// GetNFSExportList get NFS export list on a symID
+	GetNFSExportList(ctx context.Context, symID string, query types.QueryParams) (*types.NFSExportIterator, error)
+	// GetNFSExportByID get file system  on a symID
+	GetNFSExportByID(ctx context.Context, symID, nfsExportID string) (*types.NFSExport, error)
+	// CreateNFSExport creates a NFSExport
+	CreateNFSExport(ctx context.Context, symID string, createNFSExportPayload types.CreateNFSExport) (*types.NFSExport, error)
+	// ModifyNFSExport updates a NFS export
+	ModifyNFSExport(ctx context.Context, symID, nfsExportID string, payload types.ModifyNFSExport) (*types.NFSExport, error)
+	// DeleteNFSExport deletes a nfs export
+	DeleteNFSExport(ctx context.Context, symID, nfsExportID string) error
+	// GetNASServerList get NAS Server list on a symID
+	GetNASServerList(ctx context.Context, symID string, query types.QueryParams) (*types.NASServerIterator, error)
+	// GetNASServerByID fetch specific NAS server on a symID
+	GetNASServerByID(ctx context.Context, symID, nasID string) (*types.NASServer, error)
+	// ModifyNASServer updates a NAS Server
+	ModifyNASServer(ctx context.Context, symID, nasID string, payload types.ModifyNASServer) (*types.NASServer, error)
+	// DeleteNASServer deletes a NAS Server
+	DeleteNASServer(ctx context.Context, symID, nasID string) error
+	// GetFileInterfaceByID gets a FileInterface
+	GetFileInterfaceByID(ctx context.Context, symID, interfaceID string) (*types.FileInterface, error)
 }

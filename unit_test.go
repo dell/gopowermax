@@ -31,6 +31,15 @@ var mockServer *httptest.Server
 
 func TestMain(m *testing.M) {
 	status := 0
+	if st := m.Run(); st > status {
+		status = st
+	}
+	fmt.Printf("status %d\n", status)
+	os.Exit(status)
+}
+
+func TestScenarios(t *testing.T) {
+	status := 0
 	var fileWriter *bufio.Writer
 	var outputFile os.File
 	format := "pretty"
@@ -90,18 +99,19 @@ func TestMain(m *testing.M) {
 	mockServer = httptest.NewServer(handler)
 	fmt.Printf("mockServer listening on %s\n", mockServer.URL)
 
-	status = godog.RunWithOptions("godog", func(s *godog.Suite) {
-		UnitTestContext(s)
-	}, runOptions)
+	status = godog.TestSuite{
+		Name:                "GoPowermax Test Scenarios",
+		ScenarioInitializer: UnitTestContext,
+		Options:             &runOptions,
+	}.Run()
 
-	if st := m.Run(); st > status {
-		status = st
+	if status != 0 {
+		fmt.Printf("tests not succeded\n")
 	}
-	fmt.Printf("status %d\n", status)
+	fmt.Printf("TestScenarios finished\n")
 
 	if fileWriter != nil {
 		fileWriter.Flush()
 	}
 	outputFile.Close()
-	os.Exit(status)
 }

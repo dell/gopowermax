@@ -59,6 +59,10 @@ const (
 	DefaultRDFLabel              = "csi-mock-test"
 	RemoteArrayHeaderKey         = "RemoteArray"
 	RemoteArrayHeaderValue       = "true"
+	DefaultNASServerID           = "64xxx7a6-03b5-xxx-xxx-0zzzz8200209"
+	DefaultNASServerName         = "nas-1"
+	DefaultFSID                  = "64xxx7a6-03b5-xxx-xxx-0zzzz8200208"
+	DefaultFSName                = "fs-ds-1"
 )
 
 const (
@@ -110,6 +114,11 @@ var Data struct {
 	StorageGroupIDToRDFStorageGroup map[string]*types.RDFStorageGroup
 	RDFGroup                        *types.RDFGroup
 	SGRDFInfo                       *types.SGRDFInfo
+
+	// File
+	FileSysIDToFileSystem  map[string]*types.FileSystem
+	NFSExportIDToNFSExport map[string]*types.NFSExport
+	NASServerIDToNASServer map[string]*types.NASServer
 }
 
 // InducedErrors constants
@@ -218,11 +227,25 @@ var InducedErrors struct {
 	CreateSnapshotPolicyError              bool
 	ModifySnapshotPolicyError              bool
 	DeleteSnapshotPolicyError              bool
+	GetFileSystemListError                 bool
+	GetNFSExportListError                  bool
+	GetNASServerListError                  bool
+	GetFileSystemError                     bool
+	CreateFileSystemError                  bool
+	UpdateFileSystemError                  bool
+	DeleteFileSystemError                  bool
+	GetNASServerError                      bool
+	UpdateNASServerError                   bool
+	DeleteNASServerError                   bool
+	GetNFSExportError                      bool
+	CreateNFSExportError                   bool
+	UpdateNFSExportError                   bool
+	DeleteNFSExportError                   bool
 }
 
 // hasError checks to see if the specified error (via pointer)
 // is set. If so it returns true, else false.
-// Additionally if ResetAfterFirstError is set, the first error
+// Additionally, if ResetAfterFirstError is set, the first error
 // condition will be reset to no longer be an error condition.
 func hasError(errorType *bool) bool {
 	if *errorType {
@@ -337,6 +360,20 @@ func Reset() {
 	InducedErrors.CreateSnapshotPolicyError = false
 	InducedErrors.ModifySnapshotPolicyError = false
 	InducedErrors.DeleteSnapshotPolicyError = false
+	InducedErrors.GetFileSystemListError = false
+	InducedErrors.GetNFSExportListError = false
+	InducedErrors.GetNASServerListError = false
+	InducedErrors.GetFileSystemError = false
+	InducedErrors.CreateFileSystemError = false
+	InducedErrors.UpdateFileSystemError = false
+	InducedErrors.DeleteFileSystemError = false
+	InducedErrors.GetNASServerError = false
+	InducedErrors.UpdateNASServerError = false
+	InducedErrors.DeleteNASServerError = false
+	InducedErrors.GetNFSExportError = false
+	InducedErrors.CreateNFSExportError = false
+	InducedErrors.UpdateNFSExportError = false
+	InducedErrors.DeleteNFSExportError = false
 	Data.JSONDir = "mock"
 	Data.VolumeIDToIdentifier = make(map[string]string)
 	Data.VolumeIDToSize = make(map[string]int)
@@ -362,6 +399,9 @@ func Reset() {
 	Data.SnapIDToLinkedVol = make(map[string]map[string]*types.LinkedVolumes)
 	Data.StorageGroupIDToRDFStorageGroup = make(map[string]*types.RDFStorageGroup)
 	Data.HostGroupIDToHostGroup = make(map[string]*types.HostGroup)
+	Data.FileSysIDToFileSystem = make(map[string]*types.FileSystem)
+	Data.NFSExportIDToNFSExport = make(map[string]*types.NFSExport)
+	Data.NASServerIDToNASServer = make(map[string]*types.NASServer)
 	Data.RDFGroup = &types.RDFGroup{
 		RdfgNumber:          DefaultRDFGNo,
 		Label:               DefaultRDFLabel,
@@ -441,6 +481,18 @@ func initMockCache() {
 	initNode3List = append(initNode3List, hba2Node3)
 	AddHost("CSI-Test-Node-3-FC", "Fibre", initNode3List) // #nosec G20
 	AddTempSnapshots()
+	AddFileObjects()
+}
+
+func AddFileObjects() {
+	// Add a file system
+	AddNewFileSystem("id1", "fs-1", 4000)
+	// Add a NFS Export
+	AddNewNFSExport("id1", "nfs-0")
+	AddNewNFSExport("id2", "nfs-del")
+	// Add a NAS Server
+	AddNewNASServer("id1", "nas-1")
+	AddNewNASServer("id2", "nas-del")
 }
 
 var mockRouter http.Handler
@@ -539,9 +591,17 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIXNOVERSION+"/performance/StorageGroup/keys", handleStorageGroupPerfKeys)
 	router.HandleFunc(PREFIXNOVERSION+"/performance/Array/keys", handleArrayPerfKeys)
 
-	//Snapshot Policy
+	// Snapshot Policy
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/snapshot_policy/{snapshotPolicyId}", handleGetSnapshotPolicy)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/snapshot_policy", handleCreateSnapshotPolicy)
+
+	// File APIs
+	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/file_system/{fsID}", handleFileSystem)
+	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/file_system", handleFileSystem)
+	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/nfs_export/{nfsID}", handleNFSExport)
+	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/nfs_export", handleNFSExport)
+	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/nas_server/{nasID}", handleNASServer)
+	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/nas_server", handleNASServer)
 
 	mockRouter = router
 	return router
@@ -1166,8 +1226,8 @@ func handleStorageResourcePool(w http.ResponseWriter, r *http.Request) {
 	returnJSONFile(Data.JSONDir, "storage_pool_template.json", w, replacements)
 }
 
-// GET /univmax/restapi/API_VERSON/sloprovisioning/symmetrix/{id}/volume/{id}
-// GET /univmax/restapi/API_VERSON/sloprovisioning/symmetrix/{id}/volume
+// GET /univmax/restapi/API_VERSION/sloprovisioning/symmetrix/{id}/volume/{id}
+// GET /univmax/restapi/API_VERSION/sloprovisioning/symmetrix/{id}/volume
 func handleVolume(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	volID := vars["volID"]
@@ -3984,7 +4044,7 @@ func handleHostGroup(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error retrieving HostGroupList: induced error", http.StatusRequestTimeout)
 			return
 		}
-		returnHostGroup(w, hostGroupID)
+		ReturnHostGroup(w, hostGroupID)
 
 	case http.MethodPost:
 		if InducedErrors.CreateHostGroupError {
@@ -4215,6 +4275,502 @@ func handleFlags(hostGroup *types.HostGroup, flagPayload *types.HostFlags) {
 
 	if flagPayload.ConsistentLUN {
 		hostGroup.ConsistentLun = true
+	}
+}
+
+// /univmax/restapi/100/file/symmetrix/{symID}/nas_server/
+// /univmax/restapi/100/file/symmetrix/{symID}/nas_server/{nasID}
+func handleNASServer(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	nasID := vars["nasID"]
+	switch r.Method {
+	case http.MethodGet:
+		if InducedErrors.GetNASServerListError {
+			writeError(w, "Error retrieving NAS server: induced error", http.StatusRequestTimeout)
+			return
+		}
+		if InducedErrors.GetNASServerError {
+			writeError(w, "Error retrieving NAS server: induced error", http.StatusRequestTimeout)
+			return
+		}
+		ReturnNASServer(w, nasID)
+	case http.MethodPut:
+		if InducedErrors.UpdateNASServerError {
+			writeError(w, "Error updating NAS server: induced error", http.StatusRequestTimeout)
+			return
+		}
+		decoder := json.NewDecoder(r.Body)
+		modifyNASServerParam := &types.ModifyNASServer{}
+		err := decoder.Decode(modifyNASServerParam)
+		if err != nil {
+			writeError(w, "InvalidJson", http.StatusBadRequest)
+			return
+		}
+		UpdateNASServer(nasID, *modifyNASServerParam)
+		ReturnNASServer(w, nasID)
+	case http.MethodDelete:
+		if InducedErrors.DeleteNASServerError {
+			writeError(w, "Error deleting NAS server: induced error", http.StatusRequestTimeout)
+			return
+		}
+		RemoveNASServer(w, nasID)
+	default:
+		writeError(w, "Invalid Method", http.StatusBadRequest)
+	}
+}
+
+func UpdateNASServer(nasID string, payload types.ModifyNASServer) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	newName := payload.Name
+	updateNASServer(nasID, newName)
+}
+
+func updateNASServer(nasID, newName string) {
+	nas := Data.NASServerIDToNASServer[nasID]
+	nas.Name = newName
+	Data.NASServerIDToNASServer[nasID] = nas
+}
+
+func ReturnNASServer(w http.ResponseWriter, nasID string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	returnNASServer(w, nasID)
+}
+
+func returnNASServer(w http.ResponseWriter, nasID string) {
+	if nasID == "" {
+		// return NAS ServerList
+		nasIter := &types.NASServerIterator{
+			Entries: []types.NASServerList{
+				{
+					ID:   DefaultNASServerID,
+					Name: "nas-1",
+				},
+				{
+					ID:   "54xxx7a6-03b5-xxx-xxx-0zzzz8200209",
+					Name: "nas-2",
+				},
+			},
+		}
+		writeJSON(w, nasIter)
+		return
+	}
+	var nasServer *types.NASServer
+	found := false
+	for _, ns := range Data.NASServerIDToNASServer {
+		if ns.ID == nasID {
+			found = true
+			nasServer = ns
+		}
+	}
+	if !found {
+		writeError(w, "NASServer cannot be found", http.StatusNotFound)
+		return
+	}
+	writeJSON(w, nasServer)
+}
+
+// /univmax/restapi/100/file/symmetrix/{symID}/nfs_export/
+// /univmax/restapi/100/file/symmetrix/{symID}/nfs_export/{nfsID}
+func handleNFSExport(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	nfsID := vars["nfsID"]
+	switch r.Method {
+	case http.MethodGet:
+		if InducedErrors.GetNFSExportListError {
+			writeError(w, "Error retrieving NFS Export: induced error", http.StatusRequestTimeout)
+			return
+		}
+		if InducedErrors.GetNFSExportError {
+			writeError(w, "Error retrieving NFS Export: induced error", http.StatusNotFound)
+			return
+		}
+		ReturnNFSExport(w, nfsID)
+	case http.MethodPost:
+		if InducedErrors.CreateNFSExportError {
+			writeError(w, "Error creating NFS Export: induced error", http.StatusRequestTimeout)
+			return
+		}
+		decoder := json.NewDecoder(r.Body)
+		createNFSExportParam := &types.CreateNFSExport{}
+		err := decoder.Decode(createNFSExportParam)
+		if err != nil {
+			writeError(w, "InvalidJson", http.StatusBadRequest)
+			return
+		}
+		AddNewNFSExport("id-3", createNFSExportParam.Name)
+		ReturnNFSExport(w, "id-3")
+	case http.MethodPut:
+		if InducedErrors.UpdateNFSExportError {
+			writeError(w, "Error updating NFS Export: induced error", http.StatusRequestTimeout)
+			return
+		}
+		decoder := json.NewDecoder(r.Body)
+		modifyNFSExportParam := &types.ModifyNFSExport{}
+		err := decoder.Decode(modifyNFSExportParam)
+		if err != nil {
+			writeError(w, "InvalidJson", http.StatusBadRequest)
+			return
+		}
+		UpdateNFSExport(nfsID, *modifyNFSExportParam)
+		ReturnNFSExport(w, nfsID)
+	case http.MethodDelete:
+		if InducedErrors.DeleteNFSExportError {
+			writeError(w, "Error deleting NFS Export: induced error", http.StatusRequestTimeout)
+			return
+		}
+		RemoveNFSExport(w, nfsID)
+	default:
+		writeError(w, "Invalid Method", http.StatusBadRequest)
+	}
+}
+
+func RemoveNFSExport(w http.ResponseWriter, nfsID string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	removeNFSExport(w, nfsID)
+}
+
+func removeNFSExport(w http.ResponseWriter, nfsID string) {
+	_, ok := Data.NFSExportIDToNFSExport[nfsID]
+	if !ok {
+		writeError(w, "error! fileSystem doesn't exist", http.StatusNotFound)
+	}
+	delete(Data.NFSExportIDToNFSExport, nfsID)
+	return
+}
+
+func UpdateNFSExport(id string, payload types.ModifyNFSExport) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	newName := payload.Name
+	updateNFSExport(id, newName)
+}
+
+func updateNFSExport(nfsID, newName string) {
+	nfs := Data.NFSExportIDToNFSExport[nfsID]
+	nfs.Name = newName
+	Data.NFSExportIDToNFSExport[nfsID] = nfs
+}
+
+func ReturnNFSExport(w http.ResponseWriter, nfsID string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	returnNFSExport(w, nfsID)
+}
+
+func returnNFSExport(w http.ResponseWriter, nfsID string) {
+	if nfsID == "" {
+		// return NFS Export list
+		nfsExportIter := &types.NFSExportIterator{
+			ResultList: types.NFSExportList{
+				NFSExportList: []types.NFSExportIDName{
+					{
+						ID:   "64xxx7a6-03b5-xxx-xxx-0zzzz8200208",
+						Name: "nfs-ds-1",
+					},
+					{
+						ID:   "64xxx7a6-03b5-xxx-xxx-0zzzz8200209",
+						Name: "nfs-ds-2",
+					},
+				},
+				From: 1,
+				To:   2,
+			},
+			ID:             "52248851-fd6b-42c8-b7c7-2a9c0e40441a_0",
+			Count:          2,
+			ExpirationTime: 1688114398468,
+			MaxPageSize:    1000,
+		}
+		writeJSON(w, nfsExportIter)
+		return
+	}
+	var nfsExport *types.NFSExport
+	found := false
+	for _, nfs := range Data.NFSExportIDToNFSExport {
+		if nfs.ID == nfsID {
+			found = true
+			nfsExport = nfs
+		}
+	}
+	if !found {
+		writeError(w, "NFSExport cannot be found", http.StatusNotFound)
+		return
+	}
+	writeJSON(w, nfsExport)
+}
+
+// /univmax/restapi/100/file/symmetrix/{symID}/file_system/
+// /univmax/restapi/100/file/symmetrix/{symID}/file_system/{fsID}
+func handleFileSystem(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	fsID := vars["fsID"]
+	switch r.Method {
+	case http.MethodGet:
+		if InducedErrors.GetFileSystemListError {
+			writeError(w, "Error retrieving file systems: induced error", http.StatusRequestTimeout)
+			return
+		}
+		if InducedErrors.GetFileSystemError {
+			writeError(w, "Error retrieving file system: induced error", http.StatusNotFound)
+			return
+		}
+		ReturnFileSystem(w, fsID)
+	case http.MethodPost:
+		if InducedErrors.CreateFileSystemError {
+			writeError(w, "Error creating file system: induced error", http.StatusRequestTimeout)
+			return
+		}
+		decoder := json.NewDecoder(r.Body)
+		createFileSystemParam := &types.CreateFileSystem{}
+		err := decoder.Decode(createFileSystemParam)
+		if err != nil {
+			writeError(w, "InvalidJson", http.StatusBadRequest)
+			return
+		}
+		AddNewFileSystem("id-2", createFileSystemParam.Name, createFileSystemParam.SizeTotal)
+		ReturnFileSystem(w, "id-2")
+	case http.MethodPut:
+		if InducedErrors.UpdateFileSystemError {
+			writeError(w, "Error updating file system: induced error", http.StatusRequestTimeout)
+			return
+		}
+		decoder := json.NewDecoder(r.Body)
+		modifyFileSystemParam := &types.ModifyFileSystem{}
+		err := decoder.Decode(modifyFileSystemParam)
+		if err != nil {
+			writeError(w, "InvalidJson", http.StatusBadRequest)
+			return
+		}
+		UpdateFileSystem(fsID, *modifyFileSystemParam)
+		ReturnFileSystem(w, fsID)
+	case http.MethodDelete:
+		if InducedErrors.DeleteFileSystemError {
+			writeError(w, "Error deleting file system: induced error", http.StatusRequestTimeout)
+			return
+		}
+		RemoveFileSystem(w, fsID)
+	default:
+		writeError(w, "Invalid Method", http.StatusBadRequest)
+	}
+}
+
+func ReturnFileSystem(w http.ResponseWriter, fsID string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	returnFileSystem(w, fsID)
+}
+
+func returnFileSystem(w http.ResponseWriter, fsID string) {
+	if fsID != "" {
+		var fileSys *types.FileSystem
+		found := false
+		for _, fs := range Data.FileSysIDToFileSystem {
+			if fs.ID == fsID {
+				found = true
+				fileSys = fs
+			}
+		}
+		if !found {
+			writeError(w, "FileSystem cannot be found", http.StatusNotFound)
+			return
+		}
+		writeJSON(w, fileSys)
+	} else {
+		// send in a list of file System
+		fileSysIter := &types.FileSystemIterator{
+			ResultList: types.FileSystemList{
+				FileSystemList: []types.FileSystemIDName{
+					{
+						ID:   DefaultFSID,
+						Name: DefaultFSName,
+					},
+					{
+						ID:   "64xxx7a6-03b5-xxx-xxx-0zzzz8200209",
+						Name: "fs-ds-2",
+					},
+				},
+				From: 1,
+				To:   2,
+			},
+			ID:             "52248851-fd6b-42c8-b7c7-2a9c0e40441a_0",
+			Count:          2,
+			ExpirationTime: 1688114398468,
+			MaxPageSize:    1000,
+		}
+		writeJSON(w, fileSysIter)
+	}
+}
+
+func RemoveFileSystem(w http.ResponseWriter, fsID string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	removeFileSystem(w, fsID)
+}
+
+func removeFileSystem(w http.ResponseWriter, fsID string) {
+	_, ok := Data.FileSysIDToFileSystem[fsID]
+	if !ok {
+		writeError(w, "error! fileSystem doesn't exist", http.StatusNotFound)
+	}
+	delete(Data.FileSysIDToFileSystem, fsID)
+	return
+}
+
+func RemoveNASServer(w http.ResponseWriter, nasID string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	removeNASServer(w, nasID)
+}
+
+func removeNASServer(w http.ResponseWriter, nasID string) {
+	_, ok := Data.NASServerIDToNASServer[nasID]
+	if !ok {
+		writeError(w, "error! fileSystem doesn't exist", http.StatusNotFound)
+	}
+	delete(Data.NASServerIDToNASServer, nasID)
+	return
+}
+
+func AddNewNASServer(id, name string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	addNewNASServer(id, name)
+}
+
+func addNewNASServer(nasID, nasName string) {
+	Data.NASServerIDToNASServer[nasID] = newNASServer(nasID, nasName)
+}
+
+func newNASServer(nasID, nasName string) *types.NASServer {
+	return &types.NASServer{
+		ID:                          nasID,
+		Health:                      types.Health{HealthStatus: "ok"},
+		Name:                        nasName,
+		StorageResourcePool:         "SRP_1",
+		OperationalStatus:           "Started",
+		PrimaryNode:                 "1",
+		BackupNode:                  "2",
+		Cluster:                     "64860dc2-571a-15d7",
+		ProductionMode:              true,
+		CurrentUnixDirectoryService: "Nonw",
+		UsernameTranslation:         false,
+		AutoUserMapping:             false,
+		FileInterfaces:              nil,
+		NFSServer:                   "6488552e-b863-6c30-xxx-1234xxxx",
+		RootFSWWN:                   "wwn_0x540a001d01234567890",
+		ConfigFSWWN:                 "wwn_0x540a001d01234567890",
+	}
+}
+
+func AddNewNFSExport(id, name string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	addNewNFSExport(id, name)
+}
+
+func addNewNFSExport(nfsID, nfsName string) {
+	Data.NFSExportIDToNFSExport[nfsID] = newNFSExport(nfsID, nfsName)
+}
+
+func newNFSExport(nfsID, nfsName string) *types.NFSExport {
+	return &types.NFSExport{
+		ID:                 nfsID,
+		Type:               "Nfs_VMWare",
+		Filesystem:         "id1",
+		NASServer:          "id1",
+		Name:               nfsName,
+		Path:               fmt.Sprintf("/%s", nfsName),
+		Description:        "mock nfs export",
+		DefaultAccess:      "NoAccess",
+		MinSecurity:        "Sys",
+		NFSOwnerUsername:   "root",
+		NoAccessHosts:      nil,
+		ReadOnlyHosts:      nil,
+		ReadOnlyRootHosts:  nil,
+		ReadWriteHosts:     nil,
+		ReadWriteRootHosts: []string{"172.125.0.123"},
+		AnonymousUID:       -2,
+		AnonymousGID:       -2,
+		NoSUID:             false,
+	}
+}
+
+func AddNewFileSystem(id, name string, sizeInMiB int64) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	addNewFileSystem(id, name, sizeInMiB)
+}
+
+func addNewFileSystem(fsID, fsName string, sizeInMiB int64) {
+	Data.FileSysIDToFileSystem[fsID] = newFileSystem(fsID, fsName, sizeInMiB)
+}
+
+func UpdateFileSystem(id string, payload types.ModifyFileSystem) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	sizeInMiB := payload.SizeTotal
+	updateFileSystem(id, sizeInMiB)
+}
+
+func updateFileSystem(fsID string, sizeInMiB int64) {
+	fs := Data.FileSysIDToFileSystem[fsID]
+	fs.SizeTotal = sizeInMiB
+	Data.FileSysIDToFileSystem[fsID] = fs
+}
+
+func newFileSystem(fsID, fsName string, sizeInMiB int64) *types.FileSystem {
+	return &types.FileSystem{
+		ID:          fsID,
+		ParentOID:   "00000-0000",
+		Name:        fsName,
+		StorageWWN:  "0x540a001d000001740000976007271234",
+		ExportFSID:  "648af4d7-92b5-d347-989c-026048200208",
+		Description: "mock fs system",
+		SizeTotal:   sizeInMiB,
+		SizeUsed:    0,
+		Health: struct {
+			HealthStatus string `json:"health_status"`
+		}{HealthStatus: "OK"},
+		ReadOnly:                  false,
+		FsType:                    "General",
+		MountState:                "Mounted",
+		AccessPolicy:              "Native",
+		LockingPolicy:             "Advisory",
+		FolderRenamePolicy:        "SMB_Rename_Forbidden",
+		HostIOBlockSize:           8192,
+		NasServer:                 "id1",
+		SmbSyncWrites:             false,
+		SmbOpLocks:                false,
+		SmbNoNotify:               false,
+		SmbNotifyOnAccess:         false,
+		SmbNotifyOnWrite:          false,
+		SmbNotifyOnChangeDirDepth: 0,
+		AsyncMtime:                false,
+		FlrMode:                   "None",
+		FlrMinRet:                 "0D",
+		FlrDefRet:                 "0D",
+		FlrMaxRet:                 "0D",
+		FlrAutoLock:               false,
+		FlrAutoDelete:             false,
+		FlrPolicyInterval:         0,
+		FlrEnabled:                false,
+		FlrClockTime:              "",
+		FlrMaxRetentionDate:       "",
+		FlrHasProtectedFiles:      false,
+		QuotaConfig: &types.QuotaConfig{
+			QuotaEnabled:     false,
+			GracePeriod:      60480,
+			DefaultHardLimit: 0,
+			DefaultSoftLimit: 0,
+		},
+		EventNotifications: "",
+		InfoThreshold:      0,
+		HighThreshold:      75,
+		WarningThreshold:   95,
+		ServiceLevel:       "Optimized",
+		DataReduction:      true,
 	}
 }
 

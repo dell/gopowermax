@@ -296,9 +296,9 @@ Scenario Outline: Test cases for modifyMobility for volume
     | volname                                                                        | size     | capUnit   | induced                   | errormsg                                               | arrays    |
     | "IntgA"                                                                        | 1        | "CYL"     | "none"                    | "none"                                                 | ""        |
     | "IntgB"                                                                        | 5        | "CYL"     | "none"                    | "none"                                                 | ""        |
-    | "IntgC"                                                                        | 1       | "GB"      | "UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"       | ""        |
+    | "IntgC"                                                                        | 1        | "GB"      | "UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"       | ""        |
     | "IntgD"                                                                        | 1        | "GB"      | "httpStatus500"           | "A job was not returned from UpdateStorageGroup"       | ""        |
-    | "IntgE"                                                                        | 1       | "GB"      | "GetJobError"             | "induced error"                                        | ""        |
+    | "IntgE"                                                                        | 1        | "GB"      | "GetJobError"             | "induced error"                                        | ""        |
     | "IntgF"                                                                        | 1        | "GB"      | "JobFailedError"          | "The UpdateStorageGroup job failed"                    | ""        |
     | "IntgG"                                                                        | 1        | "GB"      | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
     | "IntgH"                                                                        | 1        | "GB"      | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
