@@ -24,17 +24,15 @@ type FileSystemIterator struct {
 
 // FileSystem holds information about a file system
 type FileSystem struct {
-	ID          string `json:"id"`
-	ParentOID   string `json:"parent_oid"`
-	Name        string `json:"name"`
-	StorageWWN  string `json:"storage_wwn"`
-	ExportFSID  string `json:"export_fsid"`
-	Description string `json:"description"`
-	SizeTotal   int64  `json:"size_total"`
-	SizeUsed    int64  `json:"size_used"`
-	Health      struct {
-		HealthStatus string `json:"health_status"`
-	} `json:"health"`
+	ID                        string       `json:"id"`
+	ParentOID                 string       `json:"parent_oid"`
+	Name                      string       `json:"name"`
+	StorageWWN                string       `json:"storage_wwn"`
+	ExportFSID                string       `json:"export_fsid"`
+	Description               string       `json:"description"`
+	SizeTotal                 int64        `json:"size_total"`
+	SizeUsed                  int64        `json:"size_used"`
+	Health                    Health       `json:"health"`
 	ReadOnly                  bool         `json:"read_only"`
 	FsType                    string       `json:"fs_type"`
 	MountState                string       `json:"mount_state"`
@@ -70,6 +68,7 @@ type FileSystem struct {
 	DataReduction             bool         `json:"data_reduction"`
 }
 
+// CreateFileSystem has payload to create file system
 type CreateFileSystem struct {
 	Name                      string       `json:"name"`
 	SizeTotal                 int64        `json:"size_total"`
@@ -106,6 +105,7 @@ type CreateFileSystem struct {
 	DataReduction             bool         `json:"data_reduction,omitempty"`
 }
 
+// QuotaConfig defines quotas for file
 type QuotaConfig struct {
 	QuotaEnabled     bool `json:"quota_enabled,omitempty"`
 	GracePeriod      int  `json:"grace_period,omitempty"`
@@ -113,6 +113,7 @@ type QuotaConfig struct {
 	DefaultSoftLimit int  `json:"default_soft_limit,omitempty"`
 }
 
+// ModifyFileSystem params to modifies a file system
 type ModifyFileSystem struct {
 	SizeTotal                 int64        `json:"size_total,omitempty"`
 	AccessPolicy              string       `json:"access_policy,omitempty"`
@@ -183,6 +184,7 @@ type ModifyNFSExport struct {
 	NoSUID             bool     `json:"no_suid,omitempty"`
 }
 
+// CreateNFSExport holds param to create NFS export
 type CreateNFSExport struct {
 	StorageResource    string   `json:"storage_resource"`
 	Name               string   `json:"name"`
@@ -201,6 +203,7 @@ type CreateNFSExport struct {
 	NoSUID             bool     `json:"no_suid,omitempty"`
 }
 
+// NFSExport holds export nfs export details
 type NFSExport struct {
 	ID                 string   `json:"id"`
 	Type               string   `json:"type"`
@@ -224,6 +227,7 @@ type NFSExport struct {
 	NoSUID             bool     `json:"no_suid"`
 }
 
+// NASServerList holds nas server metadata items
 type NASServerList struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
@@ -234,10 +238,12 @@ type NASServerIterator struct {
 	Entries []NASServerList `json:"entries"`
 }
 
+// Health holds health info
 type Health struct {
 	HealthStatus string `json:"health_status"`
 }
 
+// NASServer holds nas server details
 type NASServer struct {
 	ID                          string   `json:"id"`
 	Health                      Health   `json:"health"`
@@ -253,13 +259,14 @@ type NASServer struct {
 	AutoUserMapping             bool     `json:"auto_user_mapping"`
 	FileInterfaces              []string `json:"file_interfaces"`
 	PreferredInterfaceSettings  struct {
-		CurrentPreferredIpV4 string `json:"current_preferred_ip_v4"`
+		CurrentPreferredIPV4 string `json:"current_preferred_ip_v4"`
 	} `json:"preferred_interface_settings"`
 	NFSServer   string `json:"nfs_server"`
 	RootFSWWN   string `json:"root_fs_wwn"`
 	ConfigFSWWN string `json:"config_fs_wwn"`
 }
 
+// ModifyNASServer modifies nas server
 type ModifyNASServer struct {
 	Name                        string `json:"name,omitempty"`
 	CurrentUnixDirectoryService string `json:"current_unix_directory_service,omitempty"`
@@ -267,15 +274,16 @@ type ModifyNASServer struct {
 	AutoUserMapping             bool   `json:"auto_user_mapping,omitempty"`
 }
 
+// FileInterface holds file interface details
 type FileInterface struct {
 	ID         string `json:"id"`
 	NasServer  string `json:"nas_server"`
 	NetDevice  string `json:"net_device"`
 	MacAddress string `json:"mac_address"`
-	IpAddress  string `json:"ip_address"`
+	IPAddress  string `json:"ip_address"`
 	Netmask    string `json:"netmask"`
 	Gateway    string `json:"gateway"`
-	VlanId     int    `json:"vlan_id"`
+	VlanID     int    `json:"vlan_id"`
 	Name       string `json:"name"`
 	Role       string `json:"role"`
 	IsDisabled bool   `json:"is_disabled"`

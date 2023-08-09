@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// constants to be used in APIs
 const (
 	XFile          = "file/"
 	XFileSystem    = "/file_system"
@@ -125,6 +126,7 @@ func (c *Client) CreateFileSystem(ctx context.Context, symID, name, nasServer, s
 	return fileSystem, nil
 }
 
+// ModifyFileSystem modifies the given file system
 func (c *Client) ModifyFileSystem(ctx context.Context, symID, fsID string, payload types.ModifyFileSystem) (*types.FileSystem, error) {
 	defer c.TimeSpent("ModifyFileSystem", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {

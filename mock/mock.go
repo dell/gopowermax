@@ -484,8 +484,9 @@ func initMockCache() {
 	AddFileObjects()
 }
 
+// AddFileObjects adds file objects for mock objects
 func AddFileObjects() {
-	// Add a file system
+	// Add a File System
 	AddNewFileSystem("id1", "fs-1", 4000)
 	// Add a NFS Export
 	AddNewNFSExport("id1", "nfs-0")
@@ -4319,6 +4320,7 @@ func handleNASServer(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// UpdateNASServer updates NAS server
 func UpdateNASServer(nasID string, payload types.ModifyNASServer) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
@@ -4332,6 +4334,7 @@ func updateNASServer(nasID, newName string) {
 	Data.NASServerIDToNASServer[nasID] = nas
 }
 
+// ReturnNASServer returns NAS server object
 func ReturnNASServer(w http.ResponseWriter, nasID string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
@@ -4426,6 +4429,7 @@ func handleNFSExport(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// RemoveNFSExport removes NFS export object
 func RemoveNFSExport(w http.ResponseWriter, nfsID string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
@@ -4441,6 +4445,7 @@ func removeNFSExport(w http.ResponseWriter, nfsID string) {
 	return
 }
 
+// UpdateNFSExport updates NFS Export
 func UpdateNFSExport(id string, payload types.ModifyNFSExport) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
@@ -4454,6 +4459,7 @@ func updateNFSExport(nfsID, newName string) {
 	Data.NFSExportIDToNFSExport[nfsID] = nfs
 }
 
+// ReturnNFSExport NFS export
 func ReturnNFSExport(w http.ResponseWriter, nfsID string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
@@ -4556,6 +4562,7 @@ func handleFileSystem(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ReturnFileSystem returns File System object
 func ReturnFileSystem(w http.ResponseWriter, fsID string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
@@ -4603,6 +4610,7 @@ func returnFileSystem(w http.ResponseWriter, fsID string) {
 	}
 }
 
+// RemoveFileSystem removes File system from mock
 func RemoveFileSystem(w http.ResponseWriter, fsID string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
@@ -4618,6 +4626,7 @@ func removeFileSystem(w http.ResponseWriter, fsID string) {
 	return
 }
 
+// RemoveNASServer removes NAS server
 func RemoveNASServer(w http.ResponseWriter, nasID string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
@@ -4633,6 +4642,7 @@ func removeNASServer(w http.ResponseWriter, nasID string) {
 	return
 }
 
+// AddNewNASServer adds new NAS server into mock
 func AddNewNASServer(id, name string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
@@ -4664,6 +4674,7 @@ func newNASServer(nasID, nasName string) *types.NASServer {
 	}
 }
 
+// AddNewNFSExport new NFS Export into mock
 func AddNewNFSExport(id, name string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
@@ -4697,6 +4708,7 @@ func newNFSExport(nfsID, nfsName string) *types.NFSExport {
 	}
 }
 
+// AddNewFileSystem adds a new file system into mock
 func AddNewFileSystem(id, name string, sizeInMiB int64) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
@@ -4707,6 +4719,7 @@ func addNewFileSystem(fsID, fsName string, sizeInMiB int64) {
 	Data.FileSysIDToFileSystem[fsID] = newFileSystem(fsID, fsName, sizeInMiB)
 }
 
+// UpdateFileSystem updates an existing FileSystem
 func UpdateFileSystem(id string, payload types.ModifyFileSystem) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
