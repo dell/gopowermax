@@ -19,15 +19,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/cucumber/godog"
+	"github.com/dell/gopowermax/v2/mock"
+	types "github.com/dell/gopowermax/v2/types/v100"
 	"net/http"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
-
-	"github.com/cucumber/godog"
-	"github.com/dell/gopowermax/v2/mock"
-	types "github.com/dell/gopowermax/v2/types/v100"
 )
 
 const (
@@ -48,6 +47,8 @@ const (
 	testFCInitiatorWWN     = "10000090fa66060a"
 	testFCInitiator        = "FA-1D:4:10000090fa66060a"
 	protocol               = "SCSI_FC"
+	queryNASServerID       = "nas_server_id"
+	queryName              = "name"
 )
 
 type uMV struct {
@@ -126,6 +127,13 @@ type unitContext struct {
 		badPort        bool
 		badIP          bool
 	}
+
+	fileSystemList *types.FileSystemIterator
+	nasServerList  *types.NASServerIterator
+	nfsExportList  *types.NFSExportIterator
+	fileSystem     *types.FileSystem
+	nfsExport      *types.NFSExport
+	nasServer      *types.NASServer
 }
 
 func (c *unitContext) reset() {
@@ -156,7 +164,6 @@ func (c *unitContext) reset() {
 	c.hostID = ""
 	c.hostGroupID = ""
 	c.sgID = ""
-
 	c.symRepCapabilities = nil
 	c.sourceVolumeList = make([]types.VolumeList, 0)
 	c.symVolumeList = nil
@@ -165,7 +172,10 @@ func (c *unitContext) reset() {
 	c.volSnapGenerationList = nil
 	c.volSnapGenerationInfo = nil
 	c.volResultPrivate = nil
-
+	c.fileSystemList = nil
+	c.fileSystem = nil
+	c.nfsExport = nil
+	c.nasServer = nil
 }
 
 func (c *unitContext) iInduceError(errorType string) error {
@@ -225,6 +235,20 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.GetLocalRDFPortDetailsError = false
 	mock.InducedErrors.CreateRDFGroupError = false
 	mock.InducedErrors.GetRDFGroupError = false
+	mock.InducedErrors.GetFileSystemListError = false
+	mock.InducedErrors.GetNFSExportListError = false
+	mock.InducedErrors.GetNASServerListError = false
+	mock.InducedErrors.GetFileSystemError = false
+	mock.InducedErrors.CreateFileSystemError = false
+	mock.InducedErrors.UpdateFileSystemError = false
+	mock.InducedErrors.DeleteFileSystemError = false
+	mock.InducedErrors.GetNASServerError = false
+	mock.InducedErrors.UpdateNASServerError = false
+	mock.InducedErrors.DeleteNASServerError = false
+	mock.InducedErrors.GetNFSExportError = false
+	mock.InducedErrors.CreateNFSExportError = false
+	mock.InducedErrors.UpdateNFSExportError = false
+	mock.InducedErrors.DeleteNFSExportError = false
 	switch errorType {
 	case "InvalidJSON":
 		mock.InducedErrors.InvalidJSON = true
@@ -380,6 +404,34 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.ModifySnapshotPolicyError = true
 	case "DeleteSnapshotPolicyError":
 		mock.InducedErrors.DeleteSnapshotPolicyError = true
+	case "GetFileSystemListError":
+		mock.InducedErrors.GetFileSystemListError = true
+	case "GetNFSExportListError":
+		mock.InducedErrors.GetNFSExportListError = true
+	case "GetNASServerListError":
+		mock.InducedErrors.GetNASServerListError = true
+	case "GetFileSystemError":
+		mock.InducedErrors.GetFileSystemError = true
+	case "CreateFileSystemError":
+		mock.InducedErrors.CreateFileSystemError = true
+	case "UpdateFileSystemError":
+		mock.InducedErrors.UpdateFileSystemError = true
+	case "DeleteFileSystemError":
+		mock.InducedErrors.DeleteFileSystemError = true
+	case "GetNASServerError":
+		mock.InducedErrors.GetNASServerError = true
+	case "UpdateNASServerError":
+		mock.InducedErrors.UpdateNASServerError = true
+	case "DeleteNASServerError":
+		mock.InducedErrors.DeleteNASServerError = true
+	case "GetNFSExportError":
+		mock.InducedErrors.GetNFSExportError = true
+	case "CreateNFSExportError":
+		mock.InducedErrors.CreateNFSExportError = true
+	case "UpdateNFSExportError":
+		mock.InducedErrors.UpdateNFSExportError = true
+	case "DeleteNFSExportError":
+		mock.InducedErrors.DeleteNFSExportError = true
 	case "none":
 	default:
 		return fmt.Errorf("unknown errorType: %s", errorType)
@@ -2263,7 +2315,169 @@ func (c *unitContext) iShouldGetListOfSnapshotPoliciesIfNoError() error {
 	return nil
 }
 
-func UnitTestContext(s *godog.Suite) {
+func (c *unitContext) iCallGetFileSystemList() error {
+	c.fileSystemList, c.err = c.client.GetFileSystemList(context.TODO(), symID, nil)
+	return nil
+}
+
+func (c *unitContext) iCallGetFileSystemListWithParam() error {
+	query := types.QueryParams{queryName: mock.DefaultFSName, queryNASServerID: mock.DefaultNASServerID}
+	c.fileSystemList, c.err = c.client.GetFileSystemList(context.TODO(), symID, query)
+	return nil
+}
+
+func (c *unitContext) iGetAValidFileSystemIDListIfNoError() error {
+	if c.err == nil {
+		if c.fileSystemList == nil {
+			return fmt.Errorf("fileSystemIDList nil")
+		}
+		if c.fileSystemList.Count == 0 {
+			return fmt.Errorf("no IDs in fileSystemIDList")
+		}
+	}
+	return nil
+}
+func (c *unitContext) iCallGetNASServerList() error {
+	c.nasServerList, c.err = c.client.GetNASServerList(context.TODO(), symID, nil)
+	return nil
+}
+func (c *unitContext) iCallGetNASServerListWithParam() error {
+	query := types.QueryParams{queryName: mock.DefaultNASServerName}
+	c.nasServerList, c.err = c.client.GetNASServerList(context.TODO(), symID, query)
+	return nil
+}
+
+func (c *unitContext) iCallGetNFSExportList() error {
+	c.nfsExportList, c.err = c.client.GetNFSExportList(context.TODO(), symID, nil)
+	return nil
+}
+
+func (c *unitContext) iGetAValidNASServerIDListIfNoError() error {
+	if c.err == nil {
+		if c.nasServerList == nil {
+			return fmt.Errorf("nasServer List nil")
+		}
+		if len(c.nasServerList.Entries) == 0 {
+			return fmt.Errorf("no IDs in nasServerList")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iGetAValidNFSExportIDListIfNoError() error {
+	if c.err == nil {
+		if c.nfsExportList == nil {
+			return fmt.Errorf("nfsExportList nil")
+		}
+		if c.nfsExportList.Count == 0 {
+			return fmt.Errorf("no IDs in nfsExportList")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iCallGetFileSystemByID(fsID string) error {
+	c.fileSystem, c.err = c.client.GetFileSystemByID(context.TODO(), symID, fsID)
+	return nil
+}
+
+func (c *unitContext) iGetAValidFileSystemObjectIfNoError() error {
+	if c.err == nil {
+		if c.fileSystem == nil {
+			return fmt.Errorf("fileSystem nil")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iCallCreateFileSystem(fsName string) error {
+	c.fileSystem, c.err = c.client.CreateFileSystem(context.TODO(), symID, fsName, "nas-1", "Diamond", 20000)
+	return nil
+}
+func (c *unitContext) iCallModifyFileSystemOn(fsID string) error {
+	payload := types.ModifyFileSystem{
+		SizeTotal: 8000,
+	}
+	c.fileSystem, c.err = c.client.ModifyFileSystem(context.TODO(), symID, fsID, payload)
+	return nil
+}
+
+func (c *unitContext) iCallDeleteFileSystem() error {
+	var fs string
+	if c.fileSystem == nil {
+		// for disallowed array
+		fs = "id3"
+	} else {
+		fs = c.fileSystem.ID
+	}
+	c.err = c.client.DeleteFileSystem(context.TODO(), symID, fs)
+	return nil
+}
+
+func (c *unitContext) iCallDeleteNASServer(nasID string) error {
+	c.err = c.client.DeleteNASServer(context.TODO(), symID, nasID)
+	return nil
+}
+
+func (c *unitContext) iCallGetNASServerByID(nasID string) error {
+	c.nasServer, c.err = c.client.GetNASServerByID(context.TODO(), symID, nasID)
+	return nil
+}
+
+func (c *unitContext) iCallModifyNASServerOn(nasID string) error {
+	payload := types.ModifyNASServer{Name: "new-name"}
+	c.nasServer, c.err = c.client.ModifyNASServer(context.TODO(), symID, nasID, payload)
+	return nil
+}
+
+func (c *unitContext) iGetAValidNASServerObjectIfNoError() error {
+	if c.err == nil {
+		if c.nasServer == nil {
+			return fmt.Errorf("nasServer nil")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iCallCreateNFSExport(nfsName string) error {
+	payload := types.CreateNFSExport{
+		StorageResource: "id1",
+		Path:            "/id1",
+		Name:            nfsName,
+		DefaultAccess:   "ReadWrite",
+	}
+	c.nfsExport, c.err = c.client.CreateNFSExport(context.TODO(), symID, payload)
+	return nil
+}
+
+func (c *unitContext) iCallDeleteNFSExport(nfsID string) error {
+	c.err = c.client.DeleteNFSExport(context.TODO(), symID, nfsID)
+	return nil
+}
+
+func (c *unitContext) iCallGetNFSExportByID(nfsID string) error {
+	c.nfsExport, c.err = c.client.GetNFSExportByID(context.TODO(), symID, nfsID)
+	return nil
+}
+
+func (c *unitContext) iCallModifyNFSExportOn(nfsID string) error {
+	payload := types.ModifyNFSExport{
+		Name: "updated-name",
+	}
+	c.nfsExport, c.err = c.client.ModifyNFSExport(context.TODO(), symID, nfsID, payload)
+	return nil
+}
+
+func (c *unitContext) iGetAValidNFSExportObjectIfNoError() error {
+	if c.err == nil {
+		if c.nfsExport == nil {
+			return fmt.Errorf("nfs export nil")
+		}
+	}
+	return nil
+}
+
+func UnitTestContext(s *godog.ScenarioContext) {
 	c := &unitContext{}
 	s.Step(`^I induce error "([^"]*)"$`, c.iInduceError)
 	s.Step(`^I call authenticate with endpoint "([^"]*)" credentials "([^"]*)" apiversion "([^"]*)"$`, c.iCallAuthenticateWithEndpointCredentials)
@@ -2468,4 +2682,27 @@ func UnitTestContext(s *godog.Suite) {
 	s.Step(`^I call GetSnapshotPolicyList`, c.iCallGetSnapshotPolicyList)
 	s.Step(`^I should get list of snapshot policies  if no error$`, c.iShouldGetListOfSnapshotPoliciesIfNoError)
 
+	// File APIs
+	s.Step(`^I call GetFileSystemList$`, c.iCallGetFileSystemList)
+	s.Step(`^I get a valid FileSystem ID List if no error$`, c.iGetAValidFileSystemIDListIfNoError)
+	s.Step(`^I call GetNASServerList$`, c.iCallGetNASServerList)
+	s.Step(`^I call GetNFSExportList$`, c.iCallGetNFSExportList)
+	s.Step(`^I get a valid NAS Server ID List if no error$`, c.iGetAValidNASServerIDListIfNoError)
+	s.Step(`^I get a valid NFS Export ID List if no error$`, c.iGetAValidNFSExportIDListIfNoError)
+	s.Step(`^I call GetFileSystemByID "([^"]*)"$`, c.iCallGetFileSystemByID)
+	s.Step(`^I call CreateFileSystem "([^"]*)"$`, c.iCallCreateFileSystem)
+	s.Step(`^I get a valid fileSystem Object if no error$`, c.iGetAValidFileSystemObjectIfNoError)
+	s.Step(`^I call ModifyFileSystem on "([^"]*)"$`, c.iCallModifyFileSystemOn)
+	s.Step(`^I call DeleteFileSystem$`, c.iCallDeleteFileSystem)
+	s.Step(`^I call DeleteNASServer "([^"]*)"$`, c.iCallDeleteNASServer)
+	s.Step(`^I call GetNASServerByID "([^"]*)"$`, c.iCallGetNASServerByID)
+	s.Step(`^I call ModifyNASServer on "([^"]*)"$`, c.iCallModifyNASServerOn)
+	s.Step(`^I get a valid nasServer Object if no error$`, c.iGetAValidNASServerObjectIfNoError)
+	s.Step(`^I call CreateNFSExport "([^"]*)"$`, c.iCallCreateNFSExport)
+	s.Step(`^I call DeleteNFSExport "([^"]*)"$`, c.iCallDeleteNFSExport)
+	s.Step(`^I call GetNFSExportByID "([^"]*)"$`, c.iCallGetNFSExportByID)
+	s.Step(`^I call ModifyNFSExport on "([^"]*)"$`, c.iCallModifyNFSExportOn)
+	s.Step(`^I get a valid NFSExport object if no error$`, c.iGetAValidNFSExportObjectIfNoError)
+	s.Step(`^I call GetFileSystemListWithParam$`, c.iCallGetFileSystemListWithParam)
+	s.Step(`^I call GetNASServerListWithParam$`, c.iCallGetNASServerListWithParam)
 }

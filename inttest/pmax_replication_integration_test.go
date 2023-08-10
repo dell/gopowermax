@@ -283,7 +283,7 @@ func TestCreateSnapshot(t *testing.T) {
 	}
 	volumeSnapshot, err := client.GetSnapshotInfo(context.TODO(), symmetrixID, srcVolume.VolumeID, snapID)
 	if err != nil {
-		t.Errorf("Error fetching created snapshot(%s) on a volumes %v\n", snapID, sourceVolumeList)
+		t.Errorf("Error %s fetching created snapshot(%s) on a volumes %v\n", err.Error(), snapID, sourceVolumeList)
 		return
 	}
 	fmt.Printf("Snapshot(%s) created successfully\n", volumeSnapshot.SnapshotName)
