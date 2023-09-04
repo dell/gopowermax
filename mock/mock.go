@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -3270,7 +3270,7 @@ func writeError(w http.ResponseWriter, message string, httpStatus int) {
 //
 // An optional replacement map. If supplied every instance of a key in the JSON file will be replaced with the corresponding value.
 func returnJSONFile(directory, filename string, w http.ResponseWriter, replacements map[string]string) (jsonBytes []byte) {
-	jsonBytes, err := ioutil.ReadFile(filepath.Join(directory, filename)) // #nosec G20
+	jsonBytes, err := os.ReadFile(filepath.Join(directory, filename)) // #nosec G20
 	if err != nil {
 		log.Printf("Couldn't read %s/%s", directory, filename)
 		if w != nil {
