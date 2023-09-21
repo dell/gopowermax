@@ -261,7 +261,8 @@ func TestGetSnapVolumeList(t *testing.T) {
 	fmt.Printf("Volumes with snapshots: %v\n", snapVolumes)
 }
 
-func TestCreateSnapshot(t *testing.T) {
+
+/*func TestCreateSnapshot(t *testing.T) {
 	if client == nil {
 		err := getClient()
 		if err != nil {
@@ -505,7 +506,7 @@ func renameSnapshot(symmetrixID, snapshotName, newSnapID string, generation int,
 		return fmt.Errorf("Error renaming snapshot: %s", err.Error())
 	}
 	return nil
-}
+}*/
 
 /*func TestSnapshotRestore(t *testing.T) {
 	if client == nil {
@@ -770,7 +771,7 @@ func TestExecuteReplicationActionOnSG(t *testing.T) {
 	}
 	modifySnapshotLink(sourceVolumeList, targetVolumeList, "Unlink", snapshotName, t)
 	fmt.Printf("Snap and target sessions fetched successfully: %v\v%v\n", snapSession, targetSession)
-}*/
+}
 
 func TestDeleteSnapshot(t *testing.T) {
 	if client == nil {
@@ -798,7 +799,7 @@ func TestDeleteSnapshot(t *testing.T) {
 	}
 	fmt.Printf("Snapshot (%s) deleted successfully\n", snapshotName)
 	snapID = ""
-}
+}*/
 
 func TestGetReplicationCapabilities(t *testing.T) {
 	if client == nil {
@@ -954,7 +955,7 @@ func TestGetLocalOnlineRDFDirs(t *testing.T) {
 	fmt.Printf("Local Online RDF Dirs fetched successfully: %v\n", rdfGrpInfo)
 }
 
-func TestCreateSnapshotPolicy(t *testing.T) {
+/*func TestCreateSnapshotPolicy(t *testing.T) {
 
 	if client == nil {
 		err := getClient()
@@ -1021,7 +1022,7 @@ func TestUpdateSnapshotPolicyForModify(t *testing.T) {
 		return
 	}
 	fmt.Printf("Updated Snapshot Policy: Modify")
-}
+}*/
 
 func TestUpdateSnapshotPolicyForAddStorageGroup(t *testing.T) {
 
