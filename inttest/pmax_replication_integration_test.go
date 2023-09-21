@@ -771,7 +771,7 @@ func TestExecuteReplicationActionOnSG(t *testing.T) {
 	}
 	modifySnapshotLink(sourceVolumeList, targetVolumeList, "Unlink", snapshotName, t)
 	fmt.Printf("Snap and target sessions fetched successfully: %v\v%v\n", snapSession, targetSession)
-}
+}*/
 
 func TestDeleteSnapshot(t *testing.T) {
 	if client == nil {
@@ -799,7 +799,7 @@ func TestDeleteSnapshot(t *testing.T) {
 	}
 	fmt.Printf("Snapshot (%s) deleted successfully\n", snapshotName)
 	snapID = ""
-}*/
+}
 
 func TestGetReplicationCapabilities(t *testing.T) {
 	if client == nil {
