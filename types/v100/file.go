@@ -1,5 +1,7 @@
 package v100
 
+import "time"
+
 // FileSystemIDName holds id and name for a file system
 type FileSystemIDName struct {
 	ID   string `json:"id"`
@@ -288,4 +290,164 @@ type FileInterface struct {
 	Role       string `json:"role"`
 	IsDisabled bool   `json:"is_disabled"`
 	Override   bool   `json:"override"`
+}
+
+// CreateFileSnapshot holds request param for a snapshot of a file system
+type CreateFileSnapshot struct {
+	Name                      string    `json:"name"`
+	Filesystem                string    `json:"filesystem"`
+	Description               string    `json:"description,omitempty"`
+	CreationTime              time.Time `json:"creation_time,omitempty"`
+	ExpirationTime            time.Time `json:"expiration_time,omitempty"`
+	AccessType                string    `json:"access_type,omitempty"`
+	AccessPolicy              string    `json:"access_policy,omitempty"`
+	LockingPolicy             string    `json:"locking_policy,omitempty"`
+	FolderRenamePolicy        string    `json:"folder_rename_policy,omitempty"`
+	EventNotifications        string    `json:"event_notifications,omitempty"`
+	SmbSyncWrites             bool      `json:"smb_sync_writes,omitempty"`
+	SmbNoNotify               bool      `json:"smb_no_notify,omitempty"`
+	SmbOpLocks                bool      `json:"smb_op_locks,omitempty"`
+	SmNotifyOnAccess          bool      `json:"sm_notify_on_access,omitempty"`
+	SmbNotifyOnWrite          bool      `json:"smb_notify_on_write,omitempty"`
+	SmbNotifyOnChangeDirDepth int       `json:"smb_notify_on_change_dir_depth,omitempty"`
+	FsType                    string    `json:"fs_type,omitempty"`
+	ServiceLevel              string    `json:"service_level,omitempty"`
+	DataReduction             bool      `json:"data_reduction,omitempty"`
+}
+
+// FileSnapshot holds file snapshot details
+type FileSnapshot struct {
+	ID                        string    `json:"id"`
+	Name                      string    `json:"name"`
+	Filesystem                string    `json:"filesystem"`
+	NASServer                 string    `json:"nas_server"`
+	StorageWwn                string    `json:"storage_wwn"`
+	ExportFSId                string    `json:"export_fsid"`
+	Description               string    `json:"description"`
+	ParentOid                 string    `json:"parent_oid"`
+	CreationTime              time.Time `json:"creation_time"`
+	ExpirationTime            time.Time `json:"expiration_time"`
+	LastRefreshTime           time.Time `json:"lastRefreshTime"`
+	SystemSnap                bool      `json:"system_snap"`
+	SizeTotal                 int       `json:"size_total"`
+	SizeUsed                  int       `json:"size_used"`
+	ReadOnly                  bool      `json:"readOnly"`
+	IsReplicatable            bool      `json:"is_replicatable"`
+	LastWritableTime          time.Time `json:"last_writable_time"`
+	Modified                  bool      `json:"modified"`
+	AutoDelete                bool      `json:"auto_delete"`
+	AccessType                string    `json:"access_type"`
+	CreatorType               int       `json:"creator_type"`
+	AccessPolicy              string    `json:"access_policy"`
+	LockingPolicy             string    `json:"locking_policy"`
+	FolderRenamePolicy        string    `json:"folder_rename_policy"`
+	EventNotifications        string    `json:"event_notifications"`
+	SmbSyncWrites             bool      `json:"smb_sync_writes"`
+	SmbNoNotify               bool      `json:"smb_no_notify"`
+	SmbOpLocks                bool      `json:"smb_op_locks"`
+	SmNotifyOnAccess          bool      `json:"sm_notify_on_access"`
+	SmbNotifyOnWrite          bool      `json:"smb_notify_on_write"`
+	SmbNotifyOnChangeDirDepth int       `json:"smb_notify_on_change_dir_depth"`
+	AsyncMtime                bool      `json:"async_mtime"`
+	HostIoBlockSize           int       `json:"host_io_block_size"`
+	FsType                    string    `json:"fs_type"`
+	FlrMode                   string    `json:"flr_mode"`
+	FlrMinRet                 string    `json:"flr_min_ret"`
+	FlrDefRet                 string    `json:"flr_def_ret"`
+	FlrMaxRet                 string    `json:"flr_max_ret"`
+	FlrAutoLock               bool      `json:"flr_auto_lock"`
+	FlrAutoDelete             bool      `json:"flr_auto_delete"`
+	FlrPolicyInterval         int       `json:"flr_policy_interval"`
+	FlrEnabled                bool      `json:"flr_enabled"`
+	FlrHasProtectedFiles      bool      `json:"flr_has_protected_files"`
+	FlrClockTime              string    `json:"flr_clock_time"`
+	FlrMaxRetentionDate       string    `json:"flr_max_retention_date"`
+	InfoThreshold             int       `json:"info_threshold"`
+	HighThreshold             int       `json:"high_threshold"`
+	WarningThreshold          int       `json:"warning_threshold"`
+	ServiceLevel              string    `json:"service_level"`
+	DataReduction             bool      `json:"data_reduction"`
+}
+
+// ModifyFileSnapshot modifies
+type ModifyFileSnapshot struct {
+	Name               string    `json:"name"`
+	Filesystem         string    `json:"filesystem,omitempty"`
+	Description        string    `json:"description,omitempty"`
+	CreationTime       time.Time `json:"creation_time,omitempty"`
+	ExpirationTime     time.Time `json:"expiration_time,omitempty"`
+	AccessType         string    `json:"access_type,omitempty"`
+	AccessPolicy       string    `json:"access_policy,omitempty"`
+	LockingPolicy      string    `json:"locking_policy,omitempty"`
+	FolderRenamePolicy string    `json:"folder_rename_policy,omitempty"`
+	EventNotifications string    `json:"event_notifications,omitempty"`
+	FlrMinRet          string    `json:"flr_min_ret,omitempty"`
+	FlrMaxRet          string    `json:"flr_max_ret,omitempty"`
+	FlrDefRet          string    `json:"flr_def_ret,omitempty"`
+	FlrAutoLock        bool      `json:"flr_auto_lock,omitempty"`
+	FlrAutoDelete      bool      `json:"flr_auto_delete,omitempty"`
+	ServiceLevel       string    `json:"service_level,omitempty"`
+	DataReduction      bool      `json:"data_reduction,omitempty"`
+}
+
+// CloneFileSnapshot clones a file snapshot
+type CloneFileSnapshot struct {
+	Name                      string `json:"name"`
+	Description               string `json:"description,omitempty"`
+	PlatformAttributes        string `json:"platform_attributes,omitempty"`
+	NASServer                 string `json:"nas_server,omitempty"`
+	ServiceLevel              string `json:"service_level,omitempty"`
+	HostIOSize                int    `json:"host_iosize,omitempty"`
+	AutoScavengeMode          bool   `json:"autoScavengeMode,omitempty"`
+	ScavengeTimerInterval     int    `json:"scavengeTimerInterval,omitempty"`
+	AccessPolicy              string `json:"access_policy,omitempty"`
+	LockingPolicy             string `json:"locking_policy,omitempty"`
+	FolderRenamePolicy        string `json:"folder_rename_policy,omitempty"`
+	EventNotifications        string `json:"event_notifications,omitempty"`
+	SmbSyncWrites             bool   `json:"smb_sync_writes,omitempty"`
+	SmbNoNotify               bool   `json:"smb_no_notify,omitempty"`
+	SmbOpLocks                bool   `json:"smb_op_locks,omitempty"`
+	SmbNotifyOnAccess         bool   `json:"smb_notify_on_access,omitempty"`
+	SmbNotifyOnWrite          bool   `json:"smb_notify_on_write,omitempty"`
+	SmbNotifyOnChangeDirDepth int    `json:"smb_notify_on_change_dir_depth,omitempty"`
+	AsyncMtime                bool   `json:"async_mtime,omitempty"`
+	ForceFlrClone             bool   `json:"force_flr_clone,omitempty"`
+	InfoThreshold             int    `json:"info_threshold,omitempty"`
+	HighThreshold             int    `json:"high_threshold,omitempty"`
+	WarningThreshold          int    `json:"warning_threshold,omitempty"`
+}
+
+// RestoreFileSnapshot restores a snapshot to fileSystem ID
+type RestoreFileSnapshot struct {
+	ToFileSystemID string `json:"to_file_system_id"`
+	CopyName       string `json:"copy_name"`
+	Description    string `json:"description,omitempty"`
+}
+
+// CloneFileSystem clones an existing FileSystem
+type CloneFileSystem struct {
+	Name                      string       `json:"name"`
+	SizeTotal                 int64        `json:"size_total"`
+	Description               string       `json:"description,omitempty"`
+	FsType                    string       `json:"fs_type,omitempty"`
+	AccessPolicy              string       `json:"access_policy,omitempty"`
+	LockingPolicy             string       `json:"locking_policy,omitempty"`
+	FolderRenamePolicy        string       `json:"folder_rename_policy,omitempty"`
+	HostIOBlock               int          `json:"host_ioblock,omitempty"`
+	NasServer                 string       `json:"nas_server,omitempty"`
+	SmbSyncWrites             bool         `json:"smb_sync_writes,omitempty"`
+	SmbOpLocks                bool         `json:"smb_op_locks,omitempty"`
+	SmbNoNotify               bool         `json:"smb_no_notify,omitempty"`
+	SmbNotifyOnAccess         bool         `json:"smb_notify_on_access,omitempty"`
+	SmbNotifyOnWrite          bool         `json:"smb_notify_on_write,omitempty"`
+	SmbNotifyOnChangeDirDepth int          `json:"smb_notify_on_change_dir_depth,omitempty"`
+	AsyncMtime                bool         `json:"async_mtime,omitempty"`
+	QuotaConfig               *QuotaConfig `json:"quota_config,omitempty"`
+	EventNotifications        string       `json:"event_notifications,omitempty"`
+	InfoThreshold             int          `json:"info_threshold,omitempty"`
+	HighThreshold             int          `json:"high_threshold,omitempty"`
+	WarningThreshold          int          `json:"warning_threshold,omitempty"`
+	ServiceLevel              string       `json:"service_level,omitempty"`
+	DataReduction             bool         `json:"data_reduction,omitempty"`
+	ForceFLRClone             bool         `json:"force_flr_clone,omitempty"`
 }

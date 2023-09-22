@@ -17,6 +17,7 @@ const (
 	XNFSExport     = "/nfs_export"
 	XNASServer     = "/nas_server"
 	XFileInterface = "/file_interface"
+	XClone         = "/clone"
 )
 
 // GetFileSystemList get file system list on a symID
@@ -475,4 +476,144 @@ func (c *Client) GetFileInterfaceByID(ctx context.Context, symID, interfaceID st
 		return nil, err
 	}
 	return fileInterface, nil
+}
+
+// GetFileSystemSnapByID get file system snap on a symID
+func (c *Client) GetFileSystemSnapByID(ctx context.Context, symID, fsID string) (*types.FileSystem, error) {
+	defer c.TimeSpent("GetFileSystemSnapByID", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+
+	URL := c.urlPrefix() + XFile + SymmetrixX + symID + XFileSystem + "/" + fsID
+	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	if err != nil {
+		log.Error("GetFileSystemByID failed: " + err.Error())
+		return nil, err
+	}
+
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+
+	fileSystem := new(types.FileSystem)
+	if err := json.NewDecoder(resp.Body).Decode(fileSystem); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	return fileSystem, nil
+}
+
+// CreateFSSnapshot creates a snapshot on given file system
+func (c *Client) CreateFSSnapshot(ctx context.Context, symID, name, fsID string, ttl time.Time) (*types.FileSnapshot, error) {
+	defer c.TimeSpent("CreateFileSystem", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	createFSSnapPayload := types.CreateFileSnapshot{
+		Name:           name,
+		Filesystem:     fsID,
+		ExpirationTime: ttl,
+	}
+	Debug = true
+	ifDebugLogPayload(createFSSnapPayload)
+	URL := c.urlPrefix() + XFile + SymmetrixX + symID + XSnapshot
+
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	resp, err := c.api.DoAndGetResponseBody(
+		ctx, http.MethodPost, URL, c.getDefaultHeaders(), createFSSnapPayload)
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+
+	fsSnap := &types.FileSnapshot{}
+	decoder := json.NewDecoder(resp.Body)
+	if err = decoder.Decode(fsSnap); err != nil {
+		return nil, err
+	}
+	log.Infof("Successfully created file system snapshot for %s", fsSnap.Name)
+	err = resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	return fsSnap, nil
+}
+
+// CloneFSSnapshot creates a new fileSystem from the given snapshot
+func (c *Client) CloneFSSnapshot(ctx context.Context, symID, name, snapID, nasID, serviceLevel string) (*types.FileSnapshot, error) {
+	defer c.TimeSpent("CloneFSSnapshot", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	cloneFSSnapPayload := types.CloneFileSnapshot{
+		Name:         name,
+		NASServer:    nasID,
+		ServiceLevel: serviceLevel,
+	}
+	Debug = true
+	ifDebugLogPayload(cloneFSSnapPayload)
+	URL := c.urlPrefix() + XFile + SymmetrixX + symID + XSnapshot + "/" + snapID + XClone
+
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	resp, err := c.api.DoAndGetResponseBody(
+		ctx, http.MethodPost, URL, c.getDefaultHeaders(), cloneFSSnapPayload)
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+
+	fsSnap := &types.FileSnapshot{}
+	decoder := json.NewDecoder(resp.Body)
+	if err = decoder.Decode(fsSnap); err != nil {
+		return nil, err
+	}
+	log.Infof("Successfully created file system snapshot for %s", fsSnap.Name)
+	err = resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	return fsSnap, nil
+}
+
+// CloneFileSystem creates a new fileSystem from the given fileSystem
+func (c *Client) CloneFileSystem(ctx context.Context, symID, fsID, name, nasServer, serviceLevel string, sizeInMiB int64) (*types.FileSystem, error) {
+	defer c.TimeSpent("CreateFileSystem", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	createFSPayload := types.CloneFileSystem{
+		Name:         name,
+		SizeTotal:    sizeInMiB,
+		NasServer:    nasServer,
+		ServiceLevel: serviceLevel,
+	}
+	Debug = true
+	ifDebugLogPayload(createFSPayload)
+	URL := c.urlPrefix() + XFile + SymmetrixX + symID + XFileSystem + fsID + XClone
+
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	resp, err := c.api.DoAndGetResponseBody(
+		ctx, http.MethodPost, URL, c.getDefaultHeaders(), createFSPayload)
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+
+	fileSystem := &types.FileSystem{}
+	decoder := json.NewDecoder(resp.Body)
+	if err = decoder.Decode(fileSystem); err != nil {
+		return nil, err
+	}
+	log.Infof("Successfully created file system for %s", fileSystem.Name)
+	err = resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	return fileSystem, nil
 }
