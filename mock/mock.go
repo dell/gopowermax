@@ -19,8 +19,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -45,7 +45,7 @@ const (
 	Debug                        = false
 	DefaultStorageGroup          = "CSI-Test-SG-1"
 	DefaultStorageGroup1         = "CSI-Test-SG-2"
-	DefaultProtectedStorageGroup = "CSI-no-srp-async-test-13"
+	DefaultProtectedStorageGroup = "CSI-Test-ProtectedSG"
 	DefaultSymmetrixID           = "000197900046"
 	DefaultRemoteSymID           = "000000000013"
 	DefaultRDFDir                = "OR-1C"
@@ -438,7 +438,7 @@ func initMockCache() {
 	// ISCSI directors
 	iscsiDir1 := "SE-1E"
 	iscsidir1PortKey1 := iscsiDir1 + ":" + "4"
-	//iscsiDir2 := "SE-2E"
+	// iscsiDir2 := "SE-2E"
 	// FC directors
 	fcDir1 := "FA-1D"
 	fcDir2 := "FA-2D"
@@ -556,12 +556,12 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIXNOVERSION+"/version", handleVersion)
 	router.HandleFunc("/", handleNotFound)
 
-	//StorageGroup Snapshots
+	// StorageGroup Snapshots
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot", handleGetStorageGroupSnapshots)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot/{snapshotId}/snapid", handleGetStorageGroupSnapshotsSnapsIds)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot/{snapshotId}/snapid/{snapID}", handleGetStorageGroupSnapshotsSnapsDetails)
 
-	//Snapshot
+	// Snapshot
 	router.HandleFunc(PRIVATEPREFIX+"/replication/symmetrix/{symid}/snapshot/{SnapID}", handleSnapshot)
 	router.HandleFunc(PRIVATEPREFIX+"/replication/symmetrix/{symid}/volume", handleSymVolumes)
 	router.HandleFunc(PRIVATEPREFIX+"/replication/symmetrix/{symid}/volume/{volID}/snapshot", handleVolSnaps)
@@ -571,7 +571,7 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIX+"/replication/capabilities/symmetrix", handleCapabilities)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symID}/snapshot_policy/{snapshotPolicyID}/storagegroup/{storageGroupID}", handleStorageGroupSnapshotPolicy)
 
-	//SRDF
+	// SRDF
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/rdf_group", handleRDFGroup)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/rdf_group/{rdf_no}", handleRDFGroup)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{id}", handleRDFStorageGroup)
@@ -612,7 +612,6 @@ func getRouter() http.Handler {
 // PUT /replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot/{snapshotId}/snapid/{snapID}
 // DELETE /replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot/{snapshotId}/snapid/{snapID}
 func handleGetStorageGroupSnapshotsSnapsDetails(w http.ResponseWriter, r *http.Request) {
-
 	if r.Method != http.MethodGet && r.Method != http.MethodPut && r.Method != http.MethodDelete {
 		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -649,12 +648,10 @@ func handleGetStorageGroupSnapshotsSnapsDetails(w http.ResponseWriter, r *http.R
 		writeJSON(w, sgCreateSnap)
 		return
 	}
-
 }
 
 // GET /replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot/{snapshotId}/snapid
 func handleGetStorageGroupSnapshotsSnapsIds(w http.ResponseWriter, r *http.Request) {
-
 	if r.Method != http.MethodGet {
 		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -913,7 +910,7 @@ func NewVolume(volumeID, volumeIdentifier string, size int, sgList []string) {
 }
 
 // TO be used for the endpoints that don't have handlers yet
-func handleTODO(w http.ResponseWriter, r *http.Request) {
+func handleTODO(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, "Endpoint not implemented yet", http.StatusNotImplemented)
 }
 
@@ -999,7 +996,6 @@ func handleRDFGroup(w http.ResponseWriter, r *http.Request) {
 	default:
 		writeError(w, "Method["+r.Method+"] not allowed", http.StatusMethodNotAllowed)
 	}
-
 }
 
 // ReturnRDFGroup - Returns RDF group information from mock cache
@@ -1155,7 +1151,7 @@ func handleSGRDFInfo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleSGRDFAction(w http.ResponseWriter, r *http.Request) {
+func handleSGRDFAction(w http.ResponseWriter, _ *http.Request) {
 	// TODO: execute actions by updating the memory cache
 	w.WriteHeader(200)
 }
@@ -1424,7 +1420,7 @@ func FreeVolume(w http.ResponseWriter, param *types.FreeVolumeParam, volID strin
 }
 
 // This returns a job for freeing space in a volume
-func freeVolume(w http.ResponseWriter, param *types.FreeVolumeParam, volID string, executionOption string) {
+func freeVolume(w http.ResponseWriter, _ *types.FreeVolumeParam, volID string, executionOption string) {
 	if executionOption != types.ExecutionOptionAsynchronous {
 		writeError(w, "expected ASYNCHRONOUS", http.StatusBadRequest)
 		return
@@ -1463,7 +1459,7 @@ func ModifyMobility(w http.ResponseWriter, param *types.EnableMobilityIDParam, v
 	modifyMobility(w, param, volID, executionOption)
 }
 
-func modifyMobility(w http.ResponseWriter, param *types.EnableMobilityIDParam, volID string, executionOption string) {
+func modifyMobility(w http.ResponseWriter, param *types.EnableMobilityIDParam, volID string, _ string) {
 	if InducedErrors.ModifyMobilityError {
 		writeError(w, "Error modifying mobility for volume: induced error", http.StatusRequestTimeout)
 		return
@@ -1637,7 +1633,7 @@ func handleIterator(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleStorageGroupSnapshotPolicy(w http.ResponseWriter, r *http.Request) {
+func handleStorageGroupSnapshotPolicy(w http.ResponseWriter, _ *http.Request) {
 	if InducedErrors.GetStorageGroupSnapshotPolicyError {
 		writeError(w, "Error retrieving storage group snapshot policy: induced error", http.StatusRequestTimeout)
 		return
@@ -1703,7 +1699,6 @@ func handleStorageGroup(w http.ResponseWriter, r *http.Request) {
 			}
 			if editPayload.RemoveVolumeParam != nil {
 				RemoveVolumeFromStorageGroup(w, editPayload.RemoveVolumeParam.VolumeIDs, sgID)
-
 			}
 		} else {
 			// for apiVersion 91
@@ -1855,7 +1850,7 @@ func handleMaskingView(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Printf("POST MaskingView payload: %#v\n", createMVPayload)
 		mvID := createMVPayload.MaskingViewID
-		//Data.StorageGroupIDToNVolumes[sgID] = 0
+		// Data.StorageGroupIDToNVolumes[sgID] = 0
 		fmt.Println("MV Name: ", mvID)
 		addMaskingViewFromCreateParams(createMVPayload)
 		returnMaskingView(w, mvID)
@@ -1896,7 +1891,8 @@ func handleMaskingView(w http.ResponseWriter, r *http.Request) {
 }
 
 func newStorageGroup(storageGroupID string, maskingViewID string, storageResourcePoolID string,
-	serviceLevel string, numOfVolumes int) {
+	serviceLevel string, numOfVolumes int,
+) {
 	numOfMaskingViews := 0
 	if maskingViewID != "" {
 		numOfMaskingViews = 1
@@ -1942,7 +1938,8 @@ func newMaskingView(maskingViewID string, storageGroupID string, hostID string, 
 
 // AddStorageGroup - Adds a storage group to the mock data cache
 func AddStorageGroup(storageGroupID string, storageResourcePoolID string,
-	serviceLevel string) (*types.StorageGroup, error) {
+	serviceLevel string,
+) (*types.StorageGroup, error) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	if _, ok := Data.StorageGroupIDToStorageGroup[storageGroupID]; ok {
@@ -2226,7 +2223,7 @@ func addNewVolume(volumeID, volumeIdentifier string, size int, storageGroupID st
 }
 
 func newInitiator(initiatorID string, initiatorName string, initiatorType string, dirPortKeys []types.PortKey, hostID string) {
-	//maskingViewIDs := []string{}
+	// maskingViewIDs := []string{}
 	initiator := &types.Initiator{
 		InitiatorID:          initiatorName,
 		SymmetrixPortKey:     dirPortKeys,
@@ -2343,7 +2340,7 @@ func AddHost(hostID string, hostType string, initiatorIDs []string) (*types.Host
 		return nil, fmt.Errorf(errormsg)
 	}
 	newHost(hostID, hostType, initiatorIDs)
-	//Update the initiators
+	// Update the initiators
 	for _, initID := range initiatorIDs {
 		for k, v := range Data.InitiatorIDToInitiator {
 			if v.InitiatorID == initID {
@@ -2467,7 +2464,6 @@ func removePortKey(slice []types.PortKey, keyToRemove types.PortKey) []types.Por
 	}
 	// No match was found, return unchanged slice
 	return slice
-
 }
 
 // UpdatePortGroupFromParams - Updates PortGroup given an EditPortGroup payload
@@ -3046,8 +3042,8 @@ func handleHost(w http.ResponseWriter, r *http.Request) {
 			// Might need to add the Port information here
 			AddHost(createHostParam.HostID, "Fibre", createHostParam.InitiatorIDs) // #nosec G20
 		} else {
-			//initNode := make([]string, 0)
-			//initNode = append(initNode, "iqn.1993-08.org.centos:01:5ae577b352a7")
+			// initNode := make([]string, 0)
+			// initNode = append(initNode, "iqn.1993-08.org.centos:01:5ae577b352a7")
 			AddHost(createHostParam.HostID, "iSCSI", createHostParam.InitiatorIDs) // #nosec G20
 		}
 		ReturnHost(w, createHostParam.HostID)
@@ -3132,7 +3128,7 @@ func returnPortGroup(w http.ResponseWriter, portGroupID string) {
 }
 
 // /univmax/restapi/performance/StorageGroup/metrics
-func handleStorageGroupMetrics(w http.ResponseWriter, r *http.Request) {
+func handleStorageGroupMetrics(w http.ResponseWriter, _ *http.Request) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	if InducedErrors.GetStorageGroupMetricsError {
@@ -3254,8 +3250,8 @@ func writeError(w http.ResponseWriter, message string, httpStatus int) {
 	resp := new(types.Error)
 	resp.Message = message
 	// The following aren't used by the hardware but could be used internally
-	//resp.HTTPStatusCode = http.StatusNotFound
-	//resp.ErrorCode = int(errorCode)
+	// resp.HTTPStatusCode = http.StatusNotFound
+	// resp.ErrorCode = int(errorCode)
 	encoder := json.NewEncoder(w)
 	err := encoder.Encode(resp)
 	if err != nil {
@@ -3312,7 +3308,6 @@ func AddTempSnapshots() {
 		SnapID := fmt.Sprintf("%s-%s-%d", "DEL", "snapshot", i)
 		AddNewSnapshot(id, SnapID)
 	}
-
 }
 
 // univmax/restapi/private/APIVersion/replication/symmetrix/{symid}/snapshot/{SnapID}
@@ -3385,6 +3380,7 @@ func handleSnapshot(w http.ResponseWriter, r *http.Request) {
 		if updateSnapParam.Action == "Restore" {
 			// restoreSnapshot(w, r, updateSnapParam.VolumeNameListSource, updateSnapParam.VolumeNameListTarget, executionOption, SnapID)
 			// return
+			fmt.Printf("Not yet implemented")
 		}
 	case http.MethodDelete:
 		decoder := json.NewDecoder(r.Body)
@@ -3406,7 +3402,7 @@ func CreateSnapshot(w http.ResponseWriter, r *http.Request, SnapID, executionOpt
 	createSnapshot(w, r, SnapID, executionOption, sourceVolumeList)
 }
 
-func createSnapshot(w http.ResponseWriter, r *http.Request, SnapID, executionOption string, sourceVolumeList []types.VolumeList) {
+func createSnapshot(w http.ResponseWriter, _ *http.Request, SnapID, executionOption string, sourceVolumeList []types.VolumeList) {
 	if strings.Contains(SnapID, ":") {
 		writeError(w, "error, invalid snapshot name", http.StatusBadRequest)
 		return
@@ -3430,7 +3426,7 @@ func createSnapshot(w http.ResponseWriter, r *http.Request, SnapID, executionOpt
 	for i := 0; i < len(sourceVolumeList); i++ {
 		source := sourceVolumeList[i].Name
 		if !duplicateSnapshotCreationRequest(source, SnapID) {
-			//Snapshot with unique name
+			// Snapshot with unique name
 			addNewSnapshot(source, SnapID)
 		}
 		newMockJob(jobID, types.JobStatusRunning, types.JobStatusSucceeded, resourceLink)
@@ -3471,7 +3467,7 @@ func DeleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, execu
 	deleteSnapshot(w, r, SnapID, executionOption, deviceNameListSource, genID)
 }
 
-func deleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, executionOption string, deviceNameListSource []types.VolumeList, genID int64) {
+func deleteSnapshot(w http.ResponseWriter, _ *http.Request, SnapID string, _ string, deviceNameListSource []types.VolumeList, _ int64) {
 	if InducedErrors.DeleteSnapshotError {
 		writeError(w, "error deleting the snapshot: induced error", http.StatusBadRequest)
 		return
@@ -3492,7 +3488,7 @@ func deleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, execu
 		for i := 0; i < len(deviceNameListSource); i++ {
 			source := deviceNameListSource[i].Name
 
-			//volume exists, check for availability of snapshot on it i.e, check if snapshot is found in snapIDtoSnap map "SnapID": Snapshot
+			// volume exists, check for availability of snapshot on it i.e, check if snapshot is found in snapIDtoSnap map "SnapID": Snapshot
 			snapIDtoSnap := Data.VolIDToSnapshots[source]
 			if _, ok := snapIDtoSnap[SnapID]; !ok {
 				// snapshot is not found
@@ -3500,16 +3496,16 @@ func deleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, execu
 				return
 			}
 
-			//snapshot exists, check if it is linked to any target device/volumes
+			// snapshot exists, check if it is linked to any target device/volumes
 			snapIDtoLinkedVolKey := SnapID + ":" + source
 			linkedVolume := Data.SnapIDToLinkedVol[snapIDtoLinkedVolKey]
 			if len(linkedVolume) > 0 {
-				//snapshot is linked to some volumes, can not delete
+				// snapshot is linked to some volumes, can not delete
 				writeError(w, "delete cannot be attempted because the snapshot has a link", http.StatusBadRequest)
 				return
 			}
 
-			//all checks done: volume exists, snapshot existing without links -> it can be deleted
+			// all checks done: volume exists, snapshot existing without links -> it can be deleted
 			delete(snapIDtoSnap, SnapID)
 			Data.VolumeIDToVolume[source].SnapSource = false
 			newMockJob(jobID, types.JobStatusRunning, types.JobStatusSucceeded, resourceLink)
@@ -3525,7 +3521,7 @@ func RenameSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []t
 	renameSnapshot(w, r, sourceVolumeList, executionOption, oldSnapID, newSnapID)
 }
 
-func renameSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []types.VolumeList, executionOption, oldSnapID, newSnapID string) {
+func renameSnapshot(w http.ResponseWriter, _ *http.Request, sourceVolumeList []types.VolumeList, _, oldSnapID, newSnapID string) {
 	if fewVolumeUnavalaible(sourceVolumeList) {
 		writeError(w, "few devices not available", http.StatusBadRequest)
 		return
@@ -3562,7 +3558,7 @@ func LinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []typ
 	linkSnapshot(w, r, sourceVolumeList, targetVolumeList, executionOption, SnapID)
 }
 
-func linkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []types.VolumeList, targetVolumeList []types.VolumeList, executionOption, SnapID string) {
+func linkSnapshot(w http.ResponseWriter, _ *http.Request, sourceVolumeList []types.VolumeList, targetVolumeList []types.VolumeList, _, SnapID string) {
 	if sourceVolumeList[0].Name == "" {
 		writeError(w, "no source volume names given to link the snapshot", http.StatusBadRequest)
 		return
@@ -3597,21 +3593,21 @@ func linkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []typ
 				writeError(w, "no snapshot information, snopshot cannot be found on this device", http.StatusBadRequest)
 				return
 			}
-			//all devices exist, #source=#target, snapshot exist, check if target already linked
+			// all devices exist, #source=#target, snapshot exist, check if target already linked
 			snapIDtoLinkedVolKey := SnapID + ":" + volID.Name
 			volIDToLinkedVols := Data.SnapIDToLinkedVol[snapIDtoLinkedVolKey]
 			if volIDToLinkedVols == nil {
-				//No Linked Volume, first link request for this SnapID
+				// No Linked Volume, first link request for this SnapID
 				volIDToLinkedVols = map[string]*types.LinkedVolumes{}
 			} else {
-				//snapshot is linked to few devices, check if target is already linked
+				// snapshot is linked to few devices, check if target is already linked
 				if !(volIDToLinkedVols[targetVolID] == nil) {
-					//duplicate link request
+					// duplicate link request
 					writeError(w, "devices already in desired state", http.StatusBadRequest)
 					return
 				}
 			}
-			//all devices exist, #source=#target, snapshot exist, target is not linked -> ideal for Linking
+			// all devices exist, #source=#target, snapshot exist, target is not linked -> ideal for Linking
 			time := time.Now().Nanosecond()
 			linkedVolume := &types.LinkedVolumes{
 				TargetDevice: targetVolID,
@@ -3642,7 +3638,7 @@ func UnlinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []t
 	unlinkSnapshot(w, r, sourceVolumeList, targetVolumeList, executionOption, SnapID)
 }
 
-func unlinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []types.VolumeList, targetVolumeList []types.VolumeList, executionOption, SnapID string) {
+func unlinkSnapshot(w http.ResponseWriter, _ *http.Request, sourceVolumeList []types.VolumeList, targetVolumeList []types.VolumeList, _, SnapID string) {
 	if sourceVolumeList[0].Name == "" {
 		writeError(w, "no source volume names given to unlink the snapshot", http.StatusBadRequest)
 		return
@@ -3677,17 +3673,17 @@ func unlinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []t
 				writeError(w, "no snapshot information, snopshot cannot be found on this device", http.StatusBadRequest)
 				return
 			}
-			//all devices exist, #source=#target, snapshot exist, check if source is linked to target
+			// all devices exist, #source=#target, snapshot exist, check if source is linked to target
 			snapIDtoLinkedVolKey := SnapID + ":" + volID.Name
 			volIDToLinkedVolumes := Data.SnapIDToLinkedVol[snapIDtoLinkedVolKey]
 			if _, ok := volIDToLinkedVolumes[targetVolID]; ok {
-				//source volume is linked to target, ideal for unlink
+				// source volume is linked to target, ideal for unlink
 				delete(volIDToLinkedVolumes, targetVolID)
 				volIDToLinkedVolumes = Data.SnapIDToLinkedVol[snapIDtoLinkedVolKey]
 				Data.VolumeIDToVolume[targetVolID].SnapTarget = false
 				newMockJob(jobID, types.JobStatusRunning, types.JobStatusSucceeded, resourceLink)
 			} else {
-				//already unlinked
+				// already unlinked
 				writeError(w, "devices already in desired state", http.StatusBadRequest)
 				return
 			}
@@ -3906,7 +3902,7 @@ func handleGenerations(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func handleCapabilities(w http.ResponseWriter, r *http.Request) {
+func handleCapabilities(w http.ResponseWriter, _ *http.Request) {
 	var jsonBytes []byte
 	if InducedErrors.SnapshotNotLicensed {
 		jsonBytes = []byte("{\"symmetrixCapability\":[{\"symmetrixId\":\"000197900046\",\"snapVxCapable\":false,\"rdfCapable\":true,\"virtualWitnessCapable\":false}]}")

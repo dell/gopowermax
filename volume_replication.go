@@ -52,7 +52,7 @@ func (c *Client) GetFreeLocalAndRemoteRDFg(ctx context.Context, localSymID strin
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 
-	//Eg: univmax/restapi/internal/100/file/symmetrix/<LocalSID>/rdf_group_numbers_free?remote_symmetrix_id=<remoteSID>
+	// Eg: univmax/restapi/internal/100/file/symmetrix/<LocalSID>/rdf_group_numbers_free?remote_symmetrix_id=<remoteSID>
 	URL := c.urlInternalPrefix() + SymmetrixX + localSymID + XFREERDFG
 	if remoteSymID != "" {
 		URL = fmt.Sprintf("%s?%s%s", URL, XRemoteSymID, remoteSymID)
@@ -76,7 +76,6 @@ func (c *Client) GetFreeLocalAndRemoteRDFg(ctx context.Context, localSymID strin
 		return nil, err
 	}
 	return freeRdfGroups, nil
-
 }
 
 // GetLocalOnlineRDFDirs gets all Online Directors for the given SYMM
@@ -108,7 +107,6 @@ func (c *Client) GetLocalOnlineRDFDirs(ctx context.Context, localSymID string) (
 		return nil, err
 	}
 	return rdfDirList, nil
-
 }
 
 // GetLocalOnlineRDFPorts gets all Online Ports for the given ONLINE RDF Director
@@ -141,7 +139,6 @@ func (c *Client) GetLocalOnlineRDFPorts(ctx context.Context, rdfDir string, loca
 		return nil, err
 	}
 	return rdfPortList, nil
-
 }
 
 // GetRemoteRDFPortOnSAN gets Remote RDF Port on the SAN connected to this Local Array.
@@ -174,7 +171,6 @@ func (c *Client) GetRemoteRDFPortOnSAN(ctx context.Context, localSymID string, r
 		return nil, err
 	}
 	return remoteRDFPortDetails, nil
-
 }
 
 // GetLocalRDFPortDetails gets Local RDF Port Details which are Live on SAN.
@@ -451,7 +447,6 @@ func (c *Client) ExecuteReplicationActionOnSG(ctx context.Context, symID, action
 
 // GetCreateSGReplicaPayload returns a payload to create a storage group on remote array from local array and protect it with rdfgNo
 func (c *Client) GetCreateSGReplicaPayload(remoteSymID string, rdfMode string, rdfgNo int, remoteSGName string, remoteServiceLevel string, establish, bias bool) *types.CreateSGSRDF {
-
 	var payload *types.CreateSGSRDF
 	switch rdfMode {
 	case ASYNC:
@@ -524,7 +519,6 @@ func (c *Client) CreateSGReplica(ctx context.Context, symID, remoteSymID, rdfMod
 
 // GetCreateRDFPairPayload returns payload for adding a replication pair based on replication mode
 func (c *Client) GetCreateRDFPairPayload(devList types.LocalDeviceListCriteria, rdfMode, rdfType string, establish, exemptConsistency bool) *types.CreateRDFPair {
-
 	var payload *types.CreateRDFPair
 	switch rdfMode {
 	case ASYNC:

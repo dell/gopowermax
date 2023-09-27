@@ -29,7 +29,7 @@ func (s stubTypeWithMetaData) MetaData() http.Header {
 }
 
 func Test_addMetaData(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		name           string
 		givenHeader    map[string]string
 		expectedHeader map[string]string

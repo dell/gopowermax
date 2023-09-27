@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	types "github.com/dell/gopowermax/v2/types/v100"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
+
+	types "github.com/dell/gopowermax/v2/types/v100"
+	log "github.com/sirupsen/logrus"
 )
 
 // constants to be used in APIs
@@ -54,7 +55,6 @@ func (c *Client) GetFileSystemList(ctx context.Context, symID string, query type
 		return nil, err
 	}
 	return fileSystemIter, nil
-
 }
 
 // GetFileSystemByID get file system  on a symID
@@ -86,7 +86,6 @@ func (c *Client) GetFileSystemByID(ctx context.Context, symID, fsID string) (*ty
 		return nil, err
 	}
 	return fileSystem, nil
-
 }
 
 // CreateFileSystem creates a file system
@@ -211,7 +210,6 @@ func (c *Client) GetNFSExportList(ctx context.Context, symID string, query types
 		return nil, err
 	}
 	return nfsExportIter, nil
-
 }
 
 // GetNFSExportByID get file system  on a symID
@@ -243,7 +241,6 @@ func (c *Client) GetNFSExportByID(ctx context.Context, symID, nfsExportID string
 		return nil, err
 	}
 	return nfsExport, nil
-
 }
 
 // CreateNFSExport creates a NFSExport
@@ -362,7 +359,6 @@ func (c *Client) GetNASServerList(ctx context.Context, symID string, query types
 		return nil, err
 	}
 	return nasServerList, nil
-
 }
 
 // GetNASServerByID fetch specific NAS server on a symID
