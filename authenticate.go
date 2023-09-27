@@ -105,8 +105,8 @@ func basicAuth(username, password string) string {
 
 func doLog(
 	l func(args ...interface{}),
-	msg string) {
-
+	msg string,
+) {
 	if debug {
 		l(msg)
 	}
@@ -135,8 +135,8 @@ func NewClientWithArgs(
 	endpoint string,
 	applicationName string,
 	insecure,
-	useCerts bool) (client Pmax, err error) {
-
+	useCerts bool,
+) (client Pmax, err error) {
 	logResponseTimes, _ = strconv.ParseBool(os.Getenv("X_CSI_POWERMAX_RESPONSE_TIMES"))
 
 	contextTimeout := defaultPmaxTimeout

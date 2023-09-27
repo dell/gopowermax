@@ -27,9 +27,9 @@ import (
 )
 
 const (
-	//XEnvironment constant for internal use in URL
+	// XEnvironment constant for internal use in URL
 	XEnvironment = "/environment/"
-	//IncludeMigrations constant for internal use in URL
+	// IncludeMigrations constant for internal use in URL
 	IncludeMigrations = "?includeMigrations"
 )
 

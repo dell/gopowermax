@@ -19,14 +19,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cucumber/godog"
-	"github.com/dell/gopowermax/v2/mock"
-	types "github.com/dell/gopowermax/v2/types/v100"
 	"net/http"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/cucumber/godog"
+	"github.com/dell/gopowermax/v2/mock"
+	types "github.com/dell/gopowermax/v2/types/v100"
 )
 
 const (
@@ -571,8 +572,8 @@ func (c *unitContext) iHaveVolumes(number int) error {
 		volumeIdentifier := "Vol" + id
 		mock.AddNewVolume(id, volumeIdentifier, size, mock.DefaultStorageGroup)
 		c.volIDList = append(c.volIDList, id)
-		//mock.Data.VolumeIDToIdentifier[id] = fmt.Sprintf("Vol%05d", i)
-		//mock.Data.VolumeIDToSGList[id] = make([]string, 0)
+		// mock.Data.VolumeIDToIdentifier[id] = fmt.Sprintf("Vol%05d", i)
+		// mock.Data.VolumeIDToSGList[id] = make([]string, 0)
 	}
 	return nil
 }
@@ -649,7 +650,6 @@ func (c *unitContext) iExpandVolumeToSizeWithUnit(volumeID string, sizeStr strin
 	}
 
 	return nil
-
 }
 
 func (c *unitContext) iCallModifyMobilityForVolume(volumeID string, mobility string) error {
@@ -1508,7 +1508,8 @@ func (c *unitContext) iCallGetSnapVolumeListWithAnd(queryKey, queryValue string)
 	if queryKey != "" {
 		if queryValue == "true" {
 			c.symVolumeList, c.err = c.client.GetSnapVolumeList(context.TODO(), symID, types.QueryParams{
-				queryKey: true})
+				queryKey: true,
+			})
 		}
 	} else {
 		c.symVolumeList, c.err = c.client.GetSnapVolumeList(context.TODO(), symID, nil)
@@ -1896,9 +1897,7 @@ func (c *unitContext) iCallGetStorageGroupRDFInfo() error {
 }
 
 func (c *unitContext) iCallGetRDFDevicePairInfo() error {
-	var (
-		devicePairInfo *types.RDFDevicePair
-	)
+	var devicePairInfo *types.RDFDevicePair
 	localVolID := c.volIDList[0]
 	remoteVolID := c.volIDList[0]
 
@@ -1979,10 +1978,12 @@ func (c *unitContext) iCallGetLocalOnlineRDFPorts() error {
 	_, c.err = c.client.GetLocalOnlineRDFPorts(context.TODO(), mock.DefaultRDFDir, mock.DefaultRemoteSymID)
 	return nil
 }
+
 func (c *unitContext) iCallGetLocalRDFPortDetails() error {
 	_, c.err = c.client.GetLocalRDFPortDetails(context.TODO(), mock.DefaultSymmetrixID, mock.DefaultRDFDir, mock.DefaultRDFPort)
 	return nil
 }
+
 func (c *unitContext) iCallGetRDFGroupListWithQuery(query string) error {
 	if query != "" {
 		switch query {
@@ -1996,6 +1997,7 @@ func (c *unitContext) iCallGetRDFGroupListWithQuery(query string) error {
 	}
 	return nil
 }
+
 func (c *unitContext) iCallGetRemoteRDFPortOnSAN() error {
 	_, c.err = c.client.GetRemoteRDFPortOnSAN(context.TODO(), mock.DefaultSymmetrixID, mock.DefaultRDFDir, fmt.Sprintf("%d", mock.DefaultRDFPort))
 	return nil
@@ -2305,6 +2307,7 @@ func (c *unitContext) iCallGetSnapshotPolicyList() error {
 	c.snapshotPolicyList, c.err = c.client.GetSnapshotPolicyList(context.TODO(), symID)
 	return nil
 }
+
 func (c *unitContext) iShouldGetListOfSnapshotPoliciesIfNoError() error {
 	if c.err != nil {
 		return nil
@@ -2337,10 +2340,12 @@ func (c *unitContext) iGetAValidFileSystemIDListIfNoError() error {
 	}
 	return nil
 }
+
 func (c *unitContext) iCallGetNASServerList() error {
 	c.nasServerList, c.err = c.client.GetNASServerList(context.TODO(), symID, nil)
 	return nil
 }
+
 func (c *unitContext) iCallGetNASServerListWithParam() error {
 	query := types.QueryParams{queryName: mock.DefaultNASServerName}
 	c.nasServerList, c.err = c.client.GetNASServerList(context.TODO(), symID, query)
@@ -2394,6 +2399,7 @@ func (c *unitContext) iCallCreateFileSystem(fsName string) error {
 	c.fileSystem, c.err = c.client.CreateFileSystem(context.TODO(), symID, fsName, "nas-1", "Diamond", 20000)
 	return nil
 }
+
 func (c *unitContext) iCallModifyFileSystemOn(fsID string) error {
 	payload := types.ModifyFileSystem{
 		SizeTotal: 8000,
@@ -2600,7 +2606,7 @@ func UnitTestContext(s *godog.ScenarioContext) {
 
 	s.Step(`^I get a valid Symmetrix ID List that contains "([^"]*)" and does not contains "([^"]*)"$`, c.iGetAValidSymmetrixIDListThatContainsAndDoesNotContains)
 
-	//SG Snapshot
+	// SG Snapshot
 	s.Step(`^I call GetStorageGroupSnapshots with "([^"]*)"$`, c.iCallGetStorageGroupSnapshotsWith)
 	s.Step(`^I should get storage group snapshot information if no error$`, c.iShouldGetStorageGroupSnapshotInformationIfNoError)
 	s.Step(`^I call CreateStorageGroupSnapshot with "([^"]*)"$`, c.iCallCreateStorageGroupSnapshotWith)
@@ -2612,7 +2618,7 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^I call DeleteStorageGroupSnapshot with "([^"]*)" and "([^"]*)" and "([^"]*)"$`, c.iCallDeleteStorageGroupSnapshotWithAndAnd)
 	s.Step(`^I should modify storage group snapshot snap if no error$`, c.iShouldModifyStorageGroupSnapshotSnapIfNoError)
 
-	//Snapshot
+	// Snapshot
 	s.Step(`^I excute the capabilities on the symmetrix array$`, c.iExcuteTheCapabilitiesOnTheSymmetrixArray)
 	s.Step(`^I call GetSnapVolumeList with "([^"]*)" and "([^"]*)"$`, c.iCallGetSnapVolumeListWithAnd)
 	s.Step(`^I should get a list of volumes having snapshots if no error$`, c.iShouldGetListOfVolumesHavingSnapshots)

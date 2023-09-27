@@ -165,7 +165,7 @@ func TestCrudStorageGroupSnapshot(t *testing.T) {
 	modLinkSnap, err := client.ModifyStorageGroupSnapshot(context.TODO(), symmetrixID, snapshotSgName, defaultSnapshotName, snapid, modifyPayloadLink)
 	if err != nil {
 		t.Error("Error linking the snapshot: " + err.Error())
-		//Cleanup temp sg
+		// Cleanup temp sg
 		cleanupVolume(vol.VolumeID, volumeName, snapshotSgName, t)
 		deleteStorageGroup(symmetrixID, snapshotSgName)
 		return
@@ -242,7 +242,6 @@ func TestCrudStorageGroupSnapshot(t *testing.T) {
 	// Cleanup temp sg
 	cleanupVolume(vol.VolumeID, volumeName, snapshotSgName, t)
 	deleteStorageGroup(symmetrixID, snapshotSgName)
-
 }
 
 func TestGetSnapVolumeList(t *testing.T) {
@@ -426,7 +425,7 @@ func TestSnapshotLinkage(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	//Unlink snapshot
+	// Unlink snapshot
 	err = modifySnapshotLink(sourceVolumeList, targetVolumeList, "Unlink", snapshotName, t)
 	if err != nil {
 		t.Error(err)
@@ -598,7 +597,6 @@ func TestGetRDFGroup(t *testing.T) {
 		return
 	}
 	fmt.Printf("RDF Information fetched successfully: %v\n", rdfGrpInfo)
-
 }
 
 func TestGetProtectedStorageGroup(t *testing.T) {
@@ -634,6 +632,7 @@ func TestGetStorageGroupRDFInfo(t *testing.T) {
 	}
 	fmt.Printf("RDF Information for storage group fetched successfully: %v\n", rdfSgInfo)
 }
+
 func TestGetRDFDevicePairInfo(t *testing.T) {
 	if client == nil {
 		err := getClient()
@@ -673,6 +672,7 @@ func TestCreateVolumeInProtectedStorageGroupS(t *testing.T) {
 	time.Sleep(500 * time.Second)
 	cleanupRDFPair(vol.VolumeID, volumeName, defaultProtectedStorageGroup, t)
 }
+
 func TestAddVolumesToProtectedStorageGroup(t *testing.T) {
 	if client == nil {
 		err := getClient()
@@ -873,10 +873,11 @@ func volumeCleanup(volumeID string, volumeName string, storageGroup string) func
 		fmt.Printf("Received expected error: %s\n", err.Error())
 	}
 }
+
 func cleanupRDFPair(volumeID string, volumeName string, storageGroup string, t *testing.T) {
 	fmt.Println("Cleaning up RDF Pair...")
 
-	//Retrieving remote volume information
+	// Retrieving remote volume information
 
 	rdfPair, err := client.GetRDFDevicePairInfo(context.TODO(), symmetrixID, localRDFGrpNo, volumeID)
 	if err != nil {
@@ -884,14 +885,14 @@ func cleanupRDFPair(volumeID string, volumeName string, storageGroup string, t *
 		return
 	}
 
-	//Terminating the Pair and removing the volumes from local SG and remote SG
+	// Terminating the Pair and removing the volumes from local SG and remote SG
 
 	_, err = client.RemoveVolumesFromProtectedStorageGroup(context.TODO(), symmetrixID, defaultProtectedStorageGroup, remoteSymmetrixID, defaultProtectedStorageGroup, true, volumeID)
 	if err != nil {
 		t.Errorf("failed to remove volumes from default Protected SG (%s) : (%s)", defaultProtectedStorageGroup, err.Error())
 	}
 
-	//Deleting local volume
+	// Deleting local volume
 
 	err = client.DeleteVolume(context.TODO(), symmetrixID, volumeID)
 	if err != nil {
@@ -905,7 +906,7 @@ func cleanupRDFPair(volumeID string, volumeName string, storageGroup string, t *
 	}
 	fmt.Printf("Received expected error: %s\n", err.Error())
 
-	//Deleting remote volume
+	// Deleting remote volume
 
 	err = client.DeleteVolume(context.TODO(), remoteSymmetrixID, rdfPair.RemoteVolumeName)
 	if err != nil {
@@ -917,7 +918,6 @@ func cleanupRDFPair(volumeID string, volumeName string, storageGroup string, t *
 		t.Error("Expected an error saying volume was not found, but no error")
 	}
 	fmt.Printf("Received expected error: %s\n", err.Error())
-
 }
 
 func TestGetFreeLocalAndRemoteRDFg(t *testing.T) {
@@ -955,7 +955,6 @@ func TestGetLocalOnlineRDFDirs(t *testing.T) {
 }
 
 func TestCreateSnapshotPolicy(t *testing.T) {
-
 	if client == nil {
 		err := getClient()
 		if err != nil {
@@ -980,7 +979,6 @@ func TestCreateSnapshotPolicy(t *testing.T) {
 }
 
 func TestGetSnapshotPolicy(t *testing.T) {
-
 	if client == nil {
 		err := getClient()
 		if err != nil {
@@ -998,7 +996,6 @@ func TestGetSnapshotPolicy(t *testing.T) {
 }
 
 func TestUpdateSnapshotPolicyForModify(t *testing.T) {
-
 	if client == nil {
 		err := getClient()
 		if err != nil {
@@ -1024,7 +1021,6 @@ func TestUpdateSnapshotPolicyForModify(t *testing.T) {
 }
 
 func TestUpdateSnapshotPolicyForAddStorageGroup(t *testing.T) {
-
 	if client == nil {
 		err := getClient()
 		if err != nil {
@@ -1055,8 +1051,8 @@ func TestUpdateSnapshotPolicyForAddStorageGroup(t *testing.T) {
 	}
 	fmt.Printf("Updated Snapshot Policy: AssociateToStorageGroups")
 }
-func TestUpdateSnapshotPolicyForRemoveStorageGroup(t *testing.T) {
 
+func TestUpdateSnapshotPolicyForRemoveStorageGroup(t *testing.T) {
 	if client == nil {
 		err := getClient()
 		if err != nil {
@@ -1081,7 +1077,6 @@ func TestUpdateSnapshotPolicyForRemoveStorageGroup(t *testing.T) {
 }
 
 func TestGetSnapshotPolicyList(t *testing.T) {
-
 	if client == nil {
 		err := getClient()
 		if err != nil {
@@ -1098,7 +1093,6 @@ func TestGetSnapshotPolicyList(t *testing.T) {
 }
 
 func TestDeleteSnapshotPolicy(t *testing.T) {
-
 	if client == nil {
 		err := getClient()
 		if err != nil {

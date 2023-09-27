@@ -284,7 +284,7 @@ type Pmax interface {
 	// CreateSnapshot creates a snapVx snapshot of a volume using the input parameters
 	CreateSnapshot(ctx context.Context, symID string, SnapID string, sourceVolumeList []types.VolumeList, ttl int64) error
 
-	//ModifySnapshot executes actions on a snapshot asynchronously
+	// ModifySnapshot executes actions on a snapshot asynchronously
 	// This creates a job and waits on its completion
 	ModifySnapshot(ctx context.Context, symID string, sourceVol []types.VolumeList,
 		targetVol []types.VolumeList, SnapID string, action string,
@@ -322,7 +322,7 @@ type Pmax interface {
 	ExpandVolume(ctx context.Context, symID string, volumeID string, rdfGNo int, volumeSize interface{}, capUnits ...string) (*types.Volume, error)
 	// GetCreateVolInSGPayload returns a payload to create a volume in a storage group
 	GetCreateVolInSGPayload(volumeSize interface{}, capUnit string, volumeName string, isSync, enableMobility bool, remoteSymID, storageGroupID string, opts ...http.Header) (payload interface{})
-	//GetCreateVolInSGPayloadWithMetaDataHeaders(sizeInCylinders int, volumeName string, isSync bool, remoteSymID, remoteStorageGroupID string, metadata http.Header) (payload interface{})
+	// GetCreateVolInSGPayloadWithMetaDataHeaders(sizeInCylinders int, volumeName string, isSync bool, remoteSymID, remoteStorageGroupID string, metadata http.Header) (payload interface{})
 
 	// GetRDFGroupList GetRDFGroupList fetches all RDF group
 	GetRDFGroupList(ctx context.Context, symID string, queryParams types.QueryParams) (*types.RDFGroupList, error)
@@ -336,46 +336,46 @@ type Pmax interface {
 	// ExecuteReplicationActionOnSG executes supported replication based actions on the protected SG
 	ExecuteReplicationActionOnSG(ctx context.Context, symID, action, storageGroup, rdfGroup string, force, exemptConsistency, bias bool) error
 
-	//CreateRDFPair creates a volume replication pair
+	// CreateRDFPair creates a volume replication pair
 	CreateRDFPair(ctx context.Context, symID, rdfGroupNo, deviceID, rdfMode, rdfType string, establish, exemptConsistency bool) (*types.RDFDevicePairList, error)
 	// GetRDFDevicePairInfo returns RDF volume information
 	GetRDFDevicePairInfo(ctx context.Context, symID, rdfGroup, volumeID string) (*types.RDFDevicePair, error)
 	// GetStorageGroupRDFInfo returns the of RDF info of protected storage group
 	GetStorageGroupRDFInfo(ctx context.Context, symID, sgName, rdfGroupNo string) (*types.StorageGroupRDFG, error)
-	//GetFreeLocalAndRemoteRDFg returns list of Local and Remote Free RDFg in the array
+	// GetFreeLocalAndRemoteRDFg returns list of Local and Remote Free RDFg in the array
 	GetFreeLocalAndRemoteRDFg(ctx context.Context, localSymmID string, remoteSymmID string) (*types.NextFreeRDFGroup, error)
 	// ExecuteCreateRDFGroup creates a new RDF group based on payload
 	ExecuteCreateRDFGroup(ctx context.Context, symID string, CreateRDFPayload *types.RDFGroupCreate) error
-	//GetLocalOnlineRDFDirs returns a List of ONLINE RDF Directors for a given array
+	// GetLocalOnlineRDFDirs returns a List of ONLINE RDF Directors for a given array
 	GetLocalOnlineRDFDirs(ctx context.Context, localSymID string) (*types.RDFDirList, error)
-	//GetLocalOnlineRDFPorts returs List of ONLINE RDF Ports associated for a given ONLINE RDF Director
+	// GetLocalOnlineRDFPorts returs List of ONLINE RDF Ports associated for a given ONLINE RDF Director
 	GetLocalOnlineRDFPorts(ctx context.Context, rdfDir string, localSymID string) (*types.RDFPortList, error)
-	//GetRemoteRDFPortOnSAN returns an array of Remote RDF Ports on the SAN that are connected to given local RDF Dir:Port
+	// GetRemoteRDFPortOnSAN returns an array of Remote RDF Ports on the SAN that are connected to given local RDF Dir:Port
 	GetRemoteRDFPortOnSAN(ctx context.Context, localSymID string, rdfDir string, rdfPort string) (*types.RemoteRDFPortDetails, error)
-	//GetLocalRDFPortDetails returns details about the local RDFDir:port
+	// GetLocalRDFPortDetails returns details about the local RDFDir:port
 	GetLocalRDFPortDetails(ctx context.Context, localSymID string, rdfDir string, rdfPort int) (*types.RDFPortDetails, error)
 
-	//GetStorageGroupMetrics returns the list of required metrics
+	// GetStorageGroupMetrics returns the list of required metrics
 	GetStorageGroupMetrics(ctx context.Context, symID string, storageGroupID string, metricsQuery []string, firstAvailableDate int64, lastAvailableTime int64) (*types.StorageGroupMetricsIterator, error)
 
-	//GetVolumesMetrics returns the list of volume metrics for specific storage groups
+	// GetVolumesMetrics returns the list of volume metrics for specific storage groups
 	GetVolumesMetrics(ctx context.Context, symID string, storageGroups string, metricsQuery []string, firstAvailableDate int64, lastAvailableTime int64) (*types.VolumeMetricsIterator, error)
 
-	//GetStorageGroupPerfKeys returns the performance keys of storage group
+	// GetStorageGroupPerfKeys returns the performance keys of storage group
 	GetStorageGroupPerfKeys(ctx context.Context, symID string) (*types.StorageGroupKeysResult, error)
 
-	//GetArrayPerfKeys returns the performance keys of array
+	// GetArrayPerfKeys returns the performance keys of array
 	GetArrayPerfKeys(ctx context.Context) (*types.ArrayKeysResult, error)
 
-	//CreateMigrationEnvironment creates a migration environment
+	// CreateMigrationEnvironment creates a migration environment
 	CreateMigrationEnvironment(ctx context.Context, sourceSymID, remoteSymID string) (*types.MigrationEnv, error)
-	//CreateSGMigration create migration session on a storage group
+	// CreateSGMigration create migration session on a storage group
 	CreateSGMigration(ctx context.Context, localSymID, remoteSymID, storageGroup string) (*types.MigrationSession, error)
-	//ModifyMigrationSession updates a migration session on a storage group
+	// ModifyMigrationSession updates a migration session on a storage group
 	ModifyMigrationSession(ctx context.Context, localSymID, action, storageGroup string) error
-	//DeleteMigrationEnvironment deletes a migration environment
+	// DeleteMigrationEnvironment deletes a migration environment
 	DeleteMigrationEnvironment(ctx context.Context, localSymID, remoteSymID string) error
-	//GetMigrationEnvironment returns a migration environment
+	// GetMigrationEnvironment returns a migration environment
 	GetMigrationEnvironment(ctx context.Context, localSymID, remoteSymID string) (*types.MigrationEnv, error)
 	// GetStorageGroupMigration returns migration sessions on the array
 	GetStorageGroupMigration(ctx context.Context, localSymID string) (*types.MigrationStorageGroups, error)
