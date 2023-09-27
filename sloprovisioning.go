@@ -251,6 +251,7 @@ func (c *Client) volumeIteratorToVolIDList(ctx context.Context, iter *types.Volu
 		defer func(c *Client, ctx context.Context, iter *types.VolumeIterator) {
 			err := c.DeleteVolumeIDsIterator(ctx, iter)
 			if err != nil {
+				return nil, err
 			}
 		}(c, ctx, iter)
 	}

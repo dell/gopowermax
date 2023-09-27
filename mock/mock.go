@@ -3380,6 +3380,7 @@ func handleSnapshot(w http.ResponseWriter, r *http.Request) {
 		if updateSnapParam.Action == "Restore" {
 			// restoreSnapshot(w, r, updateSnapParam.VolumeNameListSource, updateSnapParam.VolumeNameListTarget, executionOption, SnapID)
 			// return
+			fmt.Printf("Not yet implemented")
 		}
 	case http.MethodDelete:
 		decoder := json.NewDecoder(r.Body)
@@ -3401,7 +3402,7 @@ func CreateSnapshot(w http.ResponseWriter, r *http.Request, SnapID, executionOpt
 	createSnapshot(w, r, SnapID, executionOption, sourceVolumeList)
 }
 
-func createSnapshot(w http.ResponseWriter, r *http.Request, SnapID, executionOption string, sourceVolumeList []types.VolumeList) {
+func createSnapshot(w http.ResponseWriter, _ *http.Request, SnapID, executionOption string, sourceVolumeList []types.VolumeList) {
 	if strings.Contains(SnapID, ":") {
 		writeError(w, "error, invalid snapshot name", http.StatusBadRequest)
 		return
@@ -3466,7 +3467,7 @@ func DeleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, execu
 	deleteSnapshot(w, r, SnapID, executionOption, deviceNameListSource, genID)
 }
 
-func deleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, executionOption string, deviceNameListSource []types.VolumeList, genID int64) {
+func deleteSnapshot(w http.ResponseWriter, _ *http.Request, SnapID string, __DIRECTOR_ID__ string, deviceNameListSource []types.VolumeList, _ int64) {
 	if InducedErrors.DeleteSnapshotError {
 		writeError(w, "error deleting the snapshot: induced error", http.StatusBadRequest)
 		return
@@ -3520,7 +3521,7 @@ func RenameSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []t
 	renameSnapshot(w, r, sourceVolumeList, executionOption, oldSnapID, newSnapID)
 }
 
-func renameSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []types.VolumeList, executionOption, oldSnapID, newSnapID string) {
+func renameSnapshot(w http.ResponseWriter, _ *http.Request, sourceVolumeList []types.VolumeList, _, oldSnapID, newSnapID string) {
 	if fewVolumeUnavalaible(sourceVolumeList) {
 		writeError(w, "few devices not available", http.StatusBadRequest)
 		return
@@ -3557,7 +3558,7 @@ func LinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []typ
 	linkSnapshot(w, r, sourceVolumeList, targetVolumeList, executionOption, SnapID)
 }
 
-func linkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []types.VolumeList, targetVolumeList []types.VolumeList, executionOption, SnapID string) {
+func linkSnapshot(w http.ResponseWriter, _ *http.Request, sourceVolumeList []types.VolumeList, targetVolumeList []types.VolumeList, _, SnapID string) {
 	if sourceVolumeList[0].Name == "" {
 		writeError(w, "no source volume names given to link the snapshot", http.StatusBadRequest)
 		return
@@ -3637,7 +3638,7 @@ func UnlinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []t
 	unlinkSnapshot(w, r, sourceVolumeList, targetVolumeList, executionOption, SnapID)
 }
 
-func unlinkSnapshot(w http.ResponseWriter, r *http.Request, sourceVolumeList []types.VolumeList, targetVolumeList []types.VolumeList, executionOption, SnapID string) {
+func unlinkSnapshot(w http.ResponseWriter, _ *http.Request, sourceVolumeList []types.VolumeList, targetVolumeList []types.VolumeList, _, SnapID string) {
 	if sourceVolumeList[0].Name == "" {
 		writeError(w, "no source volume names given to unlink the snapshot", http.StatusBadRequest)
 		return
@@ -3901,7 +3902,7 @@ func handleGenerations(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func handleCapabilities(w http.ResponseWriter, r *http.Request) {
+func handleCapabilities(w http.ResponseWriter, _ *http.Request) {
 	var jsonBytes []byte
 	if InducedErrors.SnapshotNotLicensed {
 		jsonBytes = []byte("{\"symmetrixCapability\":[{\"symmetrixId\":\"000197900046\",\"snapVxCapable\":false,\"rdfCapable\":true,\"virtualWitnessCapable\":false}]}")

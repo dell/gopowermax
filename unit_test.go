@@ -38,7 +38,7 @@ func TestMain(m *testing.M) {
 	os.Exit(status)
 }
 
-func TestScenarios(t *testing.T) {
+func TestScenarios(_ *testing.T) {
 	status := 0
 	var fileWriter *bufio.Writer
 	var outputFile os.File

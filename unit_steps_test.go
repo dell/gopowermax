@@ -456,7 +456,7 @@ func (c *unitContext) aValidConnection() error {
 }
 
 // Make a client with apiversion 91
-func (c *unitContext) aValidv91Connection(version int) error {
+func (c *unitContext) aValidv91Connection(_ int) error {
 	c.reset()
 	mock.Reset()
 	// set the flag to insure client91 is used while making functions calls
