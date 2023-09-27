@@ -96,7 +96,7 @@ type ModifySnapshotPolicyParam struct {
 	OffsetMins int32 `json:"offset_mins,omitempty"`
 	// The number of snapshots which are not failed or bad when compliance changes to warning. Set to -1 to disable this compliance threshold.
 	ComplianceCountWarning int64 `json:"compliance_count_warning,omitempty"`
-	//The number of snapshots which are not failed or bad when compliance changes to critical. Set to -1 to disable this compliance threshold.
+	// The number of snapshots which are not failed or bad when compliance changes to critical. Set to -1 to disable this compliance threshold.
 	ComplianceCountCritical int64 `json:"compliance_count_critical,omitempty"`
 	// The number of the snapshots that will be maintained by the snapshot policy
 	SnapshotCount int32 `json:"snapshot_count,omitempty"`
