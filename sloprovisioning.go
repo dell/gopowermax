@@ -240,7 +240,7 @@ func (c *Client) GetVolumeIDListWithParams(ctx context.Context, symID string, qu
 	}
 	iter, err := c.GetVolumeIDsIteratorWithParams(ctx, symID, queryParams)
 	if(err != nil) {
-		fmt.Printf(err)
+		fmt.Errorf(err)
 	}
 	return c.volumeIteratorToVolIDList(ctx, iter)
 }
@@ -251,7 +251,7 @@ func (c *Client) volumeIteratorToVolIDList(ctx context.Context, iter *types.Volu
 		defer func(c *Client, ctx context.Context, iter *types.VolumeIterator) {
 			err := c.DeleteVolumeIDsIterator(ctx, iter)
 			if(err != nil) {
-				fmt.Printf(err)
+				fmt.Errorf(err)
 		    }
 		}(c, ctx, iter)
 	}
