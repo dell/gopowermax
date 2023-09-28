@@ -88,7 +88,7 @@ func createSnapshot(sourceVolumeList []types.VolumeList) (string, error) {
 	return snapshotName, nil
 }
 
-func getOrCreateSnapshot(volumeID string, client pmax.Pmax) (string, error) {
+func getOrCreateSnapshot(volumeID string, _ pmax.Pmax) (string, error) {
 	var err error
 	if snapID == "" {
 		sourceVolumeList := []types.VolumeList{{Name: volumeID}}
@@ -433,7 +433,7 @@ func TestSnapshotLinkage(t *testing.T) {
 	}
 }
 
-func modifySnapshotLink(sourceVolumeList, targetVolumeList []types.VolumeList, operation, snapshotName string, t *testing.T) error {
+func modifySnapshotLink(sourceVolumeList, targetVolumeList []types.VolumeList, operation, snapshotName string, _ *testing.T) error {
 	err := client.ModifySnapshot(context.TODO(), symmetrixID, sourceVolumeList, targetVolumeList, snapshotName, operation, "", 0)
 	if err != nil {
 		return fmt.Errorf("Error %sing snapshot(%s)", strings.ToLower(operation), snapshotName)
@@ -498,7 +498,7 @@ func TestSnapshotRenaming(t *testing.T) {
 	}
 }
 
-func renameSnapshot(symmetrixID, snapshotName, newSnapID string, generation int, sourceVolumeList, targetVolumeList []types.VolumeList) error {
+func renameSnapshot(symmetrixID, snapshotName, newSnapID string, _ int, sourceVolumeList, targetVolumeList []types.VolumeList) error {
 	err := client.ModifySnapshot(context.TODO(), symmetrixID, sourceVolumeList, targetVolumeList, snapshotName, "Rename", newSnapID, 0)
 	if err != nil {
 		return fmt.Errorf("Error renaming snapshot: %s", err.Error())
@@ -874,7 +874,7 @@ func volumeCleanup(volumeID string, volumeName string, storageGroup string) func
 	}
 }
 
-func cleanupRDFPair(volumeID string, volumeName string, storageGroup string, t *testing.T) {
+func cleanupRDFPair(volumeID string, _ string, _ string, t *testing.T) {
 	fmt.Println("Cleaning up RDF Pair...")
 
 	// Retrieving remote volume information
@@ -1012,9 +1012,9 @@ func TestUpdateSnapshotPolicyForModify(t *testing.T) {
 	optionalPayload := make(map[string]interface{})
 	optionalPayload["modify"] = modifySnapshotPolicyParam
 
-	error := client.UpdateSnapshotPolicy(context.TODO(), symmetrixID, "Modify", "WeeklyDefaultnewTest", optionalPayload)
-	if error != nil {
-		t.Error("Error Updating snapshot policy " + error.Error())
+	err := client.UpdateSnapshotPolicy(context.TODO(), symmetrixID, "Modify", "WeeklyDefaultnewTest", optionalPayload)
+	if err != nil {
+		t.Error("Error Updating snapshot policy " + err.Error())
 		return
 	}
 	fmt.Printf("Updated Snapshot Policy: Modify")
@@ -1043,9 +1043,9 @@ func TestUpdateSnapshotPolicyForAddStorageGroup(t *testing.T) {
 	optionalPayload := make(map[string]interface{})
 	optionalPayload["associateStorageGroupParam"] = associateStorageGroupParam
 
-	error := client.UpdateSnapshotPolicy(context.TODO(), symmetrixID, "AssociateToStorageGroups", "WeeklyDefaultnewTest1", optionalPayload)
-	if error != nil {
-		t.Error("Error Updating snapshot policy " + error.Error())
+	err := client.UpdateSnapshotPolicy(context.TODO(), symmetrixID, "AssociateToStorageGroups", "WeeklyDefaultnewTest1", optionalPayload)
+	if err != nil {
+		t.Error("Error Updating snapshot policy " + err.Error())
 		deleteStorageGroup(symmetrixID, snapshotPolicySgName)
 		return
 	}
@@ -1068,9 +1068,9 @@ func TestUpdateSnapshotPolicyForRemoveStorageGroup(t *testing.T) {
 	optionalPayload := make(map[string]interface{})
 	optionalPayload["disassociateStorageGroupParam"] = disassociateStorageGroupParam
 
-	error := client.UpdateSnapshotPolicy(context.TODO(), symmetrixID, "DisassociateFromStorageGroups", "WeeklyDefaultnewTest1", optionalPayload)
-	if error != nil {
-		t.Error("Error Updating snapshot policy " + error.Error())
+	err := client.UpdateSnapshotPolicy(context.TODO(), symmetrixID, "DisassociateFromStorageGroups", "WeeklyDefaultnewTest1", optionalPayload)
+	if err != nil {
+		t.Error("Error Updating snapshot policy " + err.Error())
 		return
 	}
 	fmt.Printf("Updated Snapshot Policy: DisassociateFromStorageGroups")
@@ -1101,9 +1101,9 @@ func TestDeleteSnapshotPolicy(t *testing.T) {
 		}
 	}
 
-	error := client.DeleteSnapshotPolicy(context.TODO(), symmetrixID, "WeeklyDefaultnewTest1")
-	if error != nil {
-		t.Error("Error Deleting Snapshot Policy " + error.Error())
+	err := client.DeleteSnapshotPolicy(context.TODO(), symmetrixID, "WeeklyDefaultnewTest1")
+	if err != nil {
+		t.Error("Error Deleting Snapshot Policy " + err.Error())
 		return
 	}
 	fmt.Printf("Deleted snapshot policy")

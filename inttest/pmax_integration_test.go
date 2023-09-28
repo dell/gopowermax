@@ -335,7 +335,7 @@ func getClient() error {
 	return nil
 }
 
-func TestAuthentication(t *testing.T) {
+func TestAuthentication(_ *testing.T) {
 	_ = getClient()
 }
 
