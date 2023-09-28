@@ -1675,6 +1675,7 @@ func TestUpdatePortGroup(t *testing.T) {
 		return
 	}
 	portKeys = portGroup.SymmetrixPortKey
+	// #nosec G602
 	if portKeys[0].DirectorID != "OR-2C" {
 		t.Errorf("Couldnt modify port group details: %s", err.Error())
 		return
