@@ -45,7 +45,7 @@ const (
 	Debug                        = false
 	DefaultStorageGroup          = "CSI-Test-SG-1"
 	DefaultStorageGroup1         = "CSI-Test-SG-2"
-	DefaultProtectedStorageGroup = "CSI-no-srp-async-test-13"
+	DefaultProtectedStorageGroup = "CSI-Test-ProtectedSG"
 	DefaultSymmetrixID           = "000197900046"
 	DefaultRemoteSymID           = "000000000013"
 	DefaultRDFDir                = "OR-1C"

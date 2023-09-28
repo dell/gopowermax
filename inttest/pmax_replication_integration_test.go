@@ -1043,7 +1043,7 @@ func TestUpdateSnapshotPolicyForAddStorageGroup(t *testing.T) {
 	optionalPayload := make(map[string]interface{})
 	optionalPayload["associateStorageGroupParam"] = associateStorageGroupParam
 
-	err := client.UpdateSnapshotPolicy(context.TODO(), symmetrixID, "AssociateToStorageGroups", "WeeklyDefaultnewTest1", optionalPayload)
+	err = client.UpdateSnapshotPolicy(context.TODO(), symmetrixID, "AssociateToStorageGroups", "WeeklyDefaultnewTest1", optionalPayload)
 	if err != nil {
 		t.Error("Error Updating snapshot policy " + err.Error())
 		deleteStorageGroup(symmetrixID, snapshotPolicySgName)

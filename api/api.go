@@ -156,7 +156,7 @@ func New(
 	if opts.Insecure {
 		c.http.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: true, // #nosec G402
 			},
 		}
 	} else {
@@ -166,7 +166,7 @@ func New(
 		if err != nil {
 			return nil, errSysCerts
 		}
-		c.http.Transport = &http.Transport{
+		c.http.Transport = &http.Transport{ // #nosec G402
 			TLSClientConfig: &tls.Config{
 				RootCAs:            pool,
 				InsecureSkipVerify: false,
