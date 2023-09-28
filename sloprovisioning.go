@@ -238,7 +238,10 @@ func (c *Client) GetVolumeIDListWithParams(ctx context.Context, symID string, qu
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
-	iter, _ := c.GetVolumeIDsIteratorWithParams(ctx, symID, queryParams)
+	iter, err := c.GetVolumeIDsIteratorWithParams(ctx, symID, queryParams)
+	if err != nil {
+		return nil, err
+	}
 	return c.volumeIteratorToVolIDList(ctx, iter)
 }
 
@@ -246,7 +249,10 @@ func (c *Client) volumeIteratorToVolIDList(ctx context.Context, iter *types.Volu
 	if iter.MaxPageSize < iter.Count {
 		// The iterator only needs to be deleted if there are more entries than MaxPageSize?
 		defer func(c *Client, ctx context.Context, iter *types.VolumeIterator) {
-			_ := c.DeleteVolumeIDsIterator(ctx, iter)
+			err := c.DeleteVolumeIDsIterator(ctx, iter)
+			if err != nil {
+				return
+			}
 		}(c, ctx, iter)
 	}
 

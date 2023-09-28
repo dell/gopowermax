@@ -3467,7 +3467,7 @@ func DeleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, execu
 	deleteSnapshot(w, r, SnapID, executionOption, deviceNameListSource, genID)
 }
 
-func deleteSnapshot(w http.ResponseWriter, _ *http.Request, SnapID string, __Director_ID__ string, deviceNameListSource []types.VolumeList, _ int64) {
+func deleteSnapshot(w http.ResponseWriter, _ *http.Request, SnapID string, _ string, deviceNameListSource []types.VolumeList, _ int64) {
 	if InducedErrors.DeleteSnapshotError {
 		writeError(w, "error deleting the snapshot: induced error", http.StatusBadRequest)
 		return
