@@ -910,7 +910,7 @@ func NewVolume(volumeID, volumeIdentifier string, size int, sgList []string) {
 }
 
 // TO be used for the endpoints that don't have handlers yet
-func handleTODO(w http.ResponseWriter, r *http.Request) {
+func handleTODO(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, "Endpoint not implemented yet", http.StatusNotImplemented)
 }
 
@@ -1151,7 +1151,7 @@ func handleSGRDFInfo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleSGRDFAction(w http.ResponseWriter, r *http.Request) {
+func handleSGRDFAction(w http.ResponseWriter, _ *http.Request) {
 	// TODO: execute actions by updating the memory cache
 	w.WriteHeader(200)
 }
@@ -1420,7 +1420,7 @@ func FreeVolume(w http.ResponseWriter, param *types.FreeVolumeParam, volID strin
 }
 
 // This returns a job for freeing space in a volume
-func freeVolume(w http.ResponseWriter, param *types.FreeVolumeParam, volID string, executionOption string) {
+func freeVolume(w http.ResponseWriter, _ *types.FreeVolumeParam, volID string, executionOption string) {
 	if executionOption != types.ExecutionOptionAsynchronous {
 		writeError(w, "expected ASYNCHRONOUS", http.StatusBadRequest)
 		return
@@ -1459,7 +1459,7 @@ func ModifyMobility(w http.ResponseWriter, param *types.EnableMobilityIDParam, v
 	modifyMobility(w, param, volID, executionOption)
 }
 
-func modifyMobility(w http.ResponseWriter, param *types.EnableMobilityIDParam, volID string, executionOption string) {
+func modifyMobility(w http.ResponseWriter, param *types.EnableMobilityIDParam, volID string, _ string) {
 	if InducedErrors.ModifyMobilityError {
 		writeError(w, "Error modifying mobility for volume: induced error", http.StatusRequestTimeout)
 		return
@@ -1633,7 +1633,7 @@ func handleIterator(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleStorageGroupSnapshotPolicy(w http.ResponseWriter, r *http.Request) {
+func handleStorageGroupSnapshotPolicy(w http.ResponseWriter, _ *http.Request) {
 	if InducedErrors.GetStorageGroupSnapshotPolicyError {
 		writeError(w, "Error retrieving storage group snapshot policy: induced error", http.StatusRequestTimeout)
 		return
@@ -3128,7 +3128,7 @@ func returnPortGroup(w http.ResponseWriter, portGroupID string) {
 }
 
 // /univmax/restapi/performance/StorageGroup/metrics
-func handleStorageGroupMetrics(w http.ResponseWriter, r *http.Request) {
+func handleStorageGroupMetrics(w http.ResponseWriter, _ *http.Request) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	if InducedErrors.GetStorageGroupMetricsError {
@@ -3467,7 +3467,7 @@ func DeleteSnapshot(w http.ResponseWriter, r *http.Request, SnapID string, execu
 	deleteSnapshot(w, r, SnapID, executionOption, deviceNameListSource, genID)
 }
 
-func deleteSnapshot(w http.ResponseWriter, _ *http.Request, SnapID string, __DIRECTOR_ID__ string, deviceNameListSource []types.VolumeList, _ int64) {
+func deleteSnapshot(w http.ResponseWriter, _ *http.Request, SnapID string, __Director_ID__ string, deviceNameListSource []types.VolumeList, _ int64) {
 	if InducedErrors.DeleteSnapshotError {
 		writeError(w, "error deleting the snapshot: induced error", http.StatusBadRequest)
 		return
