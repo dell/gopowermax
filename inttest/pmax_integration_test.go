@@ -126,7 +126,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	err = createRDFSetup() //Creates RDF setup for the test
+	err = createRDFSetup() // Creates RDF setup for the test
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
@@ -136,7 +136,7 @@ func TestMain(m *testing.M) {
 	}
 	fmt.Printf("status %d\n", status)
 	doCleanUp := setenvVariable("Cleanup", "true")
-	var cleanupTests = []testing.InternalTest{}
+	cleanupTests := []testing.InternalTest{}
 	if doCleanUp != "false" {
 		fmt.Println("========= CLEANUP ==========")
 		cleanupTests = append(cleanupTests, testing.InternalTest{
@@ -204,10 +204,9 @@ func createDefaultSGAndHost() error {
 }
 
 func createRDFSetup() error {
-
 	fmt.Printf("Creating RDF Setup.....")
 
-	//Creating default Protected SG
+	// Creating default Protected SG
 
 	_, err := createStorageGroup(symmetrixID, defaultProtectedStorageGroup, defaultSRP, defaultServiceLevel, false, nil)
 	if err != nil {
@@ -217,7 +216,7 @@ func createRDFSetup() error {
 
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 
-	//Creating source volume
+	// Creating source volume
 	volOpts := make(map[string]interface{})
 	localVol, err = client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultProtectedStorageGroup, volumeName, 50, volOpts)
 	if err != nil {
@@ -225,7 +224,7 @@ func createRDFSetup() error {
 	}
 	fmt.Printf("volume:\n%#v\n", localVol)
 
-	//Creating SG Replica
+	// Creating SG Replica
 
 	SGRDFInfo, err := client.CreateSGReplica(context.TODO(), symmetrixID, remoteSymmetrixID, defaultRepMode, localRDFGrpNo, defaultProtectedStorageGroup, defaultProtectedStorageGroup, defaultServiceLevel, false)
 	fmt.Printf("SG info :\n%#v\n", SGRDFInfo)
@@ -233,7 +232,7 @@ func createRDFSetup() error {
 		return fmt.Errorf("Error Creating SGReplica: %s", err.Error())
 	}
 
-	//Retrieving remote volume information for cleanup
+	// Retrieving remote volume information for cleanup
 
 	rdfPair, err := client.GetRDFDevicePairInfo(context.TODO(), symmetrixID, localRDFGrpNo, localVol.VolumeID)
 	if err != nil {
@@ -275,13 +274,13 @@ func cleanupDefaultSGAndHOST(t *testing.T) {
 func cleanupRDFSetup(t *testing.T) {
 	fmt.Println("Cleaning up RDF Setup...")
 
-	//Terminating the Pair and removing the volumes from local SG and remote SG
+	// Terminating the Pair and removing the volumes from local SG and remote SG
 
 	_, err := client.RemoveVolumesFromProtectedStorageGroup(context.TODO(), symmetrixID, defaultProtectedStorageGroup, remoteSymmetrixID, defaultProtectedStorageGroup, true, localVol.VolumeID)
 	if err != nil {
 		t.Errorf("failed to remove volumes from default Protected SG (%s) : (%s)", defaultProtectedStorageGroup, err.Error())
 	}
-	//Deleting local volume
+	// Deleting local volume
 	err = client.DeleteVolume(context.TODO(), symmetrixID, localVol.VolumeID)
 	if err != nil {
 		t.Error("DeleteVolume failed: " + err.Error())
@@ -293,7 +292,7 @@ func cleanupRDFSetup(t *testing.T) {
 	}
 	fmt.Printf("Received expected error: %s\n", err.Error())
 
-	//Deleting remote volume
+	// Deleting remote volume
 	err = client.DeleteVolume(context.TODO(), remoteSymmetrixID, remoteVol.VolumeID)
 	if err != nil {
 		t.Error("DeleteVolume failed: " + err.Error())
@@ -328,14 +327,15 @@ func getClient() error {
 	err = client.Authenticate(context.TODO(), &pmax.ConfigConnect{
 		Endpoint: endpoint,
 		Username: username,
-		Password: password})
+		Password: password,
+	})
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func TestAuthentication(t *testing.T) {
+func TestAuthentication(_ *testing.T) {
 	_ = getClient()
 }
 
@@ -614,7 +614,7 @@ func TestCreateStorageGroup(t *testing.T) {
 		return
 	}
 	fmt.Println("Fetching the newly create storage group from array")
-	//Check if the SG exists on array
+	// Check if the SG exists on array
 	storageGroup, err = client.GetStorageGroup(context.TODO(), symmetrixID, storageGroupID)
 	if err != nil || storageGroup == nil {
 		t.Error("Expected to find " + storageGroupID + " but didn't")
@@ -627,7 +627,7 @@ func TestCreateStorageGroup(t *testing.T) {
 		t.Error("Failed to delete " + storageGroupID)
 		return
 	}
-	//Check if the SG exists on array
+	// Check if the SG exists on array
 	storageGroup, err = client.GetStorageGroup(context.TODO(), symmetrixID, storageGroupID)
 	if err == nil || storageGroup != nil {
 		t.Error("Expected a failure in fetching " + storageGroupID + " but didn't")
@@ -658,7 +658,7 @@ func TestCreateStorageGroupWithHostIOLimits(t *testing.T) {
 		return
 	}
 	fmt.Println("Fetching the newly create storage group from array")
-	//Check if the SG exists on array
+	// Check if the SG exists on array
 	storageGroup, err = client.GetStorageGroup(context.TODO(), symmetrixID, storageGroupID)
 	if err != nil || storageGroup == nil {
 		t.Error("Expected to find " + storageGroupID + " but didn't")
@@ -671,7 +671,7 @@ func TestCreateStorageGroupWithHostIOLimits(t *testing.T) {
 		t.Error("Failed to delete " + storageGroupID)
 		return
 	}
-	//Check if the SG exists on array
+	// Check if the SG exists on array
 	storageGroup, err = client.GetStorageGroup(context.TODO(), symmetrixID, storageGroupID)
 	if err == nil || storageGroup != nil {
 		t.Error("Expected a failure in fetching " + storageGroupID + " but didn't")
@@ -706,7 +706,7 @@ func TestCreateStorageGroupNonFASTManaged(t *testing.T) {
 		t.Error("Failed to delete " + storageGroupID)
 		return
 	}
-	//Check if the SG exists on array
+	// Check if the SG exists on array
 	storageGroup, err = client.GetStorageGroup(context.TODO(), symmetrixID, storageGroupID)
 	if err == nil || storageGroup != nil {
 		t.Error("Expected a failure in fetching " + storageGroupID + " but didn't")
@@ -951,7 +951,7 @@ func TestAddVolumesInStorageGroup(t *testing.T) {
 		return
 	}
 	fmt.Printf("SG after adding volume: %#v\n", sg)
-	//Remove the volume from SG as part of cleanup
+	// Remove the volume from SG as part of cleanup
 	sg, err = client.RemoveVolumesFromStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG, true, vol.VolumeID)
 	if err != nil {
 		t.Error(err)
@@ -1085,7 +1085,6 @@ func TestGetPorts(t *testing.T) {
 		return
 	}
 	fmt.Printf("port %s:%s %#v\n", dirName, portName, port)
-
 }
 
 func TestGetPortGroupIDs(t *testing.T) {
@@ -1123,8 +1122,8 @@ func TestGetPortGroupIDs(t *testing.T) {
 		t.Error("expected at least one iSCSI PortGroup ID in list")
 		return
 	}
-
 }
+
 func TestGetPortGroupByFCID(t *testing.T) {
 	if client == nil {
 		err := getClient()
@@ -1139,6 +1138,7 @@ func TestGetPortGroupByFCID(t *testing.T) {
 		return
 	}
 }
+
 func TestGetPortGroupByiSCSIID(t *testing.T) {
 	if client == nil {
 		err := getClient()
@@ -1206,6 +1206,7 @@ func TestGetInitiatorIDs(t *testing.T) {
 		fmt.Println("Received an empty list as expected for unknown IQN")
 	}
 }
+
 func TestGetInitiatorByFCID(t *testing.T) {
 	if client == nil {
 		err := getClient()
@@ -1265,7 +1266,7 @@ func TestFCGetInitiators(t *testing.T) {
 		if ourInit == "" {
 			continue
 		}
-		//fmt.Printf("ourInit: %s\n", ourInit)
+		// fmt.Printf("ourInit: %s\n", ourInit)
 		for _, init := range initList.InitiatorIDs {
 			if strings.HasSuffix(init, ourInit) {
 				fmt.Printf("initiator: %s\n", init)
@@ -1306,6 +1307,7 @@ func TestGetHostIDs(t *testing.T) {
 		return
 	}
 }
+
 func TestGetHostByFCID(t *testing.T) {
 	if client == nil {
 		err := getClient()
@@ -1496,7 +1498,7 @@ func TestCreateFCMaskingView(t *testing.T) {
 		return
 	}
 	fmt.Println("Fetching the newly created masking view from array")
-	//Check if the MV exists on array
+	// Check if the MV exists on array
 	maskingView, err = client.GetMaskingViewByID(context.TODO(), symmetrixID, maskingViewID)
 	if err != nil || maskingView == nil {
 		t.Error("Expected to find " + maskingViewID + " but didn't")
@@ -1568,7 +1570,7 @@ func TestRenameMaskingView(t *testing.T) {
 		return
 	}
 	fmt.Println("Fetching the newly created masking view from array")
-	//Check if the MV exists on array
+	// Check if the MV exists on array
 	maskingView, err = client.GetMaskingViewByID(context.TODO(), symmetrixID, maskingViewID)
 	if err != nil || maskingView == nil {
 		t.Error("Expected to find " + maskingViewID + " but didn't")
@@ -1673,6 +1675,7 @@ func TestUpdatePortGroup(t *testing.T) {
 		return
 	}
 	portKeys = portGroup.SymmetrixPortKey
+	// #nosec G602
 	if portKeys[0].DirectorID != "OR-2C" {
 		t.Errorf("Couldnt modify port group details: %s", err.Error())
 		return
@@ -1683,7 +1686,6 @@ func TestUpdatePortGroup(t *testing.T) {
 		t.Error("Couldn't delete port group")
 		return
 	}
-
 }
 
 func TestRenamePortGroup(t *testing.T) {
@@ -1778,7 +1780,7 @@ func TestCreateiSCSIMaskingView(t *testing.T) {
 		return
 	}
 	fmt.Println("Fetching the newly created masking view from array")
-	//Check if the MV exists on array
+	// Check if the MV exists on array
 	maskingView, err = client.GetMaskingViewByID(context.TODO(), symmetrixID, maskingViewID)
 	if err != nil || maskingView == nil {
 		t.Error("Expected to find " + maskingViewID + " but didn't")
@@ -1901,7 +1903,7 @@ func TestExpandVolume(t *testing.T) {
 			return
 		}
 	}
-	//create a volume
+	// create a volume
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
@@ -1912,7 +1914,7 @@ func TestExpandVolume(t *testing.T) {
 		return
 	}
 	fmt.Printf("volume:\n%#v\n", vol)
-	//expand Volume
+	// expand Volume
 	expandedSize := 30
 	fmt.Println("Doing VolumeExpansion")
 	expandedVol, err := client.ExpandVolume(context.TODO(), symmetrixID, vol.VolumeID, 0, expandedSize)
@@ -1920,14 +1922,14 @@ func TestExpandVolume(t *testing.T) {
 		t.Error("Error in Volume Expansion: " + err.Error())
 		return
 	}
-	//check expand size
+	// check expand size
 	if expandedVol.CapacityCYL != expandedSize {
 		t.Error("Size mismatch after Expansion: " + err.Error())
 		return
 	}
 	fmt.Printf("volume:\n%#v\n", expandedVol)
 	fmt.Printf("Expanded Volume Size:\n%d\n", expandedVol.CapacityCYL)
-	//all ok delete Volume
+	// all ok delete Volume
 	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
 }
 
@@ -1939,7 +1941,7 @@ func TestExpandVolumeWithUnit(t *testing.T) {
 			return
 		}
 	}
-	//create a volume
+	// create a volume
 	now := time.Now()
 	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
 	fmt.Printf("volumeName: %s\n", volumeName)
@@ -1950,7 +1952,7 @@ func TestExpandVolumeWithUnit(t *testing.T) {
 		return
 	}
 	fmt.Printf("volume:\n%#v\n", vol)
-	//expand Volume
+	// expand Volume
 	expandedSize := 30
 	capUnit := "GB"
 	fmt.Println("Doing VolumeExpansion")
@@ -1959,14 +1961,14 @@ func TestExpandVolumeWithUnit(t *testing.T) {
 		t.Error("Error in Volume Expansion: " + err.Error())
 		return
 	}
-	//check expand size
+	// check expand size
 	if expandedVol.CapacityGB != float64(expandedSize) {
 		t.Error("Size mismatch after Expansion: " + err.Error())
 		return
 	}
 	fmt.Printf("volume:\n%#v\n", expandedVol)
 	fmt.Printf("Expanded Volume Size:\n%d\n", expandedVol.CapacityCYL)
-	//all ok delete Volume
+	// all ok delete Volume
 	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
 }
 
@@ -2143,7 +2145,6 @@ func TestGetHostGroupIDs(t *testing.T) {
 		t.Error("Couldn't delete host group")
 		return
 	}
-
 }
 
 func TestGetStorageGroupPerfKeysAndMetrics(t *testing.T) {

@@ -233,7 +233,6 @@ func (c *Client) ModifyStorageGroupSnapshot(ctx context.Context, symID string, s
 	}
 	err := c.api.Put(
 		ctx, URL, c.getDefaultHeaders(), putPayload, snap)
-
 	if err != nil {
 		log.Error("ModifyStorageGroupSnapshot failed: " + err.Error())
 		return nil, err
@@ -309,7 +308,8 @@ func (c *Client) DeleteSnapshotPolicy(ctx context.Context, symID string, snapsho
 
 // CreateSnapshotPolicy creates a Snapshot policy and returns a types.SnapshotPolicy.
 func (c *Client) CreateSnapshotPolicy(ctx context.Context, symID string, snapshotPolicyID string, interval string, offsetMins int32, complianceCountWarn int64,
-	complianceCountCritical int64, optionalPayload map[string]interface{}) (*types.SnapshotPolicy, error) {
+	complianceCountCritical int64, optionalPayload map[string]interface{},
+) (*types.SnapshotPolicy, error) {
 	defer c.TimeSpent("CreateSnapshotPolicy", time.Now())
 
 	if _, err := c.IsAllowedArray(symID); err != nil {

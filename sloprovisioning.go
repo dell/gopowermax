@@ -251,7 +251,7 @@ func (c *Client) volumeIteratorToVolIDList(ctx context.Context, iter *types.Volu
 		defer func(c *Client, ctx context.Context, iter *types.VolumeIterator) {
 			err := c.DeleteVolumeIDsIterator(ctx, iter)
 			if err != nil {
-
+				return
 			}
 		}(c, ctx, iter)
 	}
@@ -674,7 +674,7 @@ func (c *Client) GetVolumeByIdentifier(ctx context.Context, symID, storageGroupI
 func (c *Client) CreateVolumeInStorageGroupS(ctx context.Context, symID, storageGroupID string, volumeName string, volumeSize interface{}, volOpts map[string]interface{}, opts ...http.Header) (*types.Volume, error) {
 	defer c.TimeSpent("CreateVolumeInStorageGroup", time.Now())
 	capUnit := "CYL"
-	var enableMobility = false
+	enableMobility := false
 
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
@@ -715,7 +715,7 @@ func (c *Client) CreateVolumeInStorageGroupS(ctx context.Context, symID, storage
 func (c *Client) CreateVolumeInProtectedStorageGroupS(ctx context.Context, symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, volumeSize interface{}, volOpts map[string]interface{}, opts ...http.Header) (*types.Volume, error) {
 	defer c.TimeSpent("CreateVolumeInStorageGroup", time.Now())
 	capUnit := "CYL"
-	var enableMobility = false
+	enableMobility := false
 
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err

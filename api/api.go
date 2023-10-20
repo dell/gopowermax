@@ -136,8 +136,8 @@ type ClientOptions struct {
 func New(
 	host string,
 	opts ClientOptions,
-	debug bool) (Client, error) {
-
+	debug bool,
+) (Client, error) {
 	if host == "" {
 		return nil, errNewClient
 	}
@@ -153,7 +153,7 @@ func New(
 		c.http.Timeout = opts.Timeout
 	}
 
-	if opts.Insecure {
+	if opts.Insecure { // #nosec G402
 		c.http.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
@@ -167,6 +167,7 @@ func New(
 			return nil, errSysCerts
 		}
 		c.http.Transport = &http.Transport{
+			// #nosec G402
 			TLSClientConfig: &tls.Config{
 				RootCAs:            pool,
 				InsecureSkipVerify: false,
@@ -191,8 +192,8 @@ func (c *client) Get(
 	ctx context.Context,
 	path string,
 	headers map[string]string,
-	resp interface{}) error {
-
+	resp interface{},
+) error {
 	return c.DoWithHeaders(
 		ctx, http.MethodGet, path, headers, nil, resp)
 }
@@ -201,8 +202,8 @@ func (c *client) Post(
 	ctx context.Context,
 	path string,
 	headers map[string]string,
-	body, resp interface{}) error {
-
+	body, resp interface{},
+) error {
 	return c.DoWithHeaders(
 		ctx, http.MethodPost, path, headers, body, resp)
 }
@@ -211,8 +212,8 @@ func (c *client) Put(
 	ctx context.Context,
 	path string,
 	headers map[string]string,
-	body, resp interface{}) error {
-
+	body, resp interface{},
+) error {
 	return c.DoWithHeaders(
 		ctx, http.MethodPut, path, headers, body, resp)
 }
@@ -221,8 +222,8 @@ func (c *client) Delete(
 	ctx context.Context,
 	path string,
 	headers map[string]string,
-	resp interface{}) error {
-
+	resp interface{},
+) error {
 	return c.DoWithHeaders(
 		ctx, http.MethodDelete, path, headers, nil, resp)
 }
@@ -230,8 +231,8 @@ func (c *client) Delete(
 func (c *client) Do(
 	ctx context.Context,
 	method, path string,
-	body, resp interface{}) error {
-
+	body, resp interface{},
+) error {
 	return c.DoWithHeaders(ctx, method, path, nil, body, resp)
 }
 
@@ -247,8 +248,8 @@ func (c *client) DoWithHeaders(
 	ctx context.Context,
 	method, uri string,
 	headers map[string]string,
-	body, resp interface{}) error {
-
+	body, resp interface{},
+) error {
 	res, err := c.DoAndGetResponseBody(
 		ctx, method, uri, headers, body)
 	if err != nil {
@@ -282,8 +283,8 @@ func (c *client) DoAndGetResponseBody(
 	ctx context.Context,
 	method, uri string,
 	headers map[string]string,
-	body interface{}) (*http.Response, error) {
-
+	body interface{},
+) (*http.Response, error) {
 	var (
 		err                error
 		req                *http.Request
@@ -410,8 +411,8 @@ func (c *client) ParseJSONError(r *http.Response) error {
 
 func (c *client) doLog(
 	l func(args ...interface{}),
-	msg string) {
-
+	msg string,
+) {
 	if c.debug {
 		l(msg)
 	}

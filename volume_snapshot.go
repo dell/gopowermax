@@ -32,7 +32,7 @@ import (
 const (
 	ReplicationX = "replication/"
 	PrivateX     = "private/"
-	//PrivURLPrefix = RESTPrefix + PrivateX + APIVersion + "/"
+	// PrivURLPrefix = RESTPrefix + PrivateX + APIVersion + "/"
 	XSnapshot    = "/snapshot"
 	XGenereation = "/generation"
 )
@@ -264,7 +264,8 @@ func (c *Client) DeleteSnapshotS(ctx context.Context, symID, snapID string, sour
 // Action defined the operation which will be performed on the given snapshot
 func (c *Client) ModifySnapshot(ctx context.Context, symID string, sourceVol []types.VolumeList,
 	targetVol []types.VolumeList, snapID string, action string,
-	newSnapID string, generation int64) error {
+	newSnapID string, generation int64,
+) error {
 	defer c.TimeSpent("ModifySnapshot", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return err
@@ -325,7 +326,8 @@ func (c *Client) ModifySnapshot(ctx context.Context, symID string, sourceVol []t
 // ModifySnapshotS executes actions on snapshots synchronously
 func (c *Client) ModifySnapshotS(ctx context.Context, symID string, sourceVol []types.VolumeList,
 	targetVol []types.VolumeList, snapID string, action string,
-	newSnapID string, generation int64) error {
+	newSnapID string, generation int64,
+) error {
 	defer c.TimeSpent("ModifySnapshotS", time.Now())
 
 	if _, err := c.IsAllowedArray(symID); err != nil {
@@ -390,7 +392,7 @@ func (c *Client) GetPrivVolumeByID(ctx context.Context, symID string, volumeID s
 	wwn := vol.WWN
 	URL := c.privURLPrefix() + SLOProvisioningX + SymmetrixX + symID + XVolume
 	URL = fmt.Sprintf("%s?wwn=%s", URL, wwn)
-	//URL = URL + query
+	// URL = URL + query
 
 	ctx, cancel := context.WithTimeout(ctx, 360*time.Second)
 	defer cancel()
@@ -404,7 +406,7 @@ func (c *Client) GetPrivVolumeByID(ctx context.Context, symID string, volumeID s
 		return nil, err
 	}
 
-	//volume := &types.VolumeResultPrivate{}
+	// volume := &types.VolumeResultPrivate{}
 	privateVolumeIterator := new(types.PrivVolumeIterator)
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(privateVolumeIterator); err != nil {
