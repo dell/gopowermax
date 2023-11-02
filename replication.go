@@ -251,7 +251,7 @@ func (c *Client) DeleteStorageGroupSnapshot(ctx context.Context, symID string, s
 	if err != nil {
 		log.Error("Error in Delete Storage Group Snapshot: " + err.Error())
 	} else {
-		log.Info(fmt.Sprintf("Successfully deleted volume: %s", snapID))
+		log.Infof("Successfully deleted Storage Group Snapshot: %s", snapID)
 	}
 	return err
 }

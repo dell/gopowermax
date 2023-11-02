@@ -135,6 +135,7 @@ type unitContext struct {
 	fileSystem     *types.FileSystem
 	nfsExport      *types.NFSExport
 	nasServer      *types.NASServer
+	fileInterface  *types.FileInterface
 }
 
 func (c *unitContext) reset() {
@@ -177,6 +178,7 @@ func (c *unitContext) reset() {
 	c.fileSystem = nil
 	c.nfsExport = nil
 	c.nasServer = nil
+	c.fileInterface = nil
 }
 
 func (c *unitContext) iInduceError(errorType string) error {
@@ -250,6 +252,18 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.CreateNFSExportError = false
 	mock.InducedErrors.UpdateNFSExportError = false
 	mock.InducedErrors.DeleteNFSExportError = false
+	mock.InducedErrors.GetFileInterfaceError = false
+	mock.InducedErrors.ExecuteActionError = false
+	mock.InducedErrors.CreateSnapshotPolicyError = false
+	mock.InducedErrors.GetStorageGroupSnapshotError = false
+	mock.InducedErrors.GetStorageGroupSnapshotSnapError = false
+	mock.InducedErrors.GetStorageGroupSnapshotSnapDetailError = false
+	mock.InducedErrors.GetStorageGroupSnapshotSnapModifyError = false
+	mock.InducedErrors.GetSnapshotPolicyError = false
+	mock.InducedErrors.GetSnapshotPolicyListError = false
+	mock.InducedErrors.CreateSnapshotPolicyError = false
+	mock.InducedErrors.ModifySnapshotPolicyError = false
+	mock.InducedErrors.DeleteSnapshotPolicyError = false
 	switch errorType {
 	case "InvalidJSON":
 		mock.InducedErrors.InvalidJSON = true
@@ -399,6 +413,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.GetRDFGroupError = true
 	case "GetSnapshotPolicyError":
 		mock.InducedErrors.GetSnapshotPolicyError = true
+	case "CreateSnapshotPolicyError":
+		mock.InducedErrors.CreateSnapshotPolicyError = true
 	case "GetSnapshotPolicyListError":
 		mock.InducedErrors.GetSnapshotPolicyListError = true
 	case "ModifySnapshotPolicyError":
@@ -433,6 +449,10 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.UpdateNFSExportError = true
 	case "DeleteNFSExportError":
 		mock.InducedErrors.DeleteNFSExportError = true
+	case "GetFileInterfaceError":
+		mock.InducedErrors.GetFileInterfaceError = true
+	case "ExecuteActionError":
+		mock.InducedErrors.ExecuteActionError = true
 	case "none":
 	default:
 		return fmt.Errorf("unknown errorType: %s", errorType)
@@ -1644,6 +1664,22 @@ func (c *unitContext) iCallGetStorageGroupSnapshotsWith(storageGroupID string) e
 	return nil
 }
 
+func (c *unitContext) iCallGetStorageGroupSnapshotsWithAndParam(storageGroupID, params string) error {
+	var exludeManualSnaps bool
+	var exludeSlSnaps bool
+	param := strings.Split(params, ",")
+	for _, p := range param {
+		if p == "exludeManualSnaps" {
+			exludeManualSnaps = true
+		}
+		if p == "exludeSlSnaps" {
+			exludeSlSnaps = true
+		}
+	}
+	c.sgSnapshot, c.err = c.client.GetStorageGroupSnapshots(context.TODO(), symID, storageGroupID, exludeManualSnaps, exludeSlSnaps)
+	return nil
+}
+
 func (c *unitContext) iCallCreateStorageGroupSnapshotWith(storageGroupID string) error {
 	c.storageGroupSnap, c.err = c.client.CreateStorageGroupSnapshot(context.TODO(), symID, storageGroupID, c.storageGroupSnapSetting)
 	return nil
@@ -1843,11 +1879,16 @@ func (c *unitContext) iCallUpdateHostName(newName string) error {
 	return nil
 }
 
-func (c *unitContext) iCallCreateSGReplica() error {
+func (c *unitContext) iCallCreateSGReplica(mode string) error {
 	localSG, remoteSG := mock.DefaultStorageGroup, mock.DefaultStorageGroup // Using same names for local and remote storage groups
 	remoteServiceLevel := mock.DefaultServiceLevel                          // Using the same service level as local
-	rdfgNumber := fmt.Sprintf("%d", mock.DefaultRDFGNo)
-	_, c.err = c.client.CreateSGReplica(context.TODO(), symID, mock.DefaultRemoteSymID, srdfMode, rdfgNumber, localSG, remoteSG, remoteServiceLevel, false)
+	var rdfgNumber string
+	if mode == "METRO" {
+		rdfgNumber = fmt.Sprintf("%d", mock.DefaultMetroRDFGNo)
+	} else {
+		rdfgNumber = fmt.Sprintf("%d", mock.DefaultAsyncRDFGNo)
+	}
+	_, c.err = c.client.CreateSGReplica(context.TODO(), symID, mock.DefaultRemoteSymID, mode, rdfgNumber, localSG, remoteSG, remoteServiceLevel, false)
 	return nil
 }
 
@@ -1885,11 +1926,11 @@ func (c *unitContext) theVolumesShouldBeReplicated(compliment string) error {
 
 func (c *unitContext) iCallGetStorageGroupRDFInfo() error {
 	var sgrdf *types.StorageGroupRDFG
-	sgrdf, c.err = c.client.GetStorageGroupRDFInfo(context.TODO(), symID, mock.DefaultStorageGroup, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo))
+	sgrdf, c.err = c.client.GetStorageGroupRDFInfo(context.TODO(), symID, mock.DefaultStorageGroup, fmt.Sprintf("%d", mock.DefaultAsyncRemoteRDFGNo))
 	if c.err == nil {
 		if sgrdf.SymmetrixID != symID ||
 			sgrdf.StorageGroupName != mock.DefaultStorageGroup ||
-			sgrdf.RdfGroupNumber != mock.DefaultRDFGNo {
+			sgrdf.RdfGroupNumber != mock.DefaultAsyncRDFGNo {
 			c.err = fmt.Errorf("the returned storage group doesn't contain proper details")
 		}
 	}
@@ -1901,7 +1942,7 @@ func (c *unitContext) iCallGetRDFDevicePairInfo() error {
 	localVolID := c.volIDList[0]
 	remoteVolID := c.volIDList[0]
 
-	devicePairInfo, c.err = c.client.GetRDFDevicePairInfo(context.TODO(), symID, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo), localVolID)
+	devicePairInfo, c.err = c.client.GetRDFDevicePairInfo(context.TODO(), symID, fmt.Sprintf("%d", mock.DefaultAsyncRemoteRDFGNo), localVolID)
 	if c.err == nil {
 		if devicePairInfo.LocalSymmID != symID || devicePairInfo.RemoteSymmID != mock.DefaultRemoteSymID ||
 			devicePairInfo.LocalVolumeName != localVolID || devicePairInfo.RemoteVolumeName != remoteVolID {
@@ -1927,17 +1968,21 @@ func (c *unitContext) iCallGetProtectedStorageGroup() error {
 
 func (c *unitContext) iCallGetRDFGroup() error {
 	var rdfGroup *types.RDFGroup
-	rdfGroup, c.err = c.client.GetRDFGroupByID(context.TODO(), symID, fmt.Sprintf("%d", mock.DefaultRemoteRDFGNo))
+	rdfGroup, c.err = c.client.GetRDFGroupByID(context.TODO(), symID, fmt.Sprintf("%d", mock.DefaultAsyncRemoteRDFGNo))
 	if c.err == nil {
-		if !rdfGroup.Async || rdfGroup.RemoteSymmetrix != mock.DefaultRemoteSymID || rdfGroup.RdfgNumber != mock.DefaultRemoteRDFGNo {
+		if !rdfGroup.Async || rdfGroup.RemoteSymmetrix != mock.DefaultRemoteSymID || rdfGroup.RdfgNumber != mock.DefaultAsyncRemoteRDFGNo {
 			c.err = fmt.Errorf("rdf group with incorrect details returned")
 		}
 	}
 	return nil
 }
 
-func (c *unitContext) iCallAddVolumesToProtectedStorageGroup() error {
-	c.err = c.client.AddVolumesToProtectedStorageGroup(context.TODO(), symID, mock.DefaultProtectedStorageGroup, mock.DefaultRemoteSymID, mock.DefaultProtectedStorageGroup, false, c.volIDList...)
+func (c *unitContext) iCallAddVolumesToProtectedStorageGroup(mode string) error {
+	if mode == "ASYNC" {
+		c.err = c.client.AddVolumesToProtectedStorageGroup(context.TODO(), symID, mock.DefaultASYNCProtectedSG, mock.DefaultRemoteSymID, mock.DefaultASYNCProtectedSG, false, c.volIDList...)
+	} else {
+		c.err = c.client.AddVolumesToProtectedStorageGroup(context.TODO(), symID, mock.DefaultMETROProtectedSG, mock.DefaultRemoteSymID, mock.DefaultMETROProtectedSG, false, c.volIDList...)
+	}
 	return nil
 }
 
@@ -1945,7 +1990,7 @@ func (c *unitContext) iCallCreateVolumeInProtectedStorageGroupSWithNameAndSize(v
 	volOpts := make(map[string]interface{})
 	volOpts["capacityUnit"] = "CYL"
 	volOpts["enableMobility"] = "false"
-	c.vol, c.err = c.client.CreateVolumeInProtectedStorageGroupS(context.TODO(), symID, mock.DefaultRemoteSymID, mock.DefaultProtectedStorageGroup, mock.DefaultProtectedStorageGroup, volumeName, sizeInCylinders, volOpts)
+	c.vol, c.err = c.client.CreateVolumeInProtectedStorageGroupS(context.TODO(), symID, mock.DefaultRemoteSymID, mock.DefaultASYNCProtectedSG, mock.DefaultASYNCProtectedSG, volumeName, sizeInCylinders, volOpts)
 	return nil
 }
 
@@ -1954,13 +1999,17 @@ func (c *unitContext) iCallRemoveVolumesFromProtectedStorageGroup() error {
 	return nil
 }
 
-func (c *unitContext) iCallCreateRDFPair() error {
-	_, c.err = c.client.CreateRDFPair(context.TODO(), symID, fmt.Sprintf("%d", mock.DefaultRDFGNo), c.volIDList[0], ASYNC, "", false, false)
+func (c *unitContext) iCallCreateRDFPair(mode string) error {
+	if mode == "ASYNC" {
+		_, c.err = c.client.CreateRDFPair(context.TODO(), symID, fmt.Sprintf("%d", mock.DefaultAsyncRDFGNo), c.volIDList[0], mode, "", false, false)
+	} else {
+		_, c.err = c.client.CreateRDFPair(context.TODO(), symID, fmt.Sprintf("%d", mock.DefaultMetroRDFGNo), c.volIDList[0], mode, "", false, false)
+	}
 	return nil
 }
 
 func (c *unitContext) iCallExecuteAction(action string) error {
-	c.err = c.client.ExecuteReplicationActionOnSG(context.TODO(), symID, action, mock.DefaultStorageGroup, fmt.Sprintf("%d", mock.DefaultRDFGNo), false, false, false)
+	c.err = c.client.ExecuteReplicationActionOnSG(context.TODO(), symID, action, mock.DefaultASYNCProtectedSG, fmt.Sprintf("%d", mock.DefaultAsyncRDFGNo), false, false, true)
 	return nil
 }
 
@@ -2025,9 +2074,9 @@ func (c *unitContext) iCallExecuteCreateRDFGroup() error {
 			PortWWN:    "5000097200007003",
 		},
 	}
-	createRDFgPayload.Label = mock.DefaultRDFLabel
-	createRDFgPayload.LocalRDFNum = mock.DefaultRDFGNo
-	createRDFgPayload.RemoteRDFNum = mock.DefaultRemoteRDFGNo
+	createRDFgPayload.Label = mock.DefaultAsyncRDFLabel
+	createRDFgPayload.LocalRDFNum = mock.DefaultAsyncRDFGNo
+	createRDFgPayload.RemoteRDFNum = mock.DefaultAsyncRemoteRDFGNo
 	c.err = c.client.ExecuteCreateRDFGroup(context.TODO(), mock.DefaultSymmetrixID, createRDFgPayload)
 	return nil
 }
@@ -2239,6 +2288,24 @@ func (c *unitContext) iCallCreateSnapshotPolicyWith(snapshotPolicyID string) err
 	return nil
 }
 
+func (c *unitContext) iCallCreateSnapshotPolicyWithAndPayload(snapshotPolicyID, payload string) error {
+	opPayload := make(map[string]interface{})
+	if payload == "cloudSnapshotPolicyDetails" {
+		opPayload["cloudSnapshotPolicyDetails"] = &types.CloudSnapshotPolicyDetails{
+			CloudRetentionDays: 1,
+			CloudProviderName:  "emc",
+		}
+	}
+	if payload == "localSnapshotPolicyDetails" {
+		opPayload["localSnapshotPolicyDetails"] = &types.LocalSnapshotPolicyDetails{
+			Secure:        true,
+			SnapshotCount: 1,
+		}
+	}
+	c.snapshotPolicy, c.err = c.client.CreateSnapshotPolicy(context.TODO(), symID, snapshotPolicyID, "1 Hour", 10, 2, 2, opPayload)
+	return nil
+}
+
 func (c *unitContext) iShouldGetSnapshotPolicytInformationIfNoError() error {
 	if c.err != nil {
 		return nil
@@ -2349,6 +2416,12 @@ func (c *unitContext) iCallGetNASServerList() error {
 func (c *unitContext) iCallGetNASServerListWithParam() error {
 	query := types.QueryParams{queryName: mock.DefaultNASServerName}
 	c.nasServerList, c.err = c.client.GetNASServerList(context.TODO(), symID, query)
+	return nil
+}
+
+func (c *unitContext) iCallGetNFSExportListWithParam() error {
+	query := types.QueryParams{queryName: "nfs-1"}
+	c.nfsExportList, c.err = c.client.GetNFSExportList(context.TODO(), symID, query)
 	return nil
 }
 
@@ -2483,6 +2556,20 @@ func (c *unitContext) iGetAValidNFSExportObjectIfNoError() error {
 	return nil
 }
 
+func (c *unitContext) iCallGetFileInterfaceByID(interfaceID string) error {
+	c.fileInterface, c.err = c.client.GetFileInterfaceByID(context.TODO(), symID, interfaceID)
+	return nil
+}
+
+func (c *unitContext) iGetAValidFileInterfaceObjectIfNoError() error {
+	if c.err == nil {
+		if c.fileInterface == nil {
+			return fmt.Errorf("file interface nil")
+		}
+	}
+	return nil
+}
+
 func UnitTestContext(s *godog.ScenarioContext) {
 	c := &unitContext{}
 	s.Step(`^I induce error "([^"]*)"$`, c.iInduceError)
@@ -2608,6 +2695,7 @@ func UnitTestContext(s *godog.ScenarioContext) {
 
 	// SG Snapshot
 	s.Step(`^I call GetStorageGroupSnapshots with "([^"]*)"$`, c.iCallGetStorageGroupSnapshotsWith)
+	s.Step(`^I call GetStorageGroupSnapshots with "([^"]*)" and param "([^"]*)"$`, c.iCallGetStorageGroupSnapshotsWithAndParam)
 	s.Step(`^I should get storage group snapshot information if no error$`, c.iShouldGetStorageGroupSnapshotInformationIfNoError)
 	s.Step(`^I call CreateStorageGroupSnapshot with "([^"]*)"$`, c.iCallCreateStorageGroupSnapshotWith)
 	s.Step(`^I call GetStorageGroupSnapshotSnapIds with "([^"]*)" and "([^"]*)"$`, c.iCallGetStorageGroupSnapshotSnapIdsWithAnd)
@@ -2643,19 +2731,19 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^I recieve (\d+) targets$`, c.iRecieveTargets)
 	s.Step(`^there should be no errors$`, c.thereShouldBeNoErrors)
 	s.Step(`^I call UpdateHostName "([^"]*)"$`, c.iCallUpdateHostName)
+
 	// SRDF
-	s.Step(`^I call CreateSGReplica$`, c.iCallCreateSGReplica)
+	s.Step(`^I call CreateSGReplica with "([^"]*)"$`, c.iCallCreateSGReplica)
 	s.Step(`^then SG should be replicated$`, c.thenSGShouldBeReplicated)
-	s.Step(`^I call GetStorageGroupRDFInfo$`, c.iCallGetStorageGroupRDFInfo)
 	s.Step(`^I call GetStorageGroupRDFInfo$`, c.iCallGetStorageGroupRDFInfo)
 	s.Step(`^I call GetRDFDevicePairInfo$`, c.iCallGetRDFDevicePairInfo)
 	s.Step(`^I call GetProtectedStorageGroup$`, c.iCallGetProtectedStorageGroup)
 	s.Step(`^I call GetRDFGroup$`, c.iCallGetRDFGroup)
-	s.Step(`^I call AddVolumesToProtectedStorageGroup$`, c.iCallAddVolumesToProtectedStorageGroup)
+	s.Step(`^I call AddVolumesToProtectedStorageGroup with "([^"]*)"$`, c.iCallAddVolumesToProtectedStorageGroup)
 	s.Step(`^I call CreateVolumeInProtectedStorageGroupS with name "([^"]*)" and size (\d+)$`, c.iCallCreateVolumeInProtectedStorageGroupSWithNameAndSize)
 	s.Step(`^the volumes should "([^"]*)" be replicated$`, c.theVolumesShouldBeReplicated)
 	s.Step(`^I call RemoveVolumesFromProtectedStorageGroup$`, c.iCallRemoveVolumesFromProtectedStorageGroup)
-	s.Step(`^I call CreateRDFPair$`, c.iCallCreateRDFPair)
+	s.Step(`^I call CreateRDFPair with "([^"]*)"$`, c.iCallCreateRDFPair)
 	s.Step(`^I call ExecuteAction "([^"]*)"$`, c.iCallExecuteAction)
 
 	// Performance Metrics
@@ -2679,6 +2767,7 @@ func UnitTestContext(s *godog.ScenarioContext) {
 
 	// Snapshot Policy
 	s.Step(`^I call CreateSnapshotPolicy with "([^"]*)"$`, c.iCallCreateSnapshotPolicyWith)
+	s.Step(`^I call CreateSnapshotPolicy with "([^"]*)" and payload "([^"]*)"$`, c.iCallCreateSnapshotPolicyWithAndPayload)
 	s.Step(`^I call GetSnapshotPolicy with "([^"]*)"$`, c.iCallGetSnapshotPolicyWith)
 	s.Step(`^I should get snapshot policy information if no error$`, c.iShouldGetSnapshotPolicytInformationIfNoError)
 	s.Step(`^I call ModifySnapshotPolicy with  "([^"]*)" and "([^"]*)" and "([^"]*)"$`, c.iCallModifySnapshotPolicyWithAndAnd)
@@ -2711,4 +2800,7 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^I get a valid NFSExport object if no error$`, c.iGetAValidNFSExportObjectIfNoError)
 	s.Step(`^I call GetFileSystemListWithParam$`, c.iCallGetFileSystemListWithParam)
 	s.Step(`^I call GetNASServerListWithParam$`, c.iCallGetNASServerListWithParam)
+	s.Step(`^I call GetNFSExportListWithParam`, c.iCallGetNFSExportListWithParam)
+	s.Step(`^I call GetFileInterfaceByID "([^"]*)"$`, c.iCallGetFileInterfaceByID)
+	s.Step(`^I get a valid fileInterface Object if no error$`, c.iGetAValidFileInterfaceObjectIfNoError)
 }

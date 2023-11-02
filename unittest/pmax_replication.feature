@@ -52,7 +52,7 @@ Feature: PMAX replication test
       | "00001,00001"          | "snapshot1"             |  "00001"       | "none"                         |   ""      | "none"             |
       | "00001,00002,00003"    | "snapshot1"             |  "00002"       | "none"                         |   ""      | "none"             |
       | "00001"                | "snapshot1"             |  "00002"       | "none"                         |   ""      | "none"             |
-      | "00001"                | "snapshot1"             |  "00004"       | "cannot be found"              |   ""      | "none"             |
+      | "00001"                | "snapshot1"             |  "00004"       | "Could not find volume"        |   ""      | "none"             |
       | "00001"                | "snapshot1"             |  "00002"       | "ignored as it is not managed" | "ignored" | "none"             |
       | "00001"                | "snapshot1"             |  "00002"       | "induced error"                |   ""      | "GetVolSnapsError" |
 
@@ -74,7 +74,7 @@ Feature: PMAX replication test
       | "00002"       | "snapshot1" |  "none"                         |    ""     | "none"             |
       | "00005"       | "snapshot1" |  "none"                         |    ""     | "none"             |
       | "00003"       | "snapshot1" |  "none"                         |    ""     | "none"             |
-      | "00007"       | "snapshot1" |  "cannot be found"              |    ""     | "none"             |
+      | "00007"       | "snapshot1" |  "Could not find volume"        |    ""     | "none"             |
       | "00007"       | "snapshot1" |  "ignored as it is not managed" | "ignored" | "none"             |
       | "00007"       | "snapshot1" |  "induced error"                |    ""     | "GetVolSnapsError" |
 
@@ -91,7 +91,7 @@ Feature: PMAX replication test
       | volIDs                 |  snapID                 | volID          | errormsg                         | arrays    |
       | "00001,00001"          | "snapshot1"             |  "00001"       | "none"                           |    ""     |
       | "00001"                | "snapshot1"             |  "00002"       | "none"                           |    ""     |
-      | "00001"                | "snapshot1"             |  "00007"       | "cannot be found"                |    ""     |
+      | "00001"                | "snapshot1"             |  "00007"       | "Could not find volume"          |    ""     |
       | "00001"                | "snapshot1"             |  "00007"       | "ignored as it is not managed"   | "ignored" |
 
   Scenario Outline: Get a Generation Info for given Snapshot
@@ -107,7 +107,7 @@ Feature: PMAX replication test
       | volIDs                 |  snapID                 | volID          | genID  | errormsg                         | arrays    |
       | "00001,00001"          | "snapshot1"             |  "00001"       |   1    | "none"                           |    ""     |
       | "00001"                | "snapshot1"             |  "00002"       |   0    | "none"                           |    ""     |
-      | "00001"                | "snapshot1"             |  "00007"       |   0    | "cannot be found"                |    ""     |
+      | "00001"                | "snapshot1"             |  "00007"       |   0    | "Could not find volume"          |    ""     |
       | "00001"                | "snapshot1"             |  "00007"       |   0    | "ignored as it is not managed"   | "ignored" |
 
   Scenario Outline: Renaming a snapshot
@@ -278,7 +278,7 @@ Feature: PMAX replication test
     | "00002" | "none"                         |   ""      | "none"                   |
     | "00003" | "none"                         |   ""      | "none"                   |
     | "00004" | "none"                         |   ""      | "none"                   |
-    | "00007" | "cannot be found"              |   ""      | "none"                   |
+    | "00007" | "Could not find"               |   ""      | "none"                   |
     | "00001" | "ignored as it is not managed" | "ignored" | "none"                   |
     | "00001" | "induced error"                |   ""      | "GetPrivVolumeByIDError" |
 
@@ -291,9 +291,22 @@ Feature: PMAX replication test
     And I should get storage group snapshot information if no error
   
     Examples:
-    | storageGroupID   | errormsg             | arrays    | induced                        |
-    | "sg_1"           | "none"               |   ""      | "none"                         |
-    | "sg_1"           | "induced error"      |   ""      | "GetStorageGroupSnapshotError" |
+    | storageGroupID   | errormsg             | induced                        |
+    | "sg_1"           | "none"               | "none"                         |
+    | "sg_1"           | "induced error"      | "GetStorageGroupSnapshotError" |
+
+  Scenario Outline: Testing GetStorageGroupSnapshots with params
+    Given a valid connection
+    And I call CreateStorageGroupSnapshot with "sg_1"
+    When I call GetStorageGroupSnapshots with <storageGroupID> and param <param>
+    Then the error message contains <errormsg>
+    And I should get storage group snapshot information if no error
+
+    Examples:
+      | storageGroupID   | errormsg             | param                               |
+      | "sg_1"           | "none"               | "exludeManualSnaps"                 |
+      | "sg_1"           | "none"               | "exludeSlSnaps"                     |
+      | "sg_1"           | "none"               | "exludeManualSnaps,exludeSlSnaps"   |
 
   Scenario Outline: Testing GetStorageGroupSnapshotSnapIds
     Given a valid connection
@@ -304,9 +317,9 @@ Feature: PMAX replication test
     And I should get storage group snapshot snap ids if no error
   
     Examples:
-    | storageGroupID   | snapshotID | errormsg             | arrays    | induced                            |
-    | "sg_1"           | "123"      | "none"               |   ""      | "none"                             |
-    | "sg_1"           | "123"      | "induced error"      |   ""      | "GetStorageGroupSnapshotSnapError" |
+    | storageGroupID   | snapshotID | errormsg             | induced                            |
+    | "sg_1"           | "123"      | "none"               | "none"                             |
+    | "sg_1"           | "123"      | "induced error"      | "GetStorageGroupSnapshotSnapError" |
 
   Scenario Outline: Testing GetStorageGroupSnapshotSnap
     Given a valid connection
@@ -317,9 +330,9 @@ Feature: PMAX replication test
     And I should get storage group snapshot snap detail information if no error
   
     Examples:
-    | storageGroupID   | snapshotID | snapID | errormsg             | arrays    | induced                                  |
-    | "sg_1"           | "123"      | "321"  | "none"               |   ""      | "none"                                   |
-    | "sg_1"           | "123"      | "321"  | "induced error"      |   ""      | "GetStorageGroupSnapshotSnapDetailError" |
+    | storageGroupID   | snapshotID | snapID | errormsg             | induced                                  |
+    | "sg_1"           | "123"      | "321"  | "none"               | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "induced error"      | "GetStorageGroupSnapshotSnapDetailError" |
 
     
   Scenario Outline: Testing ModifyStorageGroupSnapshot
@@ -331,19 +344,19 @@ Feature: PMAX replication test
     And I should modify storage group snapshot snap if no error
   
     Examples:
-    | storageGroupID   | snapshotID | snapID | action       | errormsg             | arrays    | induced                                  |
-    | "sg_1"           | "123"      | "321"  | "rename"     | "none"               |   ""      | "none"                                   |
-    | "sg_1"           | "123"      | "321"  | "restore"    | "none"               |   ""      | "none"                                   |
-    | "sg_1"           | "123"      | "321"  | "link"       | "none"               |   ""      | "none"                                   |
-    | "sg_1"           | "123"      | "321"  | "relink"     | "none"               |   ""      | "none"                                   |
-    | "sg_1"           | "123"      | "321"  | "unlink"     | "none"               |   ""      | "none"                                   |
-    | "sg_1"           | "123"      | "321"  | "setmode"    | "none"               |   ""      | "none"                                   |
-    | "sg_1"           | "123"      | "321"  | "timeToLive" | "none"               |   ""      | "none"                                   |
-    | "sg_1"           | "123"      | "321"  | "secure"     | "none"               |   ""      | "none"                                   |
-    | "sg_1"           | "123"      | "321"  | "persist"    | "none"               |   ""      | "none"                                   |
-    | "sg_1"           | "123"      | "321"  | "rename"     | "induced error"      |   ""      | "GetStorageGroupSnapshotSnapModifyError" |
+    | storageGroupID   | snapshotID | snapID | action       | errormsg             | induced                                  |
+    | "sg_1"           | "123"      | "321"  | "rename"     | "none"               | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "restore"    | "none"               | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "link"       | "none"               | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "relink"     | "none"               | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "unlink"     | "none"               | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "setmode"    | "none"               | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "timeToLive" | "none"               | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "secure"     | "none"               | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "persist"    | "none"               | "none"                                   |
+    | "sg_1"           | "123"      | "321"  | "rename"     | "induced error"      | "GetStorageGroupSnapshotSnapModifyError" |
 
-    Scenario Outline: Testing DeleteStorageGroupSnapshot
+  Scenario Outline: Testing DeleteStorageGroupSnapshot
     Given a valid connection
     And I call CreateStorageGroupSnapshot with "sg_1"
     And I induce error <induced>
@@ -351,10 +364,11 @@ Feature: PMAX replication test
     Then the error message contains <errormsg>
 
     Examples:
-    | storageGroupID  |snapshotID | snapID    | errormsg                 | induced                            |
-    | "sg_1"          |"snapshot_1" | "snap_1"    | "induced error"          | "DeleteStorageGroupSnapshotError"  |
+    | storageGroupID  |snapshotID     | snapID       | errormsg                 | induced                            |
+    | "sg_1"          |"snapshot_1"   | "snap_1"     | "induced error"          | "DeleteStorageGroupSnapshotError"  |
+    | "sg_1"          |"snapshot_1"   | "snap_1"     | "none"                   | "none"                             |
 
-    Scenario Outline: Testing GetSnapshotPolicy
+  Scenario Outline: Testing GetSnapshotPolicy
     Given a valid connection
     And I call CreateSnapshotPolicy with "sp_1"
     And I induce error <induced>
@@ -363,12 +377,33 @@ Feature: PMAX replication test
     And I should get snapshot policy information if no error
 
     Examples:
-    | snapshotPolicyID   | errormsg            | induced                        |
-    | "sp_1"           | "none"                    | "none"                         |
-    | "sp_1"           | "induced error"           | "GetSnapshotPolicyError" |
+    | snapshotPolicyID    | errormsg                   | induced                        |
+    | "sp_1"              | "none"                     | "none"                         |
+    | "sp_1"              | "induced error"            | "GetSnapshotPolicyError"       |
 
-    
- Scenario Outline: Testing ModifySnapshotPolicy
+  Scenario Outline: Testing CreateSnapshotPolicy
+    Given a valid connection
+    And I induce error <induced>
+    And I call CreateSnapshotPolicy with "sp_1"
+    Then the error message contains <errormsg>
+    And I should get snapshot policy information if no error
+
+    Examples:
+      | errormsg                   | induced                        |
+      | "none"                     | "none"                         |
+      | "induced error"            | "CreateSnapshotPolicyError"    |
+
+  Scenario Outline: Testing CreateSnapshotPolicy with payload
+    Given a valid connection
+    And I call CreateSnapshotPolicy with "sp_1" and payload <payload>
+    And I should get snapshot policy information if no error
+
+    Examples:
+      | payload                         |
+      | "cloudSnapshotPolicyDetails"    |
+      | "localSnapshotPolicyDetails"    |
+
+  Scenario Outline: Testing ModifySnapshotPolicy
     Given a valid connection
     And I call CreateSnapshotPolicy with "sp_1"
     And I induce error <induced>
@@ -381,7 +416,7 @@ Feature: PMAX replication test
     | "sp_1"              | "Modify"     | "none"               |   "sp_1_updated"     |  "none"                     |           
     | "sp_1"              | "modify"     | "induced error"      |   "sp_1_updated"     | "ModifySnapshotPolicyError" |
 
-Scenario Outline: Testing AddRemoveStorageGrpFromSnapshotPolicy
+  Scenario Outline: Testing AddRemoveStorageGrpFromSnapshotPolicy
     Given a valid connection
     And I call CreateSnapshotPolicy with "sp_1"
     And I induce error <induced>
@@ -390,13 +425,13 @@ Scenario Outline: Testing AddRemoveStorageGrpFromSnapshotPolicy
     And I should modify snapshot policy if no error
 
     Examples:
-    | snapshotPolicyID    | action                          | errormsg    | sgName      | induced   |   
-    | "sp_1"              | "AssociateToStorageGroups"      | "none"      | "sg_1"      |  "none"   |          
-    | "sp_1"              | "DisassociateFromStorageGroups" | "none"      | "sg_1"      |  "none"   |
-    | "sp_1"              | "AssociateToStorageGroups"      | "induced error" |   "sg_1"     |  "ModifySnapshotPolicyError" |
-    | "sp_1"              | "DisassociateFromStorageGroups" | "induced error" |   "sg_1"     |  "ModifySnapshotPolicyError" |
+    | snapshotPolicyID    | action                          | errormsg        |   sgName      | induced                      |
+    | "sp_1"              | "AssociateToStorageGroups"      | "none"          |   "sg_1"      |  "none"                      |
+    | "sp_1"              | "DisassociateFromStorageGroups" | "none"          |   "sg_1"      |  "none"                      |
+    | "sp_1"              | "AssociateToStorageGroups"      | "induced error" |   "sg_1"      |  "ModifySnapshotPolicyError" |
+    | "sp_1"              | "DisassociateFromStorageGroups" | "induced error" |   "sg_1"      |  "ModifySnapshotPolicyError" |
 
-Scenario Outline: Testing Delete Snapshot Policy
+  Scenario Outline: Testing Delete Snapshot Policy
     Given a valid connection
     And I call CreateSnapshotPolicy with "sp_1"
     And I induce error <induced>
@@ -404,11 +439,11 @@ Scenario Outline: Testing Delete Snapshot Policy
     Then the error message contains <errormsg>
 
     Examples:
-    | snapshotPolicyID   | errormsg                 | induced                        |
-    | "sp_1"           | "none"                    | "none"                         |
-    | "sp_1"           | "induced error"           | "DeleteSnapshotPolicyError" |
+    | snapshotPolicyID    | errormsg                   | induced                          |
+    | "sp_1"              | "none"                     | "none"                           |
+    | "sp_1"              | "induced error"            | "DeleteSnapshotPolicyError"      |
 
- Scenario Outline: Testing GetSnapshotPolicyList
+  Scenario Outline: Testing GetSnapshotPolicyList
     Given a valid connection
     And I induce error <induced>
     When I call GetSnapshotPolicyList 
@@ -416,6 +451,6 @@ Scenario Outline: Testing Delete Snapshot Policy
     And I should get list of snapshot policies  if no error
 
     Examples:
-    | snapshotPolicyID   | errormsg               | induced                        |
-    | "sp_1"           | "none"                    | "none"                         |
-    | "sp_1"           | "induced error"           | "GetSnapshotPolicyListError" |
+    | errormsg                  | induced                        |
+    | "none"                    | "none"                         |
+    | "induced error"           | "GetSnapshotPolicyListError"   |
