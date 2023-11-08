@@ -88,7 +88,7 @@ Feature: PMAX Client library
     | id              | induced               | errormsg                      | arrays    |
     | "00001"         | "none"                | "none"                        | ""        |
     | "00003"         | "none"                | "none"                        | ""        |
-    | "00010"         | "none"                | "cannot be found"             | ""        |
+    | "00010"         | "none"                | "Could not find"              | ""        |
     | "00001"         | "GetVolumeError"      | "induced error"               | ""        |
     | "00001"         | "httpStatus500"       | "Internal Error"              | ""        |
     | "00001"         | "InvalidJSON"         | "invalid character"           | ""        |

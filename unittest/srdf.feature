@@ -1,12 +1,12 @@
 Feature: PMAX SRDF test
 
   @srdf
-  Scenario Outline: Create a storage-group with volumes and protect it
+  Scenario Outline: Create a storage-group with volumes and protect it mode: ASYNC
     Given a valid connection
     And I have an allowed list of <arrays>
     And I induce error <induced>
     And I have 5 volumes
-    When I call CreateSGReplica
+    When I call CreateSGReplica with "ASYNC"
     Then the error message contains <errormsg>
     And then SG should be replicated
     And the volumes should "" be replicated
@@ -19,12 +19,30 @@ Feature: PMAX SRDF test
     | "httpStatus500" |          "Internal Error"         |      ""     |
 
   @srdf
+  Scenario Outline: Create a storage-group with volumes and protect it mode: METRO
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    And I have 5 volumes
+    When I call CreateSGReplica with "METRO"
+    Then the error message contains <errormsg>
+    And then SG should be replicated
+    And the volumes should "" be replicated
+
+    Examples:
+      |     induced     |            errormsg               |  arrays     |
+      |     "none"      |              "none"               |      ""     |
+      |  "InvalidJSON"  |       "invalid character"         |      ""     |
+      |     "none"      |    "ignored as it is not managed" |  "ignored"  |
+      | "httpStatus500" |          "Internal Error"         |      ""     |
+
+  @srdf
   Scenario Outline: Get SRDF info about a storage group
     Given a valid connection
     And I have an allowed list of <arrays>
     And I induce error <induced>
     And I have 5 volumes
-    When I call CreateSGReplica
+    When I call CreateSGReplica with "ASYNC"
     And I call GetStorageGroupRDFInfo
     Then the error message contains <errormsg>
 
@@ -41,7 +59,7 @@ Feature: PMAX SRDF test
     And I have an allowed list of <arrays>
     And I induce error <induced>
     And I have 1 volumes
-    When I call CreateSGReplica
+    When I call CreateSGReplica with "ASYNC"
     And I call GetRDFDevicePairInfo
     Then the error message contains <errormsg>
 
@@ -84,12 +102,12 @@ Feature: PMAX SRDF test
     | "httpStatus500" |          "Internal Error"         |      ""     |
 
   @srdf
-  Scenario Outline: Add volumes to protected storage-group
+  Scenario Outline: Add volumes to protected ASYNC storage-group
     Given a valid connection
     And I have an allowed list of <arrays>
     And I induce error <induced>
     And I have <vol> volumes
-    When I call AddVolumesToProtectedStorageGroup
+    When I call AddVolumesToProtectedStorageGroup with "ASYNC"
     Then the error message contains <errormsg>
     And the volumes should "" be replicated
 
@@ -100,6 +118,22 @@ Feature: PMAX SRDF test
     |  5  | "httpStatus500" |               "Internal Error"                 |      ""     |
     |  0  |     "none"      |  "at least one volume id has to be specified"  |      ""     |
 
+  @srdf
+  Scenario Outline: Add volumes to protected METRO storage-group
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    And I have <vol> volumes
+    When I call AddVolumesToProtectedStorageGroup with "METRO"
+    Then the error message contains <errormsg>
+    And the volumes should "" be replicated
+
+    Examples:
+      | vol |     induced     |                   errormsg                     |  arrays     |
+      |  5  |     "none"      |                    "none"                      |      ""     |
+      |  5  |     "none"      |         "ignored as it is not managed"         |  "ignored"  |
+      |  5  | "httpStatus500" |               "Internal Error"                 |      ""     |
+      |  0  |     "none"      |  "at least one volume id has to be specified"  |      ""     |
 
   @srdf
   Scenario Outline: Test cases for Synchronous CreateVolumeInProtectedStorageGroupS
@@ -127,7 +161,7 @@ Feature: PMAX SRDF test
     And I have an allowed list of <arrays>
     And I induce error <induced>
     And I have <vol> volumes
-    And I call CreateSGReplica
+    And I call CreateSGReplica with "ASYNC"
     When I call RemoveVolumesFromProtectedStorageGroup
     Then the error message contains <errormsg>
     And the volumes should "not" be replicated
@@ -146,7 +180,7 @@ Feature: PMAX SRDF test
     And I have an allowed list of <arrays>
     And I induce error <induced>
     And I have 1 volumes
-    When I call CreateRDFPair
+    When I call CreateRDFPair with "ASYNC"
     Then the error message contains <errormsg>
 
   Examples:
@@ -155,6 +189,22 @@ Feature: PMAX SRDF test
   |  "InvalidJSON"  |       "invalid character"         |      ""     |
   |     "none"      |    "ignored as it is not managed" |  "ignored"  |
   | "httpStatus500" |          "Internal Error"         |      ""     |
+
+  @srdf
+  Scenario Outline: Create an SRDF Pair
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    And I have 1 volumes
+    When I call CreateRDFPair with "METRO"
+    Then the error message contains <errormsg>
+
+    Examples:
+      |     induced     |            errormsg               |  arrays     |
+      |     "none"      |              "none"               |      ""     |
+      |  "InvalidJSON"  |       "invalid character"         |      ""     |
+      |     "none"      |    "ignored as it is not managed" |  "ignored"  |
+      | "httpStatus500" |          "Internal Error"         |      ""     |
 
   @srdf
   Scenario Outline: Execute Action
@@ -166,16 +216,17 @@ Feature: PMAX SRDF test
     Then the error message contains <errormsg>
 
   Examples:
-    | induced         | errormsg                       | action      | arrays    |
-    | "none"          | "none"                         | "Suspend"   | ""        |
-    | "none"          | "none"                         | "Resume"    | ""        |
-    | "none"          | "none"                         | "Failback"  | ""        |
-    | "none"          | "none"                         | "Failover"  | ""        |
-    | "none"          | "none"                         | "Establish" | ""        |
-    | "none"          | "none"                         | "Swap"      | ""        |
-    | "none"          | "not a supported action"       | "Dance"     | ""        |
-    | "none"          | "ignored as it is not managed" | "Suspend"   | "ignored" |
-    | "httpStatus500" | "Internal Error"               | "Suspend"   | ""        |
+    | induced              | errormsg                       | action      | arrays    |
+    | "none"               | "none"                         | "Suspend"   | ""        |
+    | "none"               | "none"                         | "Resume"    | ""        |
+    | "none"               | "none"                         | "Failback"  | ""        |
+    | "none"               | "none"                         | "Failover"  | ""        |
+    | "none"               | "none"                         | "Establish" | ""        |
+    | "none"               | "none"                         | "Swap"      | ""        |
+    | "none"               | "not a supported action"       | "Dance"     | ""        |
+    | "none"               | "ignored as it is not managed" | "Suspend"   | "ignored" |
+    | "httpStatus500"      | "Internal Error"               | "Suspend"   | ""        |
+    | "ExecuteActionError" | "induced error"                | "Resume"    | ""        |
 
   @autosrdf
   Scenario Outline: GetFreeLocalAndRemoteRDFg - Create a SRDF Pair with auto SRDF group creation

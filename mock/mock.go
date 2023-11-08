@@ -35,34 +35,38 @@ import (
 
 // constants
 const (
-	APIVersion                   = "{apiversion}"
-	PREFIX                       = "/univmax/restapi/" + APIVersion
-	PREFIXNOVERSION              = "/univmax/restapi"
-	PRIVATEPREFIX                = "/univmax/restapi/private/" + APIVersion
-	INTERNALPREFIX               = "/univmax/restapi/internal/100"
-	defaultUsername              = "username"
-	defaultPassword              = "password"
-	Debug                        = false
-	DefaultStorageGroup          = "CSI-Test-SG-1"
-	DefaultStorageGroup1         = "CSI-Test-SG-2"
-	DefaultProtectedStorageGroup = "CSI-Test-ProtectedSG"
-	DefaultSymmetrixID           = "000197900046"
-	DefaultRemoteSymID           = "000000000013"
-	DefaultRDFDir                = "OR-1C"
-	DefaultRDFPort               = 3
-	PostELMSRSymmetrixID         = "000197900047"
-	DefaultStoragePool           = "SRP_1"
-	DefaultServiceLevel          = "Optimized"
-	DefaultFcStoragePortWWN      = "5000000000000001"
-	DefaultRDFGNo                = 13
-	DefaultRemoteRDFGNo          = 13
-	DefaultRDFLabel              = "csi-mock-test"
-	RemoteArrayHeaderKey         = "RemoteArray"
-	RemoteArrayHeaderValue       = "true"
-	DefaultNASServerID           = "64xxx7a6-03b5-xxx-xxx-0zzzz8200209"
-	DefaultNASServerName         = "nas-1"
-	DefaultFSID                  = "64xxx7a6-03b5-xxx-xxx-0zzzz8200208"
-	DefaultFSName                = "fs-ds-1"
+	APIVersion               = "{apiversion}"
+	PREFIX                   = "/univmax/restapi/" + APIVersion
+	PREFIXNOVERSION          = "/univmax/restapi"
+	PRIVATEPREFIX            = "/univmax/restapi/private/" + APIVersion
+	INTERNALPREFIX           = "/univmax/restapi/internal/100"
+	defaultUsername          = "username"
+	defaultPassword          = "password"
+	Debug                    = false
+	DefaultStorageGroup      = "CSI-Test-SG-1"
+	DefaultStorageGroup1     = "CSI-Test-SG-2"
+	DefaultASYNCProtectedSG  = "csi-rep-sg-ns-test"
+	DefaultMETROProtectedSG  = "csi-rep-sg-ns-test"
+	DefaultSymmetrixID       = "000197900046"
+	DefaultRemoteSymID       = "000000000013"
+	DefaultRDFDir            = "OR-1C"
+	DefaultRDFPort           = 3
+	PostELMSRSymmetrixID     = "000197900047"
+	DefaultStoragePool       = "SRP_1"
+	DefaultServiceLevel      = "Optimized"
+	DefaultFcStoragePortWWN  = "5000000000000001"
+	DefaultAsyncRDFGNo       = 13
+	DefaultAsyncRemoteRDFGNo = 13
+	DefaultAsyncRDFLabel     = "csi-mock-async"
+	DefaultMetroRDFGNo       = 14
+	DefaultRemoteRDFGNo      = 14
+	DefaultMetroRDFLabel     = "csi-mock-metro"
+	RemoteArrayHeaderKey     = "RemoteArray"
+	RemoteArrayHeaderValue   = "true"
+	DefaultNASServerID       = "64xxx7a6-03b5-xxx-xxx-0zzzz8200209"
+	DefaultNASServerName     = "nas-1"
+	DefaultFSID              = "64xxx7a6-03b5-xxx-xxx-0zzzz8200208"
+	DefaultFSName            = "fs-ds-1"
 )
 
 const (
@@ -112,13 +116,16 @@ var Data struct {
 
 	// SRDF
 	StorageGroupIDToRDFStorageGroup map[string]*types.RDFStorageGroup
-	RDFGroup                        *types.RDFGroup
-	SGRDFInfo                       *types.SGRDFInfo
+	AsyncRDFGroup                   *types.RDFGroup
+	MetroRDFGroup                   *types.RDFGroup
+	AsyncSGRDFInfo                  *types.SGRDFInfo
+	MetroSGRDFInfo                  *types.SGRDFInfo
 
 	// File
-	FileSysIDToFileSystem  map[string]*types.FileSystem
-	NFSExportIDToNFSExport map[string]*types.NFSExport
-	NASServerIDToNASServer map[string]*types.NASServer
+	FileSysIDToFileSystem    map[string]*types.FileSystem
+	NFSExportIDToNFSExport   map[string]*types.NFSExport
+	NASServerIDToNASServer   map[string]*types.NASServer
+	FileIntIDtoFileInterface map[string]*types.FileInterface
 }
 
 // InducedErrors constants
@@ -241,6 +248,8 @@ var InducedErrors struct {
 	CreateNFSExportError                   bool
 	UpdateNFSExportError                   bool
 	DeleteNFSExportError                   bool
+	GetFileInterfaceError                  bool
+	ExecuteActionError                     bool
 }
 
 // hasError checks to see if the specified error (via pointer)
@@ -360,6 +369,10 @@ func Reset() {
 	InducedErrors.CreateSnapshotPolicyError = false
 	InducedErrors.ModifySnapshotPolicyError = false
 	InducedErrors.DeleteSnapshotPolicyError = false
+	InducedErrors.GetStorageGroupSnapshotError = false
+	InducedErrors.CreateSnapshotPolicyError = false
+	InducedErrors.GetStorageGroupSnapshotSnapError = false
+	InducedErrors.GetStorageGroupSnapshotSnapModifyError = false
 	InducedErrors.GetFileSystemListError = false
 	InducedErrors.GetNFSExportListError = false
 	InducedErrors.GetNASServerListError = false
@@ -374,6 +387,8 @@ func Reset() {
 	InducedErrors.CreateNFSExportError = false
 	InducedErrors.UpdateNFSExportError = false
 	InducedErrors.DeleteNFSExportError = false
+	InducedErrors.GetFileInterfaceError = false
+	InducedErrors.ExecuteActionError = false
 	Data.JSONDir = "mock"
 	Data.VolumeIDToIdentifier = make(map[string]string)
 	Data.VolumeIDToSize = make(map[string]int)
@@ -402,10 +417,11 @@ func Reset() {
 	Data.FileSysIDToFileSystem = make(map[string]*types.FileSystem)
 	Data.NFSExportIDToNFSExport = make(map[string]*types.NFSExport)
 	Data.NASServerIDToNASServer = make(map[string]*types.NASServer)
-	Data.RDFGroup = &types.RDFGroup{
-		RdfgNumber:          DefaultRDFGNo,
-		Label:               DefaultRDFLabel,
-		RemoteRdfgNumber:    DefaultRDFGNo,
+	Data.FileIntIDtoFileInterface = make(map[string]*types.FileInterface)
+	Data.AsyncRDFGroup = &types.RDFGroup{
+		RdfgNumber:          DefaultAsyncRDFGNo,
+		Label:               DefaultAsyncRDFLabel,
+		RemoteRdfgNumber:    DefaultAsyncRDFGNo,
 		RemoteSymmetrix:     DefaultRemoteSymID,
 		NumDevices:          0,
 		TotalDeviceCapacity: 0.0,
@@ -413,11 +429,29 @@ func Reset() {
 		Type:                "Dynamic",
 		Async:               true,
 	}
-	Data.SGRDFInfo = &types.SGRDFInfo{
-		RdfGroupNumber: DefaultRDFGNo,
+	Data.MetroRDFGroup = &types.RDFGroup{
+		RdfgNumber:          DefaultMetroRDFGNo,
+		Label:               DefaultMetroRDFLabel,
+		RemoteRdfgNumber:    DefaultMetroRDFGNo,
+		RemoteSymmetrix:     DefaultRemoteSymID,
+		NumDevices:          0,
+		TotalDeviceCapacity: 0.0,
+		Modes:               []string{"Active"},
+		Type:                "Metro",
+		Metro:               true,
+	}
+	Data.AsyncSGRDFInfo = &types.SGRDFInfo{
+		RdfGroupNumber: DefaultAsyncRDFGNo,
 		VolumeRdfTypes: []string{"R1"},
 		States:         []string{"Consistent"},
 		Modes:          []string{"Asynchronous"},
+		LargerRdfSides: []string{"Equal"},
+	}
+	Data.MetroSGRDFInfo = &types.SGRDFInfo{
+		RdfGroupNumber: DefaultMetroRDFGNo,
+		VolumeRdfTypes: []string{"R1"},
+		States:         []string{"Consistent"},
+		Modes:          []string{"Active"},
 		LargerRdfSides: []string{"Equal"},
 	}
 	initMockCache()
@@ -433,8 +467,11 @@ func initMockCache() {
 	AddStorageGroup("CSI-Test-SG-6", "None", "None")           // #nosec G20
 	AddStorageGroup("CSI-Test-Fake-Remote-SG", "None", "None") // #nosec G20
 	// Initialize protected SG
-	AddStorageGroup(DefaultProtectedStorageGroup, "None", "None")        // #nosec G20
-	AddRDFStorageGroup(DefaultProtectedStorageGroup, DefaultRemoteSymID) // #nosec G20
+	AddStorageGroup(DefaultASYNCProtectedSG, "None", "None")        // #nosec G20
+	AddStorageGroup(DefaultMETROProtectedSG, "None", "None")        // #nosec G20
+	AddRDFStorageGroup(DefaultASYNCProtectedSG, DefaultRemoteSymID) // #nosec G20
+	AddRDFStorageGroup(DefaultMETROProtectedSG, DefaultRemoteSymID) // #nosec G20
+
 	// ISCSI directors
 	iscsiDir1 := "SE-1E"
 	iscsidir1PortKey1 := iscsiDir1 + ":" + "4"
@@ -487,13 +524,15 @@ func initMockCache() {
 // AddFileObjects adds file objects for mock objects
 func AddFileObjects() {
 	// Add a File System
-	AddNewFileSystem("id1", "fs-1", 4000)
+	AddNewFileSystem("id1", DefaultFSName, 4000)
 	// Add a NFS Export
 	AddNewNFSExport("id1", "nfs-0")
 	AddNewNFSExport("id2", "nfs-del")
 	// Add a NAS Server
 	AddNewNASServer("id1", "nas-1")
 	AddNewNASServer("id2", "nas-del")
+	// Add a FileInterface
+	AddNewFileInterface("id1", "interface-1")
 }
 
 var mockRouter http.Handler
@@ -603,6 +642,8 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/nfs_export", handleNFSExport)
 	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/nas_server/{nasID}", handleNASServer)
 	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/nas_server", handleNASServer)
+	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/file_interface", handleFileInterface)
+	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/file_interface/{interfaceID}", handleFileInterface)
 
 	mockRouter = router
 	return router
@@ -893,8 +934,8 @@ func handleFreeRDF(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	nxtFreeRDFG := &types.NextFreeRDFGroup{
-		LocalRdfGroup:  []int{DefaultRDFGNo},
-		RemoteRdfGroup: []int{DefaultRDFGNo},
+		LocalRdfGroup:  []int{DefaultAsyncRDFGNo},
+		RemoteRdfGroup: []int{DefaultAsyncRDFGNo},
 	}
 	writeJSON(w, nxtFreeRDFG)
 }
@@ -936,8 +977,8 @@ func handleRDFDevicePairCreation(w http.ResponseWriter, r *http.Request) {
 			LocalVolumeName:      routeParams["volume_id"],
 			RemoteSymmID:         routeParams["symid"],
 			LocalSymmID:          routeParams["symid"],
-			LocalRdfGroupNumber:  DefaultRDFGNo,
-			RemoteRdfGroupNumber: DefaultRemoteRDFGNo,
+			LocalRdfGroupNumber:  DefaultAsyncRDFGNo,
+			RemoteRdfGroupNumber: DefaultAsyncRemoteRDFGNo,
 		},
 	}
 	writeJSON(w, rdfPairs)
@@ -955,20 +996,20 @@ func handleRDFDevicePairInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	routeParams := mux.Vars(r)
 	var volumeConfig string
-	if routeParams["symid"] == Data.RDFGroup.RemoteSymmetrix {
+	if routeParams["symid"] == Data.AsyncRDFGroup.RemoteSymmetrix {
 		volumeConfig = "RDF2+TDEV"
 	} else {
 		volumeConfig = "RDF1+TDEV"
 	}
 	rdfDevicePairInfo := &types.RDFDevicePair{
-		LocalRdfGroupNumber:  Data.RDFGroup.RdfgNumber,
-		RemoteRdfGroupNumber: Data.RDFGroup.RdfgNumber,
+		LocalRdfGroupNumber:  Data.AsyncRDFGroup.RdfgNumber,
+		RemoteRdfGroupNumber: Data.AsyncRDFGroup.RdfgNumber,
 		LocalSymmID:          routeParams["symid"],
-		RemoteSymmID:         Data.RDFGroup.RemoteSymmetrix,
+		RemoteSymmID:         Data.AsyncRDFGroup.RemoteSymmetrix,
 		LocalVolumeName:      routeParams["volume_id"],
 		RemoteVolumeName:     routeParams["volume_id"],
 		VolumeConfig:         volumeConfig,
-		RdfMode:              Data.RDFGroup.Modes[0],
+		RdfMode:              Data.AsyncRDFGroup.Modes[0],
 		RdfpairState:         "Consistent",
 		LargerRdfSide:        "Equal",
 	}
@@ -992,7 +1033,7 @@ func handleRDFGroup(w http.ResponseWriter, r *http.Request) {
 		rdfGroupNumber := routeParams["rdf_no"]
 		ReturnRDFGroup(w, rdfGroupNumber)
 	case http.MethodPost:
-		writeJSON(w, Data.RDFGroup)
+		writeJSON(w, Data.AsyncRDFGroup)
 	default:
 		writeError(w, "Method["+r.Method+"] not allowed", http.StatusMethodNotAllowed)
 	}
@@ -1007,13 +1048,13 @@ func ReturnRDFGroup(w http.ResponseWriter, rdfg string) {
 
 func returnRDFGroup(w http.ResponseWriter, rdfg string) {
 	if rdfg != "" {
-		if rdfg != fmt.Sprintf("%d", Data.RDFGroup.RdfgNumber) {
+		if rdfg != fmt.Sprintf("%d", Data.AsyncRDFGroup.RdfgNumber) && rdfg != fmt.Sprintf("%d", Data.MetroRDFGroup.RdfgNumber) {
 			writeError(w, "The specified RA group is not valid", http.StatusNotFound)
 		} else {
 			if InducedErrors.RDFGroupHasPairError {
-				Data.RDFGroup.NumDevices = 1
+				Data.AsyncRDFGroup.NumDevices = 1
 			}
-			writeJSON(w, Data.RDFGroup)
+			writeJSON(w, Data.AsyncRDFGroup)
 		}
 	} else {
 		rdflist := &types.RDFGroupList{
@@ -1088,6 +1129,7 @@ func handleSGRDFCreation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	routeParams := mux.Vars(r)
+	mode := sgsrdf.ReplicationMode
 	storageGroupName := routeParams["id"]
 	symmetrixID := routeParams["symid"]
 	if _, err := AddRDFStorageGroup(storageGroupName, symmetrixID); err != nil {
@@ -1100,12 +1142,24 @@ func handleSGRDFCreation(w http.ResponseWriter, r *http.Request) {
 		}
 		volume := Data.VolumeIDToVolume[volumeID]
 		volume.Type = "RDF1+TDEV"
-		volume.RDFGroupIDList = []types.RDFGroupID{
-			{RDFGroupNumber: Data.RDFGroup.RdfgNumber},
+		if strings.Compare(mode, "Active") == 0 {
+			volume.RDFGroupIDList = []types.RDFGroupID{
+				{RDFGroupNumber: Data.MetroRDFGroup.RdfgNumber},
+			}
+		} else {
+			volume.RDFGroupIDList = []types.RDFGroupID{
+				{RDFGroupNumber: Data.AsyncRDFGroup.RdfgNumber},
+			}
 		}
 	}
 	sgrdfInfo := new(types.SGRDFInfo)
-	err := copier.Copy(sgrdfInfo, Data.SGRDFInfo)
+	dataToCopy := new(types.SGRDFInfo)
+	if mode == "Active" {
+		dataToCopy = Data.MetroSGRDFInfo
+	} else {
+		dataToCopy = Data.AsyncSGRDFInfo
+	}
+	err := copier.Copy(sgrdfInfo, dataToCopy)
 	if err != nil {
 		writeError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1129,15 +1183,21 @@ func handleSGRDF(w http.ResponseWriter, r *http.Request) {
 
 func handleSGRDFInfo(w http.ResponseWriter, r *http.Request) {
 	if InducedErrors.GetSRDFInfoError {
-		writeError(w, "Error retrieving SRDF Info(%s): induced error", http.StatusRequestTimeout)
+		writeError(w, "Error retrieving SRDF Info: induced error", http.StatusRequestTimeout)
 		return
 	}
 	routeParams := mux.Vars(r)
-	if routeParams["rdf_no"] != fmt.Sprintf("%d", Data.RDFGroup.RdfgNumber) {
+	rdfNo := routeParams["rdf_no"]
+	if rdfNo != fmt.Sprintf("%d", Data.AsyncRDFGroup.RdfgNumber) && rdfNo != fmt.Sprintf("%d", Data.MetroRDFGroup.RdfgNumber) {
 		writeError(w, "The specified RA group is not valid", http.StatusNotFound)
 	} else {
 		sgrdfInfo := new(types.SGRDFInfo)
-		err := copier.Copy(sgrdfInfo, Data.SGRDFInfo)
+		var err error
+		if rdfNo == fmt.Sprintf("%d", Data.AsyncRDFGroup.RdfgNumber) {
+			err = copier.Copy(sgrdfInfo, Data.AsyncSGRDFInfo)
+		} else {
+			err = copier.Copy(sgrdfInfo, Data.MetroSGRDFInfo)
+		}
 		if err != nil {
 			writeError(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -1151,9 +1211,56 @@ func handleSGRDFInfo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleSGRDFAction(w http.ResponseWriter, _ *http.Request) {
-	// TODO: execute actions by updating the memory cache
-	w.WriteHeader(200)
+func handleSGRDFAction(w http.ResponseWriter, r *http.Request) {
+	if InducedErrors.ExecuteActionError {
+		writeError(w, "Failed to execute action on RDFG: induced error", http.StatusBadRequest)
+		return
+	}
+	routeParams := mux.Vars(r)
+	rdfNo := routeParams["rdf_no"]
+	decoder := json.NewDecoder(r.Body)
+	modifySRDFGParam := &types.ModifySGRDFGroup{}
+	err := decoder.Decode(modifySRDFGParam)
+	if err != nil {
+		writeError(w, "problem decoding PUT ACTION payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	action := modifySRDFGParam.Action
+	PerformActionOnRDFSG(w, rdfNo, action)
+}
+
+func PerformActionOnRDFSG(w http.ResponseWriter, rdfNo, action string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	performActionOnRDFSG(w, rdfNo, action)
+}
+
+func performActionOnRDFSG(w http.ResponseWriter, rdfNo, action string) {
+	if rdfNo != fmt.Sprintf("%d", Data.AsyncRDFGroup.RdfgNumber) && rdfNo != fmt.Sprintf("%d", Data.MetroRDFGroup.RdfgNumber) {
+		writeError(w, "The specified RA group is not valid", http.StatusNotFound)
+	} else {
+		// we only support actions on ASYNC
+		switch action {
+		case "Establish":
+			Data.AsyncSGRDFInfo.States = []string{"Consistent"}
+			return
+		case "Suspend":
+			Data.AsyncSGRDFInfo.States = []string{"Suspended"}
+			return
+		case "Resume":
+			Data.AsyncSGRDFInfo.States = []string{"Consistent"}
+			return
+		case "Failback":
+			Data.AsyncSGRDFInfo.States = []string{"Consistent"}
+			return
+		case "Failover":
+			Data.AsyncSGRDFInfo.States = []string{"Failed Over"}
+			return
+		case "Swap":
+			Data.AsyncSGRDFInfo.States = []string{"Consistent"}
+			return
+		}
+	}
 }
 
 // GET /univmax/restapi/system/version
@@ -1193,7 +1300,7 @@ func handleSymmetrix(w http.ResponseWriter, r *http.Request) {
 	if id == "" {
 		returnJSONFile(Data.JSONDir, "symmetrixList.json", w, nil)
 	}
-	if id != "000197900046" && id != "000197900047" {
+	if id != "000197900046" && id != "000197900047" && id != DefaultRemoteSymID {
 		writeError(w, "Symmetrix not found", http.StatusNotFound)
 		return
 	}
@@ -1201,6 +1308,8 @@ func handleSymmetrix(w http.ResponseWriter, r *http.Request) {
 		returnJSONFile(Data.JSONDir, "symmetrix46.json", w, nil)
 	} else if id == "000197900047" {
 		returnJSONFile(Data.JSONDir, "symmetrix47.json", w, nil)
+	} else {
+		returnJSONFile(Data.JSONDir, "symmetrix13.json", w, nil)
 	}
 }
 
@@ -1295,7 +1404,7 @@ func handleVolume(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if volID != "" {
-			if vars["symid"] == Data.RDFGroup.RemoteSymmetrix {
+			if vars["symid"] == Data.AsyncRDFGroup.RemoteSymmetrix {
 				returnVolume(w, volID, true)
 			} else {
 				returnVolume(w, volID, false)
@@ -1329,7 +1438,7 @@ func handleVolume(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if updateVolumePayload.EditVolumeActionParam.ModifyVolumeIdentifierParam != nil {
-			if vars["symid"] == Data.RDFGroup.RemoteSymmetrix {
+			if vars["symid"] == Data.AsyncRDFGroup.RemoteSymmetrix {
 				RenameVolume(w, updateVolumePayload.EditVolumeActionParam.ModifyVolumeIdentifierParam, volID, executionOption, true)
 			} else {
 				RenameVolume(w, updateVolumePayload.EditVolumeActionParam.ModifyVolumeIdentifierParam, volID, executionOption, false)
@@ -1368,7 +1477,7 @@ func deleteVolume(volID string) error {
 		}
 		Data.VolumeIDToVolume[volID] = nil
 	} else {
-		return errors.New("Volume not found")
+		return errors.New("Could not find volume")
 	}
 	return nil
 }
@@ -1392,14 +1501,14 @@ func returnVolume(w http.ResponseWriter, volID string, remote bool) {
 					return
 				}
 				if InducedErrors.GetRemoteVolumeError {
-					writeError(w, "Volume cannot be found", http.StatusNotFound)
+					writeError(w, "Could not find volume", http.StatusNotFound)
 					return
 				}
 				if InducedErrors.InvalidRemoteVolumeError {
 					newVol.StorageGroupIDList = nil
 				}
 				if !strings.Contains(vol.Type, "RDF") {
-					writeError(w, "Volume not found", http.StatusNotFound)
+					writeError(w, "Could not find volume", http.StatusNotFound)
 					return
 				}
 				newVol.Type = strings.ReplaceAll(newVol.Type, "RDF1", "RDF2")
@@ -1408,7 +1517,7 @@ func returnVolume(w http.ResponseWriter, volID string, remote bool) {
 			writeJSON(w, newVol)
 			return
 		}
-		writeError(w, "Volume cannot be found: "+volID, http.StatusNotFound)
+		writeError(w, "Could not find volume: "+volID, http.StatusNotFound)
 	}
 }
 
@@ -1655,7 +1764,7 @@ func handleStorageGroup(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error retrieving Storage Group(s): induced error", http.StatusRequestTimeout)
 			return
 		}
-		if vars["symid"] == Data.RDFGroup.RemoteSymmetrix && strings.Contains(sgID, "rep") {
+		if vars["symid"] == Data.AsyncRDFGroup.RemoteSymmetrix && strings.Contains(sgID, "rep") {
 			ReturnStorageGroup(w, sgID, true)
 		} else {
 			ReturnStorageGroup(w, sgID, false)
@@ -1748,7 +1857,7 @@ func handleStorageGroup(w http.ResponseWriter, r *http.Request) {
 		// Data.StorageGroupIDToNVolumes[sgID] = 0
 		// fmt.Println("SG Name: ", sgID)
 		AddStorageGroupFromCreateParams(createSGPayload)
-		if vars["symid"] == Data.RDFGroup.RemoteSymmetrix {
+		if vars["symid"] == Data.AsyncRDFGroup.RemoteSymmetrix {
 			ReturnStorageGroup(w, sgID, true)
 		} else {
 			ReturnStorageGroup(w, sgID, false)
@@ -2193,7 +2302,7 @@ func newVolume(volumeID, volumeIdentifier string, size int, sgList []string) {
 	if _, ok := Data.StorageGroupIDToRDFStorageGroup[sgList[0]]; ok {
 		volume.Type = "RDF1+TDEV"
 		volume.RDFGroupIDList = []types.RDFGroupID{
-			{RDFGroupNumber: Data.RDFGroup.RdfgNumber},
+			{RDFGroupNumber: Data.AsyncRDFGroup.RdfgNumber},
 		}
 	}
 	Data.VolumeIDToVolume[volumeID] = volume
@@ -2645,8 +2754,14 @@ func addOneVolumeToStorageGroup(volumeID, volumeIdentifier, sgID string, size in
 			// Update volume's replication details in case the storage-group is replicated
 			if _, ok := Data.StorageGroupIDToRDFStorageGroup[sgID]; ok {
 				Data.VolumeIDToVolume[volumeID].Type = "RDF1+TDEV"
-				Data.VolumeIDToVolume[volumeID].RDFGroupIDList = []types.RDFGroupID{
-					{RDFGroupNumber: Data.RDFGroup.RdfgNumber},
+				if strings.Contains(sgID, "ASYNC") {
+					Data.VolumeIDToVolume[volumeID].RDFGroupIDList = []types.RDFGroupID{
+						{RDFGroupNumber: Data.AsyncRDFGroup.RdfgNumber},
+					}
+				} else {
+					Data.VolumeIDToVolume[volumeID].RDFGroupIDList = []types.RDFGroupID{
+						{RDFGroupNumber: Data.MetroRDFGroup.RdfgNumber},
+					}
 				}
 			}
 
@@ -3763,7 +3878,7 @@ func handleVolSnaps(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if Data.VolumeIDToVolume[volID] == nil {
-		writeError(w, "Volume cannot be found: "+volID, http.StatusNotFound)
+		writeError(w, "Could not find volume: "+volID, http.StatusNotFound)
 		return
 	}
 
@@ -3864,7 +3979,7 @@ func handleGenerations(w http.ResponseWriter, r *http.Request) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	if Data.VolumeIDToVolume[volID] == nil {
-		writeError(w, "Volume cannot be found: "+volID, http.StatusNotFound)
+		writeError(w, "Could not find volume: "+volID, http.StatusNotFound)
 		return
 	}
 
@@ -4515,8 +4630,60 @@ func handleFileSystem(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if InducedErrors.GetFileSystemError {
-			writeError(w, "Error retrieving file system: induced error", http.StatusNotFound)
+			writeError(w, "Error retrieving file system, Could not find: induced error", http.StatusNotFound)
 			return
+		}
+		if fsID == "" {
+			// send in a list of file Syste
+			// Here we want a volume iterator.
+			queryParams := r.URL.Query()
+			fileIdentifier := queryParams.Get("name")
+			if fileIdentifier != "" {
+				fsIDNameList := make([]types.FileSystemIDName, 0)
+				for _, fs := range Data.FileSysIDToFileSystem {
+					if fs.Name == fileIdentifier {
+						fsIDName := types.FileSystemIDName{
+							ID:   fs.ID,
+							Name: fs.Name,
+						}
+						fsIDNameList = append(fsIDNameList, fsIDName)
+					}
+				}
+				fileSysIter := &types.FileSystemIterator{
+					ResultList: types.FileSystemList{
+						FileSystemList: fsIDNameList,
+						From:           1,
+						To:             len(fsIDNameList),
+					},
+					ID:             "52248851-fd6b-42c8-b7c7-2a9c0e40441a_0",
+					Count:          len(fsIDNameList),
+					ExpirationTime: 1688114398468,
+					MaxPageSize:    1000,
+				}
+				writeJSON(w, fileSysIter)
+			} else {
+				fileSysIter := &types.FileSystemIterator{
+					ResultList: types.FileSystemList{
+						FileSystemList: []types.FileSystemIDName{
+							{
+								ID:   DefaultFSID,
+								Name: DefaultFSName,
+							},
+							{
+								ID:   "64xxx7a6-03b5-xxx-xxx-0zzzz8200209",
+								Name: "fs-ds-2",
+							},
+						},
+						From: 1,
+						To:   2,
+					},
+					ID:             "52248851-fd6b-42c8-b7c7-2a9c0e40441a_0",
+					Count:          2,
+					ExpirationTime: 1688114398468,
+					MaxPageSize:    1000,
+				}
+				writeJSON(w, fileSysIter)
+			}
 		}
 		ReturnFileSystem(w, fsID)
 	case http.MethodPost:
@@ -4531,8 +4698,10 @@ func handleFileSystem(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "InvalidJson", http.StatusBadRequest)
 			return
 		}
-		AddNewFileSystem("id-2", createFileSystemParam.Name, createFileSystemParam.SizeTotal)
-		ReturnFileSystem(w, "id-2")
+		id := strconv.Itoa(time.Now().Nanosecond())
+		fsID := fmt.Sprintf("%s-%s-%d-%s", "649112ce-742b", "id", len(Data.FileSysIDToFileSystem), id)
+		AddNewFileSystem(fsID, createFileSystemParam.Name, createFileSystemParam.SizeTotal)
+		ReturnFileSystem(w, fsID)
 	case http.MethodPut:
 		if InducedErrors.UpdateFileSystemError {
 			writeError(w, "Error updating file system: induced error", http.StatusRequestTimeout)
@@ -4580,29 +4749,6 @@ func returnFileSystem(w http.ResponseWriter, fsID string) {
 			return
 		}
 		writeJSON(w, fileSys)
-	} else {
-		// send in a list of file System
-		fileSysIter := &types.FileSystemIterator{
-			ResultList: types.FileSystemList{
-				FileSystemList: []types.FileSystemIDName{
-					{
-						ID:   DefaultFSID,
-						Name: DefaultFSName,
-					},
-					{
-						ID:   "64xxx7a6-03b5-xxx-xxx-0zzzz8200209",
-						Name: "fs-ds-2",
-					},
-				},
-				From: 1,
-				To:   2,
-			},
-			ID:             "52248851-fd6b-42c8-b7c7-2a9c0e40441a_0",
-			Count:          2,
-			ExpirationTime: 1688114398468,
-			MaxPageSize:    1000,
-		}
-		writeJSON(w, fileSysIter)
 	}
 }
 
@@ -4780,6 +4926,69 @@ func newFileSystem(fsID, fsName string, sizeInMiB int64) *types.FileSystem {
 		WarningThreshold:   95,
 		ServiceLevel:       "Optimized",
 		DataReduction:      true,
+	}
+}
+
+// AddNewFileInterface adds a new file interface into mock
+func AddNewFileInterface(id, name string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	addNewFileInterface(id, name)
+}
+
+func addNewFileInterface(interfaceID, interfaceName string) {
+	Data.FileIntIDtoFileInterface[interfaceID] = newFileInterface(interfaceID, interfaceName)
+}
+
+func newFileInterface(interfaceID, interfaceName string) *types.FileInterface {
+	return &types.FileInterface{
+		ID:         interfaceID,
+		NasServer:  DefaultNASServerID,
+		NetDevice:  "eth-1",
+		MacAddress: "01:01:ab:01:01:zx",
+		IPAddress:  "100.125.0.109",
+		Netmask:    "255.255.255.0",
+		Gateway:    "172.125.0.1",
+		VlanID:     0,
+		Name:       interfaceName,
+		Role:       "Production",
+		IsDisabled: false,
+		Override:   false,
+	}
+}
+
+// /univmax/restapi/100/file/symmetrix/{symID}//file_interface/
+// /univmax/restapi/100/file/symmetrix/file_interface/{interfaceID}
+func handleFileInterface(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	interfaceID := vars["interfaceID"]
+	switch r.Method {
+	case http.MethodGet:
+		if InducedErrors.GetFileInterfaceError {
+			writeError(w, "Error retrieving FileSystemInterface: induced error", http.StatusNotFound)
+			return
+		}
+		ReturnFileInterface(w, interfaceID)
+	default:
+		writeError(w, "Invalid Method", http.StatusBadRequest)
+	}
+}
+
+// ReturnFileInterface returns File Interface object
+func ReturnFileInterface(w http.ResponseWriter, interfaceID string) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	returnFileInterface(w, interfaceID)
+}
+
+func returnFileInterface(w http.ResponseWriter, interfaceID string) {
+	if interfaceID != "" {
+		if fi, ok := Data.FileIntIDtoFileInterface[interfaceID]; ok {
+			writeJSON(w, fi)
+		} else {
+			writeError(w, "Could not find FileInterface", http.StatusNotFound)
+			return
+		}
 	}
 }
 

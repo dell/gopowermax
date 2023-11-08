@@ -58,6 +58,13 @@ Feature: PMAX file test
       | "InvalidResponse"          | "EOF"                  |
 
   @v2.4.0
+  Scenario: TestCases for GetNFSExportList with Param
+    Given a valid connection
+    When I call GetNFSExportListWithParam
+    Then the error message contains "none"
+    And I get a valid NFS Export ID List if no error
+
+  @v2.4.0
   Scenario Outline: Test cases for GetFileSystemByID
     Given a valid connection
     And I have an allowed list of <arrays>
@@ -93,7 +100,6 @@ Feature: PMAX file test
       | "fs-1"        | "InvalidJSON"           | "invalid character"           | ""        |
       | "fs-1"        | "none"                  | "ignored as it is not managed"| "ignored" |
       | "fs-1"        | "CreateFileSystemError" | "induced error"               | ""        |
-
 
   @v2.4.0
   Scenario Outline: Test cases for ModifyFileSystem
@@ -258,3 +264,22 @@ Feature: PMAX file test
       | "none"                  | "none"                         | ""        |
       | "DeleteNFSExportError"  | "induced error"                | ""        |
       | "none"                  | "ignored as it is not managed" | "ignored" |
+
+  @v2.4.0
+  Scenario Outline: Test cases for GetFileInterfaceByID
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    When I call GetFileInterfaceByID <id>
+    Then the error message contains <errormsg>
+    And I get a valid fileInterface Object if no error
+
+    Examples:
+      | id            | induced                  | errormsg                      | arrays    |
+      | "id1"         | "none"                   | "none"                        | ""        |
+      | "id3"         | "none"                   | "Could not find"              | ""        |
+      | "id1"         | "GetFileInterfaceError"  | "induced error"               | ""        |
+      | "id1"         | "InvalidResponse"        | "EOF"                         | ""        |
+      | "id1"         | "httpStatus500"          | "Internal Error"              | ""        |
+      | "id1"         | "InvalidJSON"            | "invalid character"           | ""        |
+      | "id1"         | "none"                   | "ignored as it is not managed"| "ignored" |
