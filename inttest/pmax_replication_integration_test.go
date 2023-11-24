@@ -723,8 +723,8 @@ func TestExecuteReplicationActionOnSG(t *testing.T) {
 	}
 	fmt.Printf("Volume in Protected Storage Group created successfully: %v\n", vol)
 
-	fmt.Printf("Waiting for 10 minutes \n")
-	time.Sleep(600 * time.Second)
+	fmt.Printf("Waiting for 2 minutes \n")
+	time.Sleep(120 * time.Second)
 
 	err = client.ExecuteReplicationActionOnSG(context.TODO(), symmetrixID, "Suspend", defaultProtectedStorageGroup, localRDFGrpNo, true, true, false)
 	if err != nil {
@@ -732,11 +732,17 @@ func TestExecuteReplicationActionOnSG(t *testing.T) {
 		return
 	}
 
+	fmt.Printf("Waiting for 2 minutes \n")
+	time.Sleep(120 * time.Second)
+
 	err = client.ExecuteReplicationActionOnSG(context.TODO(), symmetrixID, "Resume", defaultProtectedStorageGroup, localRDFGrpNo, true, true, false)
 	if err != nil {
 		t.Errorf("Error in resuming the RDF relation in Protected Storage Group: %s", err.Error())
 		return
 	}
+
+	fmt.Printf("Waiting for 2 minutes \n")
+	time.Sleep(120 * time.Second)
 
 	cleanupRDFPair(vol.VolumeID, volumeName, defaultProtectedStorageGroup, t)
 }
@@ -884,6 +890,9 @@ func cleanupRDFPair(volumeID string, _ string, _ string, t *testing.T) {
 		t.Errorf("Error retrieving RDF device pair information: %s", err.Error())
 		return
 	}
+	fmt.Printf("RDF INFO %v", rdfPair)
+        fmt.Printf("Waiting for 2 minutes \n")
+        time.Sleep(120 * time.Second)
 
 	// Terminating the Pair and removing the volumes from local SG and remote SG
 
