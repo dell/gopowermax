@@ -1229,6 +1229,7 @@ func handleSGRDFAction(w http.ResponseWriter, r *http.Request) {
 	PerformActionOnRDFSG(w, rdfNo, action)
 }
 
+// PerformActionOnRDFSG updates rdfNo with given action
 func PerformActionOnRDFSG(w http.ResponseWriter, rdfNo, action string) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
