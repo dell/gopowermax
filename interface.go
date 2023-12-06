@@ -424,4 +424,7 @@ type Pmax interface {
 	DeleteNASServer(ctx context.Context, symID, nasID string) error
 	// GetFileInterfaceByID gets a FileInterface
 	GetFileInterfaceByID(ctx context.Context, symID, interfaceID string) (*types.FileInterface, error)
+
+	// RefreshSymmetrix refreshes cache on the symID
+	RefreshSymmetrix(ctx context.Context, symID string) error
 }

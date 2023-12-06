@@ -368,6 +368,29 @@ func (c *Client) GetISCSITargets(ctx context.Context, symID string) ([]ISCSITarg
 	return targets, nil
 }
 
+// RefreshSymmetrix refreshes symmetrix cache
+func (c *Client) RefreshSymmetrix(ctx context.Context, symID string) error {
+	defer c.TimeSpent("RefreshSymmetrix", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return err
+	}
+	// univmax/restapi/101/system/symmetrix/{{symID}}/refresh
+	URL := fmt.Sprintf("%s%d/system/symmetrix/%s/refresh", RESTPrefix, 101, symID)
+	fields := map[string]interface{}{
+		http.MethodPut: URL,
+	}
+	log.WithFields(fields).Info("Refresh symmetrix")
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Post(
+		ctx, URL, c.getDefaultHeaders(), nil, nil)
+	if err != nil {
+		log.WithFields(fields).Error("Error in RefreshSymmetrix: " + err.Error())
+		return err
+	}
+	return nil
+}
+
 // SetAllowedArrays sets the list of arrays which can be manipulated
 // an empty list will allow all arrays to be accessed
 func (c *Client) SetAllowedArrays(arrays []string) error {
