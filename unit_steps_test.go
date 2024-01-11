@@ -109,6 +109,7 @@ type unitContext struct {
 	volResultPrivate      *types.VolumeResultPrivate
 	storageGroupMetrics   *types.StorageGroupMetricsIterator
 	volumesMetrics        *types.VolumeMetricsIterator
+	fileSystemMetrics     *types.FileSystemMetricsIterator
 
 	sgSnapshot              *types.StorageGroupSnapshot
 	storageGroupSnapSetting *types.CreateStorageGroupSnapshot
@@ -179,6 +180,8 @@ func (c *unitContext) reset() {
 	c.nfsExport = nil
 	c.nasServer = nil
 	c.fileInterface = nil
+	c.volumesMetrics = nil
+	c.fileSystemMetrics = nil
 }
 
 func (c *unitContext) iInduceError(errorType string) error {
@@ -393,6 +396,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.GetStorageGroupMetricsError = true
 	case "GetVolumesMetricsError":
 		mock.InducedErrors.GetVolumesMetricsError = true
+	case "GetFileSysMetricsError":
+		mock.InducedErrors.GetFileSysMetricsError = true
 	case "GetStorageGroupPerfKeyError":
 		mock.InducedErrors.GetStorageGroupPerfKeyError = true
 	case "GetArrayPerfKeyError":
@@ -2234,6 +2239,13 @@ func (c *unitContext) iCallGetVolumesMetrics() error {
 	return nil
 }
 
+func (c *unitContext) iCallGetVolumesMetricsByIDFor(volID string) error {
+	var metrics *types.VolumeMetricsIterator
+	metrics, c.err = c.client.GetVolumesMetricsByID(context.TODO(), symID, volID, []string{"MBReads"}, 0, 0)
+	c.volumesMetrics = metrics
+	return nil
+}
+
 func (c *unitContext) iGetVolumesMetrics() error {
 	if c.err == nil {
 		if c.volumesMetrics == nil {
@@ -2241,6 +2253,25 @@ func (c *unitContext) iGetVolumesMetrics() error {
 		}
 		if len(c.volumesMetrics.ResultList.Result) == 0 {
 			return fmt.Errorf("no metric in volumesMetrics")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iCallGetFileSystemMetricsByIDFor(fileSystemID string) error {
+	var metrics *types.FileSystemMetricsIterator
+	metrics, c.err = c.client.GetFileSystemMetricsByID(context.TODO(), symID, fileSystemID, []string{"MBReads"}, 0, 0)
+	c.fileSystemMetrics = metrics
+	return nil
+}
+
+func (c *unitContext) iGetFileMetrics() error {
+	if c.err == nil {
+		if c.fileSystemMetrics == nil {
+			return fmt.Errorf("fileMetrics nil")
+		}
+		if len(c.fileSystemMetrics.ResultList.Result) == 0 {
+			return fmt.Errorf("no metric in filemetrics")
 		}
 	}
 	return nil
@@ -2751,6 +2782,9 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^I get StorageGroupMetrics$`, c.iGetStorageGroupMetrics)
 	s.Step(`^I call GetVolumesMetrics$`, c.iCallGetVolumesMetrics)
 	s.Step(`^I get VolumesMetrics$`, c.iGetVolumesMetrics)
+	s.Step(`^I call GetFileSystemMetricsByID for "([^"]*)"$`, c.iCallGetFileSystemMetricsByIDFor)
+	s.Step(`^I call GetVolumesMetricsByID for "([^"]*)"$`, c.iCallGetVolumesMetricsByIDFor)
+	s.Step(`^I get FileMetrics$`, c.iGetFileMetrics)
 
 	// Performance keys
 	s.Step(`^I call GetStorageGroupPerfKeys$`, c.iCallGetStorageGroupPerfKeys)

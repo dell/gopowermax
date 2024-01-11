@@ -358,15 +358,16 @@ type Pmax interface {
 
 	// GetStorageGroupMetrics returns the list of required metrics
 	GetStorageGroupMetrics(ctx context.Context, symID string, storageGroupID string, metricsQuery []string, firstAvailableDate int64, lastAvailableTime int64) (*types.StorageGroupMetricsIterator, error)
-
 	// GetVolumesMetrics returns the list of volume metrics for specific storage groups
 	GetVolumesMetrics(ctx context.Context, symID string, storageGroups string, metricsQuery []string, firstAvailableDate int64, lastAvailableTime int64) (*types.VolumeMetricsIterator, error)
-
 	// GetStorageGroupPerfKeys returns the performance keys of storage group
 	GetStorageGroupPerfKeys(ctx context.Context, symID string) (*types.StorageGroupKeysResult, error)
-
 	// GetArrayPerfKeys returns the performance keys of array
 	GetArrayPerfKeys(ctx context.Context) (*types.ArrayKeysResult, error)
+	// GetVolumesMetricsByID returns a given Volume performance metrics
+	GetVolumesMetricsByID(ctx context.Context, symID string, volID string, metricsQuery []string, firstAvailableTime, lastAvailableTime int64) (*types.VolumeMetricsIterator, error)
+	// GetFileSystemMetricsByID returns a given FileSystem performance metrics
+	GetFileSystemMetricsByID(ctx context.Context, symID string, fsID string, metricsQuery []string, firstAvailableTime, lastAvailableTime int64) (*types.FileSystemMetricsIterator, error)
 
 	// CreateMigrationEnvironment creates a migration environment
 	CreateMigrationEnvironment(ctx context.Context, sourceSymID, remoteSymID string) (*types.MigrationEnv, error)

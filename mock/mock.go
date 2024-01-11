@@ -216,6 +216,7 @@ var InducedErrors struct {
 	GetHostGroupListError                  bool
 	GetStorageGroupMetricsError            bool
 	GetVolumesMetricsError                 bool
+	GetFileSysMetricsError                 bool
 	GetStorageGroupPerfKeyError            bool
 	GetArrayPerfKeyError                   bool
 	GetFreeRDFGError                       bool
@@ -355,6 +356,7 @@ func Reset() {
 	InducedErrors.GetHostGroupListError = false
 	InducedErrors.GetStorageGroupMetricsError = false
 	InducedErrors.GetVolumesMetricsError = false
+	InducedErrors.GetFileSysMetricsError = false
 	InducedErrors.GetStorageGroupPerfKeyError = false
 	InducedErrors.GetArrayPerfKeyError = false
 	InducedErrors.GetFreeRDFGError = false
@@ -626,6 +628,7 @@ func getRouter() http.Handler {
 	// Performance Metrics
 	router.HandleFunc(PREFIXNOVERSION+"/performance/StorageGroup/metrics", handleStorageGroupMetrics)
 	router.HandleFunc(PREFIXNOVERSION+"/performance/Volume/metrics", handleVolumeMetrics)
+	router.HandleFunc(PREFIXNOVERSION+"/performance/file/filesystem/metrics", handleFileSysMetrics)
 
 	// Performance Keys
 	router.HandleFunc(PREFIXNOVERSION+"/performance/StorageGroup/keys", handleStorageGroupPerfKeys)
@@ -3303,6 +3306,33 @@ func handleVolumeMetrics(w http.ResponseWriter, r *http.Request) {
 	metricsIterator := &types.VolumeMetricsIterator{
 		ResultList: types.VolumeMetricsResultList{
 			Result: []types.VolumeResult{volumeResult},
+			From:   1,
+			To:     1,
+		},
+		ID:             "query_id",
+		Count:          1,
+		ExpirationTime: 1671091597409,
+		MaxPageSize:    1000,
+	}
+	writeJSON(w, metricsIterator)
+}
+
+// /univmax/restapi/performance/file/filesystem/metrics
+func handleFileSysMetrics(w http.ResponseWriter, _ *http.Request) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	if InducedErrors.GetFileSysMetricsError {
+		writeError(w, "Error getting volume metrics: induced error", http.StatusRequestTimeout)
+		return
+	}
+	fileMetric := types.FileSystemResult{
+		PercentBusy: 1,
+		Timestamp:   1671091500000,
+	}
+
+	metricsIterator := &types.FileSystemMetricsIterator{
+		ResultList: types.FileSystemMetricsResultList{
+			Result: []types.FileSystemResult{fileMetric},
 			From:   1,
 			To:     1,
 		},

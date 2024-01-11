@@ -58,6 +58,8 @@ type VolumeMetricsParam struct {
 	SystemID                       string   `json:"systemId"`
 	StartDate                      int64    `json:"startDate"`
 	EndDate                        int64    `json:"endDate"`
+	VolumeStartRange               string   `json:"volumeStartRange"`
+	VolumeEndRange                 string   `json:"volumeEndRange"`
 	DataFormat                     string   `json:"dataFormat"`
 	CommaSeparatedStorageGroupList string   `json:"commaSeparatedStorageGroupList"`
 	Metrics                        []string `json:"metrics"`
@@ -94,6 +96,7 @@ type VolumeMetric struct {
 	Writes            float64 `json:"Writes"`
 	ReadResponseTime  float64 `json:"ReadResponseTime"`
 	WriteResponseTime float64 `json:"WriteResponseTime"`
+	IoRate            float64 `json:"IoRate"`
 	Timestamp         int64   `json:"timestamp"`
 }
 
@@ -124,4 +127,36 @@ type ArrayInfo struct {
 	SymmetrixID        string `json:"symmetrixId"`
 	FirstAvailableDate int64  `json:"firstAvailableDate"`
 	LastAvailableDate  int64  `json:"lastAvailableDate"`
+}
+
+// FileSystemMetricsParam contains req param for filesystem metric
+type FileSystemMetricsParam struct {
+	SystemID     string   `json:"systemId"`
+	EndDate      int64    `json:"endDate"`
+	FileSystemID string   `json:"fileSystemID"`
+	DataFormat   string   `json:"dataFormat"`
+	Metrics      []string `json:"metrics"`
+	StartDate    int64    `json:"startDate"`
+}
+
+// FileSystemMetricsIterator contains the result of query
+type FileSystemMetricsIterator struct {
+	ResultList     FileSystemMetricsResultList `json:"resultList"`
+	ID             string                      `json:"id"`
+	Count          int                         `json:"count"`
+	ExpirationTime int64                       `json:"expirationTime"`
+	MaxPageSize    int                         `json:"maxPageSize"`
+}
+
+// FileSystemMetricsResultList contains the list of volume result
+type FileSystemMetricsResultList struct {
+	Result []FileSystemResult `json:"result"`
+	From   int                `json:"from"`
+	To     int                `json:"to"`
+}
+
+// FileSystemResult contains the list of volume metrics and ID of volume
+type FileSystemResult struct {
+	PercentBusy float64 `json:"PercentBusy"`
+	Timestamp   int64   `json:"timestamp"`
 }

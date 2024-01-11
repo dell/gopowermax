@@ -2219,7 +2219,17 @@ func TestGetVolumesMetrics(t *testing.T) {
 		t.Errorf("Failed to get array %s perf keys", symmetrixID)
 		return
 	}
+	fmt.Println("... getting VolumeMetrics ...")
 	metrics, err := client.GetVolumesMetrics(context.TODO(), symmetrixID, defaultStorageGroup, queryParams, firstTime, lastTime)
+	if err != nil {
+		t.Errorf("Failed to get volume in storage group %s Metrics", defaultStorageGroup)
+		return
+	}
+	fmt.Printf("MBRead of volume %s: %f \n", metrics.ResultList.Result[0].VolumeID, metrics.ResultList.Result[0].VolumeResult[0].MBRead)
+
+	fmt.Println("... getting VolumeMetricsByID ...")
+
+	metrics, err = client.GetVolumesMetricsByID(context.TODO(), symmetrixID, vol.VolumeID, queryParams, firstTime, lastTime)
 	if err != nil {
 		t.Errorf("Failed to get volume in storage group %s Metrics", defaultStorageGroup)
 		return
