@@ -118,11 +118,11 @@ type Pmax interface {
 	// This method creates a job and waits on the job to complete.
 	CreateVolumeInStorageGroup(ctx context.Context, symID string, storageGroupID string, volumeName string, volumeSize interface{}, volOpts map[string]interface{}) (*types.Volume, error)
 
-	// CreateVolumeInStorageGroup takes simplified input arguments to create a volume of a give name and size in a particular storage group.
+	// CreateVolumeInStorageGroupS takes simplified input arguments to create a volume of a give name and size in a particular storage group.
 	// This is done synchronously and no jobs are created. HTTP header argument is optional
 	CreateVolumeInStorageGroupS(ctx context.Context, symID, storageGroupID string, volumeName string, volumeSize interface{}, volOpts map[string]interface{}, opts ...http.Header) (*types.Volume, error)
 
-	// CreateVolumeInProtectedStorageGroup takes simplified input arguments to create a volume of a give name and size in a protected storage group.
+	// CreateVolumeInProtectedStorageGroupS takes simplified input arguments to create a volume of a give name and size in a protected storage group.
 	// This will add volume in both Local and Remote Storage group
 	// This is done synchronously and no jobs are created. HTTP header argument is optional
 	CreateVolumeInProtectedStorageGroupS(ctx context.Context, symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, volumeSize interface{}, volOpts map[string]interface{}, opts ...http.Header) (*types.Volume, error)
@@ -136,30 +136,30 @@ type Pmax interface {
 	// RenameMaskingView renames masking view given it's identifier (which is the name)
 	RenameMaskingView(ctx context.Context, symID string, maskingViewID string, newName string) (*types.MaskingView, error)
 
-	// Get the list of Storage Pools
+	//GetStoragePoolList Get the list of Storage Pools
 	GetStoragePoolList(ctx context.Context, symID string) (*types.StoragePoolList, error)
 
-	// Rename a Volume given the volumeID
+	//RenameVolume Rename a Volume given the volumeID
 	RenameVolume(ctx context.Context, symID string, volumeID string, newName string) (*types.Volume, error)
 
-	// Add volume(s) asynchronously to a StorageGroup
+	//AddVolumesToStorageGroup Add volume(s) asynchronously to a StorageGroup
 	AddVolumesToStorageGroup(ctx context.Context, symID, storageGroupID string, force bool, volumeIDs ...string) error
-	// Add volume(s) synchronously to a StorageGroup
+	//AddVolumesToStorageGroupS Add volume(s) synchronously to a StorageGroup
 	// This is a blocking call and will only return once the volumes have been added to storage group
 	AddVolumesToStorageGroupS(ctx context.Context, symID, storageGroupID string, force bool, volumeIDs ...string) error
-	// Adds one or more volumes (given by their volumeIDs) to a Protected StorageGroup
+	//AddVolumesToProtectedStorageGroup Adds one or more volumes (given by their volumeIDs) to a Protected StorageGroup
 	AddVolumesToProtectedStorageGroup(ctx context.Context, symID, storageGroupID, remoteSymID, remoteStorageGroupID string, force bool, volumeIDs ...string) error
 
-	// Remove volume(s) synchronously from a StorageGroup
+	//RemoveVolumesFromStorageGroup Remove volume(s) synchronously from a StorageGroup
 	RemoveVolumesFromStorageGroup(ctx context.Context, symID string, storageGroupID string, force bool, volumeIDs ...string) (*types.StorageGroup, error)
 
 	// RemoveVolumesFromProtectedStorageGroup removes one or more volumes (given by their volumeIDs) from a Protected StorageGroup.
 	RemoveVolumesFromProtectedStorageGroup(ctx context.Context, symID string, storageGroupID, remoteSymID, remoteStorageGroupID string, force bool, volumeIDs ...string) (*types.StorageGroup, error)
 
-	// Initiate a job to remove storage space from the volume.
+	//InitiateDeallocationOfTracksFromVolume Initiate a job to remove storage space from the volume.
 	InitiateDeallocationOfTracksFromVolume(ctx context.Context, symID string, volumeID string) (*types.Job, error)
 
-	// Deletes a volume
+	//DeleteVolume Deletes a volume
 	DeleteVolume(ctx context.Context, symID string, volumeID string) error
 
 	// GetMaskingViewList  returns a list of the MaskingView names.
@@ -179,11 +179,12 @@ type Pmax interface {
 	// CreatePortGroup creates a port group given the Port Group id and a list of dir/port ids
 	CreatePortGroup(ctx context.Context, symID string, portGroupID string, dirPorts []types.PortKey, protocol string) (*types.PortGroup, error)
 
-	// RenamePortGroup renames port group given it's identifier (which is the name)
+	// RenamePortGroup renames port group given it is identifier (which is the name)
 	RenamePortGroup(ctx context.Context, symID string, portGroupID string, newName string) (*types.PortGroup, error)
 
-	// System
+	//GetSymmetrixIDList gets symmetrix list
 	GetSymmetrixIDList(ctx context.Context) (*types.SymmetrixIDList, error)
+	//GetSymmetrixByID gets symmetrix by given ID
 	GetSymmetrixByID(ctx context.Context, id string) (*types.Symmetrix, error)
 
 	// GetJobIDList retrieves the list of jobs on a given Symmetrix.
@@ -264,12 +265,12 @@ type Pmax interface {
 	// This creates a job and waits on its completion
 	ModifySnapshot(ctx context.Context, symID string, sourceVol []types.VolumeList,
 		targetVol []types.VolumeList, SnapID string, action string,
-		newSnapID string, generation int64) error
+		newSnapID string, generation int64, isCopy bool) error
 
 	// ModifySnapshotS executes actions on a snapshot synchronously
 	ModifySnapshotS(ctx context.Context, symID string, sourceVol []types.VolumeList,
 		targetVol []types.VolumeList, SnapID string, action string,
-		newSnapID string, generation int64) error
+		newSnapID string, generation int64, isCopy bool) error
 	// DeleteSnapshot deletes a snapshot from a volume
 	// This is an asynchronous call and waits for the job to complete
 	DeleteSnapshot(ctx context.Context, symID, SnapID string, sourceVolumes []types.VolumeList, generation int64) error

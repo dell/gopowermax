@@ -286,7 +286,7 @@ func TestSnapshotLinkage(t *testing.T) {
 }
 
 func modifySnapshotLink(sourceVolumeList, targetVolumeList []types.VolumeList, operation, snapshotName string, t *testing.T) error {
-	err := client.ModifySnapshot(context.TODO(), symmetrixID, sourceVolumeList, targetVolumeList, snapshotName, operation, "", 0)
+	err := client.ModifySnapshot(context.TODO(), symmetrixID, sourceVolumeList, targetVolumeList, snapshotName, operation, "", 0, false)
 	if err != nil {
 		return fmt.Errorf("Error %sing snapshot(%s)", strings.ToLower(operation), snapshotName)
 	}
@@ -351,7 +351,7 @@ func TestSnapshotRenaming(t *testing.T) {
 }
 
 func renameSnapshot(symmetrixID, snapshotName, newSnapID string, generation int, sourceVolumeList, targetVolumeList []types.VolumeList) error {
-	err := client.ModifySnapshot(context.TODO(), symmetrixID, sourceVolumeList, targetVolumeList, snapshotName, "Rename", newSnapID, 0)
+	err := client.ModifySnapshot(context.TODO(), symmetrixID, sourceVolumeList, targetVolumeList, snapshotName, "Rename", newSnapID, 0, false)
 	if err != nil {
 		return fmt.Errorf("Error renaming snapshot: %s", err.Error())
 	}
