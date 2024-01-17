@@ -252,19 +252,19 @@ func (c *Client) DeleteSnapshotS(ctx context.Context, symID, snapID string, sour
 // VolumeNameListSource is a list which contains the names of source volumes
 // VolumeNameListTarget is a list which contains the names of target volumes to which the snapshot is linked or going to be linked
 // Symforce flag is used to automate some internal establish scenarios
-//  Star mode is used for devices in SRDF relations
-//  Use the Force flag in acceptable error conditions
+// Star mode is used for devices in SRDF relations
+// Use the Force flag in acceptable error conditions
 // Restore, when set to true will terminate the Restore and the Snapshot as well
 // Exact when specified, pairs source and link devices in their ordinal positions within the selection. When not set uses the source and link device selections as a pool that pairs by best match
 // Copy when specified creates an exact copy of the source device, otherwise copies the references
 // Remote when specified propagates the data to the remote mirror of the RDF device
-//  Generation is used to tell which generation of snapshot needs to be updated, it is passed as int64
+// Generation is used to tell which generation of snapshot needs to be updated, it is passed as int64
 // NewSnapshotName specifies the new snapshot name to which the old snapshot will be renamed
 // ExecutionOption tells the Unisphere to perform the operation either in Synchronous mode or Asynchronous mode
 // Action defined the operation which will be performed on the given snapshot
 func (c *Client) ModifySnapshot(ctx context.Context, symID string, sourceVol []types.VolumeList,
 	targetVol []types.VolumeList, snapID string, action string,
-	newSnapID string, generation int64,
+	newSnapID string, generation int64, isCopy bool,
 ) error {
 	defer c.TimeSpent("ModifySnapshot", time.Now())
 	if _, err := c.IsAllowedArray(symID); err != nil {
@@ -274,15 +274,26 @@ func (c *Client) ModifySnapshot(ctx context.Context, symID string, sourceVol []t
 	snapParam := &types.ModifyVolumeSnapshot{}
 
 	switch action {
-	case "Link", "Unlink":
+	case "Link":
 		snapParam = &types.ModifyVolumeSnapshot{
 			VolumeNameListSource: sourceVol,
 			VolumeNameListTarget: targetVol,
 			Force:                false,
 			Star:                 false,
 			Exact:                false,
-			Copy:                 false,
+			Copy:                 isCopy,
 			Remote:               false,
+			Symforce:             false,
+			Action:               action,
+			Generation:           generation,
+			ExecutionOption:      types.ExecutionOptionAsynchronous,
+		}
+	case "Unlink":
+		snapParam = &types.ModifyVolumeSnapshot{
+			VolumeNameListSource: sourceVol,
+			VolumeNameListTarget: targetVol,
+			Force:                false,
+			Star:                 false,
 			Symforce:             false,
 			Action:               action,
 			Generation:           generation,
@@ -326,7 +337,7 @@ func (c *Client) ModifySnapshot(ctx context.Context, symID string, sourceVol []t
 // ModifySnapshotS executes actions on snapshots synchronously
 func (c *Client) ModifySnapshotS(ctx context.Context, symID string, sourceVol []types.VolumeList,
 	targetVol []types.VolumeList, snapID string, action string,
-	newSnapID string, generation int64,
+	newSnapID string, generation int64, isCopy bool,
 ) error {
 	defer c.TimeSpent("ModifySnapshotS", time.Now())
 
@@ -337,15 +348,26 @@ func (c *Client) ModifySnapshotS(ctx context.Context, symID string, sourceVol []
 	snapParam := &types.ModifyVolumeSnapshot{}
 
 	switch action {
-	case "Link", "Unlink":
+	case "Link":
 		snapParam = &types.ModifyVolumeSnapshot{
 			VolumeNameListSource: sourceVol,
 			VolumeNameListTarget: targetVol,
 			Force:                false,
 			Star:                 false,
 			Exact:                false,
-			Copy:                 false,
+			Copy:                 isCopy,
 			Remote:               false,
+			Symforce:             false,
+			Action:               action,
+			Generation:           generation,
+			ExecutionOption:      types.ExecutionOptionSynchronous,
+		}
+	case "Unlink":
+		snapParam = &types.ModifyVolumeSnapshot{
+			VolumeNameListSource: sourceVol,
+			VolumeNameListTarget: targetVol,
+			Force:                false,
+			Star:                 false,
 			Symforce:             false,
 			Action:               action,
 			Generation:           generation,
