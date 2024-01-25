@@ -1629,7 +1629,7 @@ func (c *unitContext) iShouldGetAGenerationInfoIfNoError() error {
 func (c *unitContext) iCallModifySnapshotWithAnd(sourceVols, targetVols, SnapID, newSnapID string, genID int64, action string) error {
 	sourceVolumeList := c.createVolumeList(sourceVols)
 	targetVolumeList := c.createVolumeList(targetVols)
-	c.err = c.client.ModifySnapshot(context.TODO(), symID, sourceVolumeList, targetVolumeList, SnapID, action, newSnapID, genID)
+	c.err = c.client.ModifySnapshot(context.TODO(), symID, sourceVolumeList, targetVolumeList, SnapID, action, newSnapID, genID, false)
 
 	return nil
 }
@@ -1637,7 +1637,7 @@ func (c *unitContext) iCallModifySnapshotWithAnd(sourceVols, targetVols, SnapID,
 func (c *unitContext) iCallModifySnapshotSWithAnd(sourceVols, targetVols, SnapID, newSnapID string, genID int64, action string) error {
 	sourceVolumeList := c.createVolumeList(sourceVols)
 	targetVolumeList := c.createVolumeList(targetVols)
-	c.err = c.client.ModifySnapshotS(context.TODO(), symID, sourceVolumeList, targetVolumeList, SnapID, action, newSnapID, genID)
+	c.err = c.client.ModifySnapshotS(context.TODO(), symID, sourceVolumeList, targetVolumeList, SnapID, action, newSnapID, genID, false)
 
 	return nil
 }

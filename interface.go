@@ -203,11 +203,12 @@ type Pmax interface {
 	// CreatePortGroup creates a port group given the Port Group id and a list of dir/port ids
 	CreatePortGroup(ctx context.Context, symID string, portGroupID string, dirPorts []types.PortKey, protocol string) (*types.PortGroup, error)
 
-	// RenamePortGroup renames port group given it's identifier (which is the name)
+	// RenamePortGroup renames port group given it is identifier (which is the name)
 	RenamePortGroup(ctx context.Context, symID string, portGroupID string, newName string) (*types.PortGroup, error)
 
-	// System
+	// GetSymmetrixIDList gets symmetrix list
 	GetSymmetrixIDList(ctx context.Context) (*types.SymmetrixIDList, error)
+	// GetSymmetrixByID gets symmetrix by given ID
 	GetSymmetrixByID(ctx context.Context, id string) (*types.Symmetrix, error)
 
 	// GetJobIDList retrieves the list of jobs on a given Symmetrix.
@@ -288,12 +289,12 @@ type Pmax interface {
 	// This creates a job and waits on its completion
 	ModifySnapshot(ctx context.Context, symID string, sourceVol []types.VolumeList,
 		targetVol []types.VolumeList, SnapID string, action string,
-		newSnapID string, generation int64) error
+		newSnapID string, generation int64, isCopy bool) error
 
 	// ModifySnapshotS executes actions on a snapshot synchronously
 	ModifySnapshotS(ctx context.Context, symID string, sourceVol []types.VolumeList,
 		targetVol []types.VolumeList, SnapID string, action string,
-		newSnapID string, generation int64) error
+		newSnapID string, generation int64, isCopy bool) error
 	// DeleteSnapshot deletes a snapshot from a volume
 	// This is an asynchronous call and waits for the job to complete
 	DeleteSnapshot(ctx context.Context, symID, SnapID string, sourceVolumes []types.VolumeList, generation int64) error
