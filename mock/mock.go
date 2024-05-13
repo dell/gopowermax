@@ -1462,7 +1462,11 @@ func handleVolume(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error deleting Volume: induced error - device is a member of a storage group", http.StatusForbidden)
 			return
 		}
-		DeleteVolume(volID) // #nosec G20
+		err := DeleteVolume(volID)
+		if err != nil {
+			writeError(w, "error deleteVolume", http.StatusBadRequest)
+			return
+		}
 	}
 }
 
@@ -2969,7 +2973,11 @@ func handlePortGroup(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error deleting Port Group: induced error", http.StatusRequestTimeout)
 			return
 		}
-		DeletePortGroup(pgID) // #nosec G20
+		_, err := DeletePortGroup(pgID)
+		if err != nil {
+			writeError(w, "Error deletePortGroup", http.StatusRequestTimeout)
+			return
+		}
 	default:
 		writeError(w, "Invalid Method", http.StatusBadRequest)
 	}
@@ -3187,7 +3195,11 @@ func handleHost(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error deleting Host: induced error", http.StatusRequestTimeout)
 			return
 		}
-		RemoveHost(hostID) // #nosec G20
+		err := RemoveHost(hostID)
+		if err != nil {
+			writeError(w, "error removeHost", http.StatusBadRequest)
+			return
+		}
 	default:
 		writeError(w, "Invalid Method", http.StatusBadRequest)
 	}
@@ -4224,7 +4236,11 @@ func handleHostGroup(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error deleting HostGroup: induced error", http.StatusRequestTimeout)
 			return
 		}
-		RemoveHostGroup(hostGroupID) // #nosec G20
+		err := RemoveHostGroup(hostGroupID)
+		if err != nil {
+			writeError(w, "error removeHostGroup", http.StatusBadRequest)
+			return
+		}
 	default:
 		writeError(w, "Invalid Method", http.StatusBadRequest)
 	}
