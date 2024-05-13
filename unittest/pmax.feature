@@ -741,16 +741,17 @@ Scenario Outline: Test GetHostList
     And I have an allowed list of <arrays>
     And I have a FC Host <fchostname>
     And I have a ISCSI Host <hostname>
+    And I have a NVMeTCP Host <nvmehostname>
     And I induce error <induced>
     When I call GetHostList
     Then the error message contains <errormsg>
     And I get a valid HostList if no error
 
     Examples:
-    | fchostname     | hostname     | induced                        | errormsg                                              | arrays    |
-    | "Test-Host-FC" | "Test-Host"  | "none"                         | "none"                                                | ""        |
-    | "Test-Host-FC" | "Test-Host"  | "GetHostError"                 | "induced error"                                       | ""        |
-    | "Test-Host-FC" | "Test-Host"  | "none"                         | "ignored as it is not managed"                        | "ignored" |
+    | fchostname     | hostname     | nvmehostname     | induced                        | errormsg                                              | arrays    |
+    | "Test-Host-FC" | "Test-Host"  | "Test-Host-NVME" | "none"                         | "none"                                                | ""        |
+    | "Test-Host-FC" | "Test-Host"  | "Test-Host-NVME" | "GetHostError"                 | "induced error"                                       | ""        |
+    | "Test-Host-FC" | "Test-Host"  | "Test-Host-NVME" | "none"                         | "ignored as it is not managed"                        | "ignored" |
 
   Scenario Outline: Test GetHostByID
     Given a valid connection
@@ -888,6 +889,28 @@ Scenario Outline: Test GetHostList
     | "TestHost"   | "TestSG"    | "TestMV"       | "InitiatorGroupNotFoundError"| "Initiator Group on Symmetrix cannot be found"        | ""        |
     | "TestHost"   | "TestSG"    | "TestMV"       | "StorageGroupNotFoundError"  | "Storage Group on Symmetrix cannot be found"          | ""        |
     | "TestHost"   | "TestSG"    | "TestMV"       | "none"                       | "ignored as it is not managed"                        | "ignored" |
+
+  Scenario Outline: Test cases for CreateMaskingViewWithHost
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I have a NVMeTCP Host <hostname>
+    And I have a PortGroup
+    And I have a StorageGroup <sgname>
+    And I induce error <induced>
+    When I call CreateMaskingViewWithHost <mvname>
+    Then the error message contains <errormsg>
+    And I get a valid MaskingView if no error
+
+    Examples:
+    | hostname     | sgname      | mvname         | induced                      | errormsg                                              | arrays    |
+    | "TestHost"   | "TestSG"    | "TestMV"       | "none"                       | "none"                                                | ""        |
+    | "TestHost"   | "TestSG"    | "TestMV"       | "CreateMaskingViewError"     | "Failed to create masking view"                       | ""        |
+    | "TestHost"   | "TestSG"    | "TestMV"       | "MaskingViewAlreadyExists"   | "The requested masking view resource already exists"  | ""        |
+    | "TestHost"   | "TestSG"    | "TestMV"       | "PortGroupNotFoundError"     | "Port Group on Symmetrix cannot be found"             | ""        |
+    | "TestHost"   | "TestSG"    | "TestMV"       | "InitiatorGroupNotFoundError"| "Initiator Group on Symmetrix cannot be found"        | ""        |
+    | "TestHost"   | "TestSG"    | "TestMV"       | "StorageGroupNotFoundError"  | "Storage Group on Symmetrix cannot be found"          | ""        |
+    | "TestHost"   | "TestSG"    | "TestMV"       | "none"                       | "ignored as it is not managed"                        | "ignored" |
+
 
   Scenario Outline: Test cases for CreateMaskingViewWithHostGroup
     Given a valid connection
