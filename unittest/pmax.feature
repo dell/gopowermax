@@ -476,11 +476,11 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with met
 
     Examples:
     | induced                   | errormsg                                         | arrays    |
-    | "none"                    | "none"                                           | ""        |               
+    | "none"                    | "none"                                           | ""        |
     | "UpdateVolumeError"       | "induced error"                                  | ""        |
     | "none"                    | "ignored as it is not managed"                   | "ignored" |
 
-  Scenario Outline: Test cases for Delete Volume
+  Scenario Outline: Test cases for Delete Volume with errors
     Given a valid connection
     And I call CreateVolumeInStorageGroup with name "IntP" and size 1
     And I induce error <induced>
@@ -490,9 +490,18 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with met
 
     Examples:
     | induced                   | errormsg                                         | arrays    |
-    | "none"                    | "none"                                           | ""        |               
+    | "none"                    | "present in storage group"                       | ""        |
     | "DeleteVolumeError"       | "induced error"                                  | ""        |
     | "none"                    | "ignored as it is not managed"                   | "ignored" |
+
+  Scenario: Test cases for Delete Volume
+    Given a valid connection
+    And I call CreateVolumeInStorageGroup with name "DEL" and size 1
+    When I call RemoveVolumeFromStorageGroup
+    Then the error message contains "none"
+    And the volume is no longer a member of the Storage Group if no error
+    When I call DeleteVolume
+    Then the error message contains "none"
 
   Scenario Outline: Test cases for CreateStorageGroup for v90
     Given a valid connection

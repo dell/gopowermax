@@ -308,11 +308,11 @@ Feature: PMAX replication test
       | "sg_1"           | "none"               | "exludeSlSnaps"                     |
       | "sg_1"           | "none"               | "exludeManualSnaps,exludeSlSnaps"   |
 
-  Scenario Outline: Testing GetStorageGroupSnapshotSnapIds
+  Scenario Outline: Testing GetStorageGroupSnapshotSnapIDs
     Given a valid connection
     And I call CreateStorageGroupSnapshot with "sg_1"
     And I induce error <induced>
-    When I call GetStorageGroupSnapshotSnapIds with <storageGroupID> and <snapshotID>
+    When I call GetStorageGroupSnapshotSnapIDs with <storageGroupID> and <snapshotID>
     Then the error message contains <errormsg>
     And I should get storage group snapshot snap ids if no error
   

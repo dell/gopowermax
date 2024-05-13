@@ -48,14 +48,14 @@ const (
 )
 
 // GetStorageGroupSnapshots Get All Storage Group Snapshots
-func (c *Client) GetStorageGroupSnapshots(ctx context.Context, symID string, storageGroupID string, exludeManualSnaps bool, exludeSlSnaps bool) (*types.StorageGroupSnapshot, error) {
+func (c *Client) GetStorageGroupSnapshots(ctx context.Context, symID string, storageGroupID string, excludeManualSnaps bool, excludeSlSnaps bool) (*types.StorageGroupSnapshot, error) {
 	defer c.TimeSpent("GetStorageGroupSnapshots", time.Now())
 	query := ""
-	if exludeManualSnaps && exludeSlSnaps {
+	if excludeManualSnaps && excludeSlSnaps {
 		query = "?exclude_manual_snaps=true&exclude_sl_snaps=true"
-	} else if exludeManualSnaps {
+	} else if excludeManualSnaps {
 		query = "?exclude_manual_snap=true"
-	} else if exludeSlSnaps {
+	} else if excludeSlSnaps {
 		query = "?exclude_sl_snaps=true"
 	}
 
@@ -86,9 +86,9 @@ func (c *Client) GetStorageGroupSnapshots(ctx context.Context, symID string, sto
 	return snapshots, nil
 }
 
-// GetStorageGroupSnapshotSnapIds Get a list of Snapids for a particular snapshot
-func (c *Client) GetStorageGroupSnapshotSnapIds(ctx context.Context, symID string, storageGroupID string, snapshotID string) (*types.SnapID, error) {
-	defer c.TimeSpent("GetStorageGroupSnapshotSnapIds", time.Now())
+// GetStorageGroupSnapshotSnapIDs Get a list of SnapIDs for a particular snapshot
+func (c *Client) GetStorageGroupSnapshotSnapIDs(ctx context.Context, symID string, storageGroupID string, snapshotID string) (*types.SnapID, error) {
+	defer c.TimeSpent("GetStorageGroupSnapshotSnapIDs", time.Now())
 	URL := c.urlPrefix() + Replication + SymmetrixX + symID + XStorageGroup + "/" + storageGroupID + XSnapshot + "/" + snapshotID + SnapID
 
 	ctx, cancel := c.GetTimeoutContext(ctx)
@@ -96,7 +96,7 @@ func (c *Client) GetStorageGroupSnapshotSnapIds(ctx context.Context, symID strin
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.Error("GetStorageGroupSnapshotSnapIds failed: " + err.Error())
+		log.Error("GetStorageGroupSnapshotSnapIDs failed: " + err.Error())
 		return nil, err
 	}
 	if err = c.checkResponse(resp); err != nil {
@@ -119,7 +119,7 @@ func (c *Client) GetStorageGroupSnapshotSnapIds(ctx context.Context, symID strin
 
 // GetStorageGroupSnapshotSnap Get the details of a storage group snapshot snap
 func (c *Client) GetStorageGroupSnapshotSnap(ctx context.Context, symID string, storageGroupID string, snapshotID, snapID string) (*types.StorageGroupSnap, error) {
-	defer c.TimeSpent("GetStorageGroupSnapshotSnapIds", time.Now())
+	defer c.TimeSpent("GetStorageGroupSnapshotSnapIDs", time.Now())
 	URL := c.urlPrefix() + Replication + SymmetrixX + symID + XStorageGroup + "/" + storageGroupID + XSnapshot + "/" + snapshotID + SnapID + "/" + snapID
 
 	ctx, cancel := c.GetTimeoutContext(ctx)
@@ -127,7 +127,7 @@ func (c *Client) GetStorageGroupSnapshotSnap(ctx context.Context, symID string, 
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.Error("GetStorageGroupSnapshotSnapIds failed: " + err.Error())
+		log.Error("GetStorageGroupSnapshotSnapIDs failed: " + err.Error())
 		return nil, err
 	}
 	if err = c.checkResponse(resp); err != nil {

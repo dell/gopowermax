@@ -599,7 +599,7 @@ func getRouter() http.Handler {
 
 	// StorageGroup Snapshots
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot", handleGetStorageGroupSnapshots)
-	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot/{snapshotId}/snapid", handleGetStorageGroupSnapshotsSnapsIds)
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot/{snapshotId}/snapid", handleGetStorageGroupSnapshotsSnapsIDs)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot/{snapshotId}/snapid/{snapID}", handleGetStorageGroupSnapshotsSnapsDetails)
 
 	// Snapshot
@@ -695,7 +695,7 @@ func handleGetStorageGroupSnapshotsSnapsDetails(w http.ResponseWriter, r *http.R
 }
 
 // GET /replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot/{snapshotId}/snapid
-func handleGetStorageGroupSnapshotsSnapsIds(w http.ResponseWriter, r *http.Request) {
+func handleGetStorageGroupSnapshotsSnapsIDs(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -707,7 +707,7 @@ func handleGetStorageGroupSnapshotsSnapsIds(w http.ResponseWriter, r *http.Reque
 	snaps := make([]int64, 1)
 	snaps = append(snaps, 1234)
 	snapIDs := &types.SnapID{
-		SnapIds: snaps,
+		SnapIDs: snaps,
 	}
 	writeJSON(w, snapIDs)
 }
@@ -823,7 +823,7 @@ func handleCreateSnapshotPolicy(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		ids := []string{"Test123", "Test345"}
 		snapPolicyList := &types.SnapshotPolicyList{
-			SnapshotPolicyIds: ids,
+			SnapshotPolicyIDs: ids,
 		}
 		writeJSON(w, snapPolicyList)
 	}
@@ -1464,7 +1464,7 @@ func handleVolume(w http.ResponseWriter, r *http.Request) {
 		}
 		err := DeleteVolume(volID)
 		if err != nil {
-			writeError(w, "error deleteVolume", http.StatusBadRequest)
+			writeError(w, "error deleteVolume: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 	}

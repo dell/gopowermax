@@ -114,7 +114,7 @@ type unitContext struct {
 	sgSnapshot              *types.StorageGroupSnapshot
 	storageGroupSnapSetting *types.CreateStorageGroupSnapshot
 	storageGroupSnap        *types.StorageGroupSnap
-	storageGroupSnapIds     *types.SnapID
+	storageGroupSnapIDs     *types.SnapID
 
 	storageGroupPerfKeys *types.StorageGroupKeysResult
 	arrayPerfKeys        *types.ArrayKeysResult
@@ -1567,8 +1567,8 @@ func (c *unitContext) iShouldGetAListOfSnapshotsIfNoError() error {
 	return nil
 }
 
-func (c *unitContext) iCallCreateSnapshotWithAndSnapshotOnIt(volIds, snapID string) error {
-	c.sourceVolumeList = c.createVolumeList(volIds)
+func (c *unitContext) iCallCreateSnapshotWithAndSnapshotOnIt(volIDs, snapID string) error {
+	c.sourceVolumeList = c.createVolumeList(volIDs)
 	c.err = c.client.CreateSnapshot(context.TODO(), symID, snapID, c.sourceVolumeList, 0)
 	return nil
 }
@@ -1700,16 +1700,16 @@ func (c *unitContext) iShouldGetStorageGroupSnapshotInformationIfNoError() error
 	return nil
 }
 
-func (c *unitContext) iCallGetStorageGroupSnapshotSnapIdsWithAnd(storageGroupID string, snapshotID string) error {
-	c.storageGroupSnapIds, c.err = c.client.GetStorageGroupSnapshotSnapIds(context.TODO(), symID, storageGroupID, snapshotID)
+func (c *unitContext) iCallGetStorageGroupSnapshotSnapIDsWithAnd(storageGroupID string, snapshotID string) error {
+	c.storageGroupSnapIDs, c.err = c.client.GetStorageGroupSnapshotSnapIDs(context.TODO(), symID, storageGroupID, snapshotID)
 	return nil
 }
 
-func (c *unitContext) iShouldGetStorageGroupSnapshotSnapIdsIfNoError() error {
+func (c *unitContext) iShouldGetStorageGroupSnapshotSnapIDsIfNoError() error {
 	if c.err != nil {
 		return nil
 	}
-	if c.storageGroupSnapIds == nil {
+	if c.storageGroupSnapIDs == nil {
 		return fmt.Errorf("The storage group snapshot snap does not exist")
 	}
 	return nil
@@ -1830,9 +1830,9 @@ func (c *unitContext) thereShouldBeNoErrors() error {
 }
 
 // createVolumeList will extract all the volumes and will return a list of type VolumeList
-func (c *unitContext) createVolumeList(volIds string) []types.VolumeList {
+func (c *unitContext) createVolumeList(volIDs string) []types.VolumeList {
 	var VolumeList []types.VolumeList
-	volNames := strings.Split(volIds, ",")
+	volNames := strings.Split(volIDs, ",")
 	for i := 0; i < len(volNames); i++ {
 		VolumeList = append(VolumeList, types.VolumeList{Name: volNames[i]})
 	}
@@ -2729,8 +2729,8 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^I call GetStorageGroupSnapshots with "([^"]*)" and param "([^"]*)"$`, c.iCallGetStorageGroupSnapshotsWithAndParam)
 	s.Step(`^I should get storage group snapshot information if no error$`, c.iShouldGetStorageGroupSnapshotInformationIfNoError)
 	s.Step(`^I call CreateStorageGroupSnapshot with "([^"]*)"$`, c.iCallCreateStorageGroupSnapshotWith)
-	s.Step(`^I call GetStorageGroupSnapshotSnapIds with "([^"]*)" and "([^"]*)"$`, c.iCallGetStorageGroupSnapshotSnapIdsWithAnd)
-	s.Step(`^I should get storage group snapshot snap ids if no error$`, c.iShouldGetStorageGroupSnapshotSnapIdsIfNoError)
+	s.Step(`^I call GetStorageGroupSnapshotSnapIDs with "([^"]*)" and "([^"]*)"$`, c.iCallGetStorageGroupSnapshotSnapIDsWithAnd)
+	s.Step(`^I should get storage group snapshot snap ids if no error$`, c.iShouldGetStorageGroupSnapshotSnapIDsIfNoError)
 	s.Step(`^I call GetStorageGroupSnapshotSnap with "([^"]*)" and "([^"]*)" and "([^"]*)"$`, c.iCallGetStorageGroupSnapshotSnapWithAndAnd)
 	s.Step(`^I should get storage group snapshot snap detail information if no error$`, c.iShouldGetStorageGroupSnapshotSnapDetailInformationIfNoError)
 	s.Step(`^I call ModifyStorageGroupSnapshot with "([^"]*)" and "([^"]*)" and "([^"]*)" and action "([^"]*)"$`, c.iCallModifyStorageGroupSnapshotWithAndAndAndAction)
