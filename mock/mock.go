@@ -216,6 +216,7 @@ var InducedErrors struct {
 	GetHostGroupListError                  bool
 	GetStorageGroupMetricsError            bool
 	GetVolumesMetricsError                 bool
+	GetFileSysMetricsError                 bool
 	GetStorageGroupPerfKeyError            bool
 	GetArrayPerfKeyError                   bool
 	GetFreeRDFGError                       bool
@@ -355,6 +356,7 @@ func Reset() {
 	InducedErrors.GetHostGroupListError = false
 	InducedErrors.GetStorageGroupMetricsError = false
 	InducedErrors.GetVolumesMetricsError = false
+	InducedErrors.GetFileSysMetricsError = false
 	InducedErrors.GetStorageGroupPerfKeyError = false
 	InducedErrors.GetArrayPerfKeyError = false
 	InducedErrors.GetFreeRDFGError = false
@@ -597,7 +599,7 @@ func getRouter() http.Handler {
 
 	// StorageGroup Snapshots
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot", handleGetStorageGroupSnapshots)
-	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot/{snapshotId}/snapid", handleGetStorageGroupSnapshotsSnapsIds)
+	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot/{snapshotId}/snapid", handleGetStorageGroupSnapshotsSnapsIDs)
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot/{snapshotId}/snapid/{snapID}", handleGetStorageGroupSnapshotsSnapsDetails)
 
 	// Snapshot
@@ -626,6 +628,7 @@ func getRouter() http.Handler {
 	// Performance Metrics
 	router.HandleFunc(PREFIXNOVERSION+"/performance/StorageGroup/metrics", handleStorageGroupMetrics)
 	router.HandleFunc(PREFIXNOVERSION+"/performance/Volume/metrics", handleVolumeMetrics)
+	router.HandleFunc(PREFIXNOVERSION+"/performance/file/filesystem/metrics", handleFileSysMetrics)
 
 	// Performance Keys
 	router.HandleFunc(PREFIXNOVERSION+"/performance/StorageGroup/keys", handleStorageGroupPerfKeys)
@@ -692,7 +695,7 @@ func handleGetStorageGroupSnapshotsSnapsDetails(w http.ResponseWriter, r *http.R
 }
 
 // GET /replication/symmetrix/{symid}/storagegroup/{StorageGroupId}/snapshot/{snapshotId}/snapid
-func handleGetStorageGroupSnapshotsSnapsIds(w http.ResponseWriter, r *http.Request) {
+func handleGetStorageGroupSnapshotsSnapsIDs(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -704,7 +707,7 @@ func handleGetStorageGroupSnapshotsSnapsIds(w http.ResponseWriter, r *http.Reque
 	snaps := make([]int64, 1)
 	snaps = append(snaps, 1234)
 	snapIDs := &types.SnapID{
-		SnapIds: snaps,
+		SnapIDs: snaps,
 	}
 	writeJSON(w, snapIDs)
 }
@@ -820,7 +823,7 @@ func handleCreateSnapshotPolicy(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		ids := []string{"Test123", "Test345"}
 		snapPolicyList := &types.SnapshotPolicyList{
-			SnapshotPolicyIds: ids,
+			SnapshotPolicyIDs: ids,
 		}
 		writeJSON(w, snapPolicyList)
 	}
@@ -1459,7 +1462,11 @@ func handleVolume(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error deleting Volume: induced error - device is a member of a storage group", http.StatusForbidden)
 			return
 		}
-		DeleteVolume(volID) // #nosec G20
+		err := DeleteVolume(volID)
+		if err != nil {
+			writeError(w, "error deleteVolume: "+err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 }
 
@@ -2966,7 +2973,11 @@ func handlePortGroup(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error deleting Port Group: induced error", http.StatusRequestTimeout)
 			return
 		}
-		DeletePortGroup(pgID) // #nosec G20
+		_, err := DeletePortGroup(pgID)
+		if err != nil {
+			writeError(w, "Error deletePortGroup", http.StatusRequestTimeout)
+			return
+		}
 	default:
 		writeError(w, "Invalid Method", http.StatusBadRequest)
 	}
@@ -3184,7 +3195,11 @@ func handleHost(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error deleting Host: induced error", http.StatusRequestTimeout)
 			return
 		}
-		RemoveHost(hostID) // #nosec G20
+		err := RemoveHost(hostID)
+		if err != nil {
+			writeError(w, "error removeHost", http.StatusBadRequest)
+			return
+		}
 	default:
 		writeError(w, "Invalid Method", http.StatusBadRequest)
 	}
@@ -3303,6 +3318,33 @@ func handleVolumeMetrics(w http.ResponseWriter, r *http.Request) {
 	metricsIterator := &types.VolumeMetricsIterator{
 		ResultList: types.VolumeMetricsResultList{
 			Result: []types.VolumeResult{volumeResult},
+			From:   1,
+			To:     1,
+		},
+		ID:             "query_id",
+		Count:          1,
+		ExpirationTime: 1671091597409,
+		MaxPageSize:    1000,
+	}
+	writeJSON(w, metricsIterator)
+}
+
+// /univmax/restapi/performance/file/filesystem/metrics
+func handleFileSysMetrics(w http.ResponseWriter, _ *http.Request) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	if InducedErrors.GetFileSysMetricsError {
+		writeError(w, "Error getting volume metrics: induced error", http.StatusRequestTimeout)
+		return
+	}
+	fileMetric := types.FileSystemResult{
+		PercentBusy: 1,
+		Timestamp:   1671091500000,
+	}
+
+	metricsIterator := &types.FileSystemMetricsIterator{
+		ResultList: types.FileSystemMetricsResultList{
+			Result: []types.FileSystemResult{fileMetric},
 			From:   1,
 			To:     1,
 		},
@@ -4194,7 +4236,11 @@ func handleHostGroup(w http.ResponseWriter, r *http.Request) {
 			writeError(w, "Error deleting HostGroup: induced error", http.StatusRequestTimeout)
 			return
 		}
-		RemoveHostGroup(hostGroupID) // #nosec G20
+		err := RemoveHostGroup(hostGroupID)
+		if err != nil {
+			writeError(w, "error removeHostGroup", http.StatusBadRequest)
+			return
+		}
 	default:
 		writeError(w, "Invalid Method", http.StatusBadRequest)
 	}

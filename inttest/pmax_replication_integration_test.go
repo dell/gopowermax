@@ -141,8 +141,8 @@ func TestCrudStorageGroupSnapshot(t *testing.T) {
 	}
 	fmt.Printf("Successfully created snapshot (%v)\n", sgSnap)
 
-	// Get the list of SnapIds
-	sgSnapIds, err := client.GetStorageGroupSnapshotSnapIds(context.TODO(), symmetrixID, snapshotSgName, defaultSnapshotName)
+	// Get the list of SnapIDs
+	sgSnapIDs, err := client.GetStorageGroupSnapshotSnapIDs(context.TODO(), symmetrixID, snapshotSgName, defaultSnapshotName)
 	if err != nil {
 		t.Error("Error getting the snapshot snapid details on storage group: " + err.Error())
 		// Cleanup temp sg
@@ -150,9 +150,9 @@ func TestCrudStorageGroupSnapshot(t *testing.T) {
 		deleteStorageGroup(symmetrixID, snapshotSgName)
 		return
 	}
-	fmt.Printf("Successfully fetched snapshot ids (%v) \n\n", sgSnapIds)
+	fmt.Printf("Successfully fetched snapshot ids (%v) \n\n", sgSnapIDs)
 
-	snapid := strconv.FormatInt(sgSnapIds.SnapIds[0], 10)
+	snapid := strconv.FormatInt(sgSnapIDs.SnapIDs[0], 10)
 
 	// Link snap
 	modifyPayloadLink := &types.ModifyStorageGroupSnapshot{
@@ -843,7 +843,7 @@ func afterRun(tests []testing.InternalTest) {
 		})
 	}
 	cleanup = append(cleanup, tests...)
-	testing.Main(func(pat, str string) (bool, error) {
+	testing.Main(func(_, _ string) (bool, error) {
 		return true, nil
 	}, cleanup, nil, nil)
 }
@@ -1096,7 +1096,7 @@ func TestGetSnapshotPolicyList(t *testing.T) {
 		t.Error("Error calling GetSnapshotPolicyList " + err.Error())
 		return
 	}
-	fmt.Printf("Snapshot Policy names: %v\n", targets.SnapshotPolicyIds)
+	fmt.Printf("Snapshot Policy names: %v\n", targets.SnapshotPolicyIDs)
 }
 
 func TestDeleteSnapshotPolicy(t *testing.T) {

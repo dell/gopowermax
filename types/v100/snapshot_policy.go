@@ -129,5 +129,5 @@ type UpdateSnapshotPolicyParam struct {
 
 // SnapshotPolicyList contains list of snapshot Policiy ids
 type SnapshotPolicyList struct {
-	SnapshotPolicyIds []string `json:"name"`
+	SnapshotPolicyIDs []string `json:"name"`
 }

@@ -393,7 +393,7 @@ type PresistSnapshotAction struct {
 
 // SnapID list of snap ids related to a Storage Group snapshot
 type SnapID struct {
-	SnapIds []int64 `json:"snapids"`
+	SnapIDs []int64 `json:"snapids"`
 }
 
 // SymDevice list of devices on a particular symmetrix system

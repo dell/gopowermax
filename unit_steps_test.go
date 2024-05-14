@@ -109,11 +109,12 @@ type unitContext struct {
 	volResultPrivate      *types.VolumeResultPrivate
 	storageGroupMetrics   *types.StorageGroupMetricsIterator
 	volumesMetrics        *types.VolumeMetricsIterator
+	fileSystemMetrics     *types.FileSystemMetricsIterator
 
 	sgSnapshot              *types.StorageGroupSnapshot
 	storageGroupSnapSetting *types.CreateStorageGroupSnapshot
 	storageGroupSnap        *types.StorageGroupSnap
-	storageGroupSnapIds     *types.SnapID
+	storageGroupSnapIDs     *types.SnapID
 
 	storageGroupPerfKeys *types.StorageGroupKeysResult
 	arrayPerfKeys        *types.ArrayKeysResult
@@ -179,6 +180,8 @@ func (c *unitContext) reset() {
 	c.nfsExport = nil
 	c.nasServer = nil
 	c.fileInterface = nil
+	c.volumesMetrics = nil
+	c.fileSystemMetrics = nil
 }
 
 func (c *unitContext) iInduceError(errorType string) error {
@@ -393,6 +396,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.GetStorageGroupMetricsError = true
 	case "GetVolumesMetricsError":
 		mock.InducedErrors.GetVolumesMetricsError = true
+	case "GetFileSysMetricsError":
+		mock.InducedErrors.GetFileSysMetricsError = true
 	case "GetStorageGroupPerfKeyError":
 		mock.InducedErrors.GetStorageGroupPerfKeyError = true
 	case "GetArrayPerfKeyError":
@@ -1562,8 +1567,8 @@ func (c *unitContext) iShouldGetAListOfSnapshotsIfNoError() error {
 	return nil
 }
 
-func (c *unitContext) iCallCreateSnapshotWithAndSnapshotOnIt(volIds, snapID string) error {
-	c.sourceVolumeList = c.createVolumeList(volIds)
+func (c *unitContext) iCallCreateSnapshotWithAndSnapshotOnIt(volIDs, snapID string) error {
+	c.sourceVolumeList = c.createVolumeList(volIDs)
 	c.err = c.client.CreateSnapshot(context.TODO(), symID, snapID, c.sourceVolumeList, 0)
 	return nil
 }
@@ -1695,16 +1700,16 @@ func (c *unitContext) iShouldGetStorageGroupSnapshotInformationIfNoError() error
 	return nil
 }
 
-func (c *unitContext) iCallGetStorageGroupSnapshotSnapIdsWithAnd(storageGroupID string, snapshotID string) error {
-	c.storageGroupSnapIds, c.err = c.client.GetStorageGroupSnapshotSnapIds(context.TODO(), symID, storageGroupID, snapshotID)
+func (c *unitContext) iCallGetStorageGroupSnapshotSnapIDsWithAnd(storageGroupID string, snapshotID string) error {
+	c.storageGroupSnapIDs, c.err = c.client.GetStorageGroupSnapshotSnapIDs(context.TODO(), symID, storageGroupID, snapshotID)
 	return nil
 }
 
-func (c *unitContext) iShouldGetStorageGroupSnapshotSnapIdsIfNoError() error {
+func (c *unitContext) iShouldGetStorageGroupSnapshotSnapIDsIfNoError() error {
 	if c.err != nil {
 		return nil
 	}
-	if c.storageGroupSnapIds == nil {
+	if c.storageGroupSnapIDs == nil {
 		return fmt.Errorf("The storage group snapshot snap does not exist")
 	}
 	return nil
@@ -1825,9 +1830,9 @@ func (c *unitContext) thereShouldBeNoErrors() error {
 }
 
 // createVolumeList will extract all the volumes and will return a list of type VolumeList
-func (c *unitContext) createVolumeList(volIds string) []types.VolumeList {
+func (c *unitContext) createVolumeList(volIDs string) []types.VolumeList {
 	var VolumeList []types.VolumeList
-	volNames := strings.Split(volIds, ",")
+	volNames := strings.Split(volIDs, ",")
 	for i := 0; i < len(volNames); i++ {
 		VolumeList = append(VolumeList, types.VolumeList{Name: volNames[i]})
 	}
@@ -2234,6 +2239,13 @@ func (c *unitContext) iCallGetVolumesMetrics() error {
 	return nil
 }
 
+func (c *unitContext) iCallGetVolumesMetricsByIDFor(volID string) error {
+	var metrics *types.VolumeMetricsIterator
+	metrics, c.err = c.client.GetVolumesMetricsByID(context.TODO(), symID, volID, []string{"MBReads"}, 0, 0)
+	c.volumesMetrics = metrics
+	return nil
+}
+
 func (c *unitContext) iGetVolumesMetrics() error {
 	if c.err == nil {
 		if c.volumesMetrics == nil {
@@ -2241,6 +2253,25 @@ func (c *unitContext) iGetVolumesMetrics() error {
 		}
 		if len(c.volumesMetrics.ResultList.Result) == 0 {
 			return fmt.Errorf("no metric in volumesMetrics")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iCallGetFileSystemMetricsByIDFor(fileSystemID string) error {
+	var metrics *types.FileSystemMetricsIterator
+	metrics, c.err = c.client.GetFileSystemMetricsByID(context.TODO(), symID, fileSystemID, []string{"MBReads"}, 0, 0)
+	c.fileSystemMetrics = metrics
+	return nil
+}
+
+func (c *unitContext) iGetFileMetrics() error {
+	if c.err == nil {
+		if c.fileSystemMetrics == nil {
+			return fmt.Errorf("fileMetrics nil")
+		}
+		if len(c.fileSystemMetrics.ResultList.Result) == 0 {
+			return fmt.Errorf("no metric in filemetrics")
 		}
 	}
 	return nil
@@ -2698,8 +2729,8 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^I call GetStorageGroupSnapshots with "([^"]*)" and param "([^"]*)"$`, c.iCallGetStorageGroupSnapshotsWithAndParam)
 	s.Step(`^I should get storage group snapshot information if no error$`, c.iShouldGetStorageGroupSnapshotInformationIfNoError)
 	s.Step(`^I call CreateStorageGroupSnapshot with "([^"]*)"$`, c.iCallCreateStorageGroupSnapshotWith)
-	s.Step(`^I call GetStorageGroupSnapshotSnapIds with "([^"]*)" and "([^"]*)"$`, c.iCallGetStorageGroupSnapshotSnapIdsWithAnd)
-	s.Step(`^I should get storage group snapshot snap ids if no error$`, c.iShouldGetStorageGroupSnapshotSnapIdsIfNoError)
+	s.Step(`^I call GetStorageGroupSnapshotSnapIDs with "([^"]*)" and "([^"]*)"$`, c.iCallGetStorageGroupSnapshotSnapIDsWithAnd)
+	s.Step(`^I should get storage group snapshot snap ids if no error$`, c.iShouldGetStorageGroupSnapshotSnapIDsIfNoError)
 	s.Step(`^I call GetStorageGroupSnapshotSnap with "([^"]*)" and "([^"]*)" and "([^"]*)"$`, c.iCallGetStorageGroupSnapshotSnapWithAndAnd)
 	s.Step(`^I should get storage group snapshot snap detail information if no error$`, c.iShouldGetStorageGroupSnapshotSnapDetailInformationIfNoError)
 	s.Step(`^I call ModifyStorageGroupSnapshot with "([^"]*)" and "([^"]*)" and "([^"]*)" and action "([^"]*)"$`, c.iCallModifyStorageGroupSnapshotWithAndAndAndAction)
@@ -2751,6 +2782,9 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^I get StorageGroupMetrics$`, c.iGetStorageGroupMetrics)
 	s.Step(`^I call GetVolumesMetrics$`, c.iCallGetVolumesMetrics)
 	s.Step(`^I get VolumesMetrics$`, c.iGetVolumesMetrics)
+	s.Step(`^I call GetFileSystemMetricsByID for "([^"]*)"$`, c.iCallGetFileSystemMetricsByIDFor)
+	s.Step(`^I call GetVolumesMetricsByID for "([^"]*)"$`, c.iCallGetVolumesMetricsByIDFor)
+	s.Step(`^I get FileMetrics$`, c.iGetFileMetrics)
 
 	// Performance keys
 	s.Step(`^I call GetStorageGroupPerfKeys$`, c.iCallGetStorageGroupPerfKeys)

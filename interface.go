@@ -73,7 +73,7 @@ type Pmax interface {
 	// GetVolumeIDsIteratorWithParams returns an iterator of a list of volumes with query parameters
 	GetVolumeIDsIteratorWithParams(ctx context.Context, symID string, queryParams map[string]string) (*types.VolumeIterator, error)
 
-	// GetVolumeIDsIteraotrPage gets a page of volume ids from a Volume iterator.
+	// GetVolumeIDsIteratorPage gets a page of volume ids from a Volume iterator.
 	GetVolumeIDsIteratorPage(ctx context.Context, iter *types.VolumeIterator, from, to int) ([]string, error)
 
 	// DeleteVolumeIDsIterator deletes a Volume iterator.
@@ -134,10 +134,10 @@ type Pmax interface {
 	CreateVolumeInProtectedStorageGroupS(ctx context.Context, symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, volumeSize interface{}, volOpts map[string]interface{}, opts ...http.Header) (*types.Volume, error)
 
 	// GetStorageGroupSnapshots Gets All Storage Group Snapshots
-	GetStorageGroupSnapshots(ctx context.Context, symID string, storageGroupID string, exludeManualSnaps bool, exludeSlSnaps bool) (*types.StorageGroupSnapshot, error)
+	GetStorageGroupSnapshots(ctx context.Context, symID string, storageGroupID string, excludeManualSnaps bool, excludeSlSnaps bool) (*types.StorageGroupSnapshot, error)
 
-	// GetStorageGroupSnapshotSnapIds Gets a list of SnapIDs for a particular snapshot
-	GetStorageGroupSnapshotSnapIds(ctx context.Context, symID string, storageGroupID string, snapshotID string) (*types.SnapID, error)
+	// GetStorageGroupSnapshotSnapIDs Gets a list of SnapIDs for a particular snapshot
+	GetStorageGroupSnapshotSnapIDs(ctx context.Context, symID string, storageGroupID string, snapshotID string) (*types.SnapID, error)
 
 	// GetStorageGroupSnapshotSnap Gets the details of a storage group snapshot snap
 	GetStorageGroupSnapshotSnap(ctx context.Context, symID string, storageGroupID string, snapshotID, snapID string) (*types.StorageGroupSnap, error)
@@ -157,7 +157,7 @@ type Pmax interface {
 	// DeleteMaskingView deletes a masking view given a masking view id
 	DeleteMaskingView(ctx context.Context, symID string, maskingViewID string) error
 
-	// RenameMaskingView renames masking view given it's identifier (which is the name)
+	// RenameMaskingView renames masking view given its identifier (which is the name)
 	RenameMaskingView(ctx context.Context, symID string, maskingViewID string, newName string) (*types.MaskingView, error)
 
 	// GetStoragePoolList Gets the list of Storage Pools
@@ -189,7 +189,7 @@ type Pmax interface {
 	// GetMaskingViewList  returns a list of the MaskingView names.
 	GetMaskingViewList(ctx context.Context, symID string) (*types.MaskingViewList, error)
 
-	// GetMaskingViewByID returns a masking view given it's identifier (which is the name)
+	// GetMaskingViewByID returns a masking view given its identifier (which is the name)
 	GetMaskingViewByID(ctx context.Context, symID string, maskingViewID string) (*types.MaskingView, error)
 
 	// GetMaskingViewConnections returns the connections of a masking view (optionally for a specific volume id.)
@@ -358,15 +358,16 @@ type Pmax interface {
 
 	// GetStorageGroupMetrics returns the list of required metrics
 	GetStorageGroupMetrics(ctx context.Context, symID string, storageGroupID string, metricsQuery []string, firstAvailableDate int64, lastAvailableTime int64) (*types.StorageGroupMetricsIterator, error)
-
 	// GetVolumesMetrics returns the list of volume metrics for specific storage groups
 	GetVolumesMetrics(ctx context.Context, symID string, storageGroups string, metricsQuery []string, firstAvailableDate int64, lastAvailableTime int64) (*types.VolumeMetricsIterator, error)
-
 	// GetStorageGroupPerfKeys returns the performance keys of storage group
 	GetStorageGroupPerfKeys(ctx context.Context, symID string) (*types.StorageGroupKeysResult, error)
-
 	// GetArrayPerfKeys returns the performance keys of array
 	GetArrayPerfKeys(ctx context.Context) (*types.ArrayKeysResult, error)
+	// GetVolumesMetricsByID returns a given Volume performance metrics
+	GetVolumesMetricsByID(ctx context.Context, symID string, volID string, metricsQuery []string, firstAvailableTime, lastAvailableTime int64) (*types.VolumeMetricsIterator, error)
+	// GetFileSystemMetricsByID returns a given FileSystem performance metrics
+	GetFileSystemMetricsByID(ctx context.Context, symID string, fsID string, metricsQuery []string, firstAvailableTime, lastAvailableTime int64) (*types.FileSystemMetricsIterator, error)
 
 	// CreateMigrationEnvironment creates a migration environment
 	CreateMigrationEnvironment(ctx context.Context, sourceSymID, remoteSymID string) (*types.MigrationEnv, error)
