@@ -39,30 +39,35 @@ var (
 	// username should match an existing user in Unisphere
 	username = "username"
 	// password should be the value for the corresponding user in Unisphere
-	password                = "password"
-	apiVersion              = "XX"
-	symmetrixID             = "000000000001"
-	remoteSymmetrixID       = "000000000001"
-	localRDFGrpNo           = "0"
-	remoteRDFGrpNo          = "0"
-	defaultRepMode          = "ASYNC"
-	defaultFCPortGroup      = "fc-pg"
-	defaultiSCSIPortGroup   = "iscsi-pg"
-	defaultFCInitiator      = "FA-1D:0:00000000abcd000e"
-	defaultFCInitiatorID    string
-	fcInitiator1            = "00000000abcd000f"
-	fcInitiator2            = "00000000abcd000g"
-	fcInitiator3            = "10000000c9959b8e"
-	defaultiSCSIInitiator   = "SE-1E:000:iqn.1993-08.org.debian:01:012a34b5cd6"
-	defaultiSCSIInitiatorID string
-	iscsiInitiator1         = "iqn.1993-08.org.centos:01:012a34b5cd7"
-	iscsiInitiator2         = "iqn.1993-08.org.centos:01:012a34b5cd8"
-	defaultSRP              = "storage-pool"
-	defaultServiceLevel     = "Diamond"
-	volumePrefix            = "xx"
-	sgPrefix                = "zz"
-	snapshotPrefix          = "snap"
-	csiPrefix               = "csi"
+	password                  = "password"
+	apiVersion                = "XX"
+	symmetrixID               = "000000000001"
+	remoteSymmetrixID         = "000000000001"
+	localRDFGrpNo             = "0"
+	remoteRDFGrpNo            = "0"
+	defaultRepMode            = "ASYNC"
+	defaultFCPortGroup        = "fc-pg"
+	defaultiSCSIPortGroup     = "iscsi-pg"
+	defaultNVMePortGroup      = "nvme-pg"
+	defaultFCInitiator        = "FA-1D:0:00000000abcd000e"
+	defaultFCInitiatorID      string
+	fcInitiator1              = "00000000abcd000f"
+	fcInitiator2              = "00000000abcd000g"
+	fcInitiator3              = "10000000c9959b8e"
+	defaultiSCSIInitiator     = "SE-1E:000:iqn.1993-08.org.debian:01:012a34b5cd6"
+	defaultiSCSIInitiatorID   string
+	iscsiInitiator1           = "iqn.1993-08.org.centos:01:012a34b5cd7"
+	iscsiInitiator2           = "iqn.1993-08.org.centos:01:012a34b5cd8"
+	defaultNVMeTCPInitiator   = "OR-1C:1:nqn.2014-08.org.nvmexpress:uuid:csi_k8_nvme:76B04D56EAB26A2E1509A7E98D3DFDB6"
+	defaultNVMeTCPInitiatorID string
+	nvmetcpInitiator1         = "nqn.2014-08.org.nvmexpress:uuid:csi_k8_nvme:76B04D56EAB26A2E1509A7E98D3DFDB6"
+	nvmetcpInitiator2         = "nqn.2014-08.org.nvmexpress:uuid:csi_k8_nvme:76B04D56EAB26A2E1509A7E98D3DFDB6"
+	defaultSRP                = "storage-pool"
+	defaultServiceLevel       = "Diamond"
+	volumePrefix              = "xx"
+	sgPrefix                  = "zz"
+	snapshotPrefix            = "snap"
+	csiPrefix                 = "csi"
 	// the test run will create these for the run and clean up in the end
 	defaultStorageGroup          = "csi-Integration-Test"
 	defaultSnapshotName          = "integration-test-snapshot"
@@ -72,6 +77,7 @@ var (
 	defaultSnapshotPolicy        = "DailyDefault"
 	defaultFCHost                = "IntegrationFCHost"
 	defaultiSCSIHost             = "IntegrationiSCSIHost"
+	defaultNVMeTCPHost           = "IntegrationNVMeTCPHost"
 	defaultFCdirname             = "FA-1D"
 	defaultFCportName            = "4"
 	defaultiscsidirName          = "SE-1E"
@@ -101,6 +107,11 @@ func setDefaultVariables() {
 	defaultiSCSIInitiatorID = strings.Join(strings.Split(defaultiSCSIInitiator, ":")[2:], ":")
 	iscsiInitiator1 = setenvVariable("ISCSIInitiator1", iscsiInitiator1)
 	iscsiInitiator2 = setenvVariable("ISCSIInitiator2", iscsiInitiator2)
+	defaultNVMeTCPInitiator = setenvVariable("DefaultNVMeInitiator", defaultNVMeTCPInitiator)
+	defaultNVMeTCPInitiatorID = strings.Join(strings.Split(defaultNVMeTCPInitiator, ":")[2:], ":")
+	defaultNVMePortGroup = setenvVariable("DefaultNVMeTCPPortGroup", defaultNVMePortGroup)
+	nvmetcpInitiator1 = setenvVariable("NVMeInitiator1", nvmetcpInitiator1)
+	nvmetcpInitiator2 = setenvVariable("NVMeInitiator2", nvmetcpInitiator2)
 	volumePrefix = setenvVariable("VolumePrefix", volumePrefix)
 	defaultSRP = setenvVariable("DefaultStoragePool", defaultSRP)
 	defaultServiceLevel = setenvVariable("DefaultServiceLevel", defaultServiceLevel)
@@ -198,7 +209,14 @@ func createDefaultSGAndHost() error {
 	initiators = []string{defaultiSCSIInitiatorID}
 	_, err = createHost(symmetrixID, defaultiSCSIHost, initiators, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create default FC host: (%s)", err.Error())
+		return fmt.Errorf("failed to create default iSCSI host: (%s)", err.Error())
+	}
+
+	// Create default NVMeTCP Host
+	initiators = []string{defaultNVMeTCPInitiatorID}
+	_, err = createHost(symmetrixID, defaultNVMeTCPHost, initiators, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create default NVMeTCP host: (%s)", err.Error())
 	}
 	return err
 }
@@ -246,6 +264,7 @@ func createRDFSetup() error {
 	return err
 }
 
+// NVME
 func cleanupDefaultSGAndHOST(t *testing.T) {
 	fmt.Println("Cleaning up SG and host...")
 	// delete default SG
@@ -1239,6 +1258,64 @@ func TestGetInitiatorByiSCSIID(t *testing.T) {
 	fmt.Printf("defaultiSCSIInitator: %#v\n", initiator)
 }
 
+// NVMe
+func TestNVMeTCPGetInitiatorIDs(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+	initList, err := client.GetInitiatorList(context.TODO(), symmetrixID, "", false, false)
+	if err != nil || initList == nil {
+		t.Error("cannot get Initiator List: ", err.Error())
+		return
+	}
+	if len(initList.InitiatorIDs) == 0 {
+		t.Error("expected at least one Initiator ID in list")
+		return
+	}
+	// Get the NVMeTCP initiator list for the default initiator ID
+	initList, err = client.GetInitiatorList(context.TODO(), symmetrixID, defaultNVMeTCPInitiatorID, false, true)
+	if err != nil {
+		t.Error("Receieved error : ", err.Error())
+	}
+	if len(initList.InitiatorIDs) != 0 {
+		fmt.Println(initList.InitiatorIDs)
+	} else {
+		fmt.Println("Received an empty NVMeTCP list")
+		t.Error("Expected to find atleast one NVMeTCP initiator")
+	}
+
+	// Get the NVMeTCP initiator list for an NQN not on the array
+	initList, err = client.GetInitiatorList(context.TODO(), symmetrixID, "nqn.2014-08.org.nvmexpress:uuid:csi_nvme:76b04d56e", false, true)
+	if err != nil {
+		t.Error("Received error : ", err.Error())
+	}
+	if len(initList.InitiatorIDs) != 0 {
+		fmt.Println(initList.InitiatorIDs)
+	} else {
+		fmt.Println("Received an empty list as expected for unknown IQN")
+	}
+}
+
+func TestGetInitiatorByNVMeTCPID(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+	initiator, err := client.GetInitiatorByID(context.TODO(), symmetrixID, defaultNVMeTCPInitiator)
+	if err != nil || initiator == nil {
+		t.Error("Expected to find " + defaultNVMeTCPInitiator + " but didn't")
+		return
+	}
+	fmt.Printf("defaultNVMeTCPInitator: %#v\n", initiator)
+}
+
 func TestFCGetInitiators(t *testing.T) {
 	// Get all the initiators and print the FC ones
 	initList, err := client.GetInitiatorList(context.TODO(), symmetrixID, "", false, false)
@@ -1452,6 +1529,104 @@ func TestCreateiSCSIHost(t *testing.T) {
 	if err != nil {
 		t.Error("Could not delete Host: " + err.Error())
 	}
+}
+
+func TestCreateNVMeTCPHost(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			return
+		}
+	}
+	// In case a prior test left the host in the system
+	err := deleteHost(symmetrixID, "IntTestNVMeTCPHost")
+	if err != nil {
+		t.Error("Could not delete Host: " + err.Error())
+	}
+	initiatorKeys := make([]string, 0)
+	initiatorKeys = append(initiatorKeys, nvmetcpInitiator1)
+	host, err := createHost(symmetrixID, "IntTestNVMeTCPHost", initiatorKeys, nil)
+	if err != nil || host == nil {
+		t.Error("Expected to create host but didn't: " + err.Error())
+		return
+	}
+	fmt.Printf("%#v\n, host", host)
+	err = deleteHost(symmetrixID, "IntTestNVMeTCPHost")
+	if err != nil {
+		t.Error("Could not delete Host: " + err.Error())
+	}
+}
+
+func TestCreateNVMeTCPMaskingView(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping this test in short mode")
+	}
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+	hostID := "IntTestNVMeTCPMV-Host"
+	// In case a prior test left the Host in the system...
+	client.DeleteHost(context.TODO(), symmetrixID, hostID)
+
+	// create a Host with some initiators
+	initiatorKeys := make([]string, 0)
+	initiatorKeys = append(initiatorKeys, nvmetcpInitiator1)
+	fmt.Println("Setting up a host before creation of masking view")
+	host, err := createHost(symmetrixID, hostID, initiatorKeys, nil)
+	if err != nil || host == nil {
+		t.Error("Expected to create host but didn't: " + err.Error())
+		return
+	}
+	fmt.Printf("%#v\n, host", host)
+	// add a volume in defaultStorageGroup
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, time.Now().Nanosecond())
+	fmt.Printf("volumeName: %s\n", volumeName)
+	volOpts := make(map[string]interface{})
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1, volOpts)
+	if err != nil {
+		t.Error("Expected to create a volume but didn't" + err.Error())
+		return
+	}
+	fmt.Printf("volume:\n%#v\n", vol)
+	maskingViewID := "IntTestNVMeTCPMV"
+	maskingView, err := client.CreateMaskingView(context.TODO(), symmetrixID, maskingViewID, defaultStorageGroup,
+		hostID, true, defaultNVMePortGroup)
+	if err != nil {
+		t.Error("Expected to create MV with NVMeTCP initiator and port but didn't: " + err.Error())
+		cleanupHost(symmetrixID, hostID, t)
+		return
+	}
+	fmt.Println("Fetching the newly created masking view from array")
+	// Check if the MV exists on array
+	maskingView, err = client.GetMaskingViewByID(context.TODO(), symmetrixID, maskingViewID)
+	if err != nil || maskingView == nil {
+		t.Error("Expected to find " + maskingViewID + " but didn't")
+		cleanupHost(symmetrixID, hostID, t)
+		return
+	}
+	fmt.Printf("%#v\n", maskingView)
+	fmt.Println("Cleaning up the masking view")
+	err = client.DeleteMaskingView(context.TODO(), symmetrixID, maskingViewID)
+	if err != nil {
+		t.Error("Failed to delete " + maskingViewID)
+		return
+	}
+	fmt.Println("Sleeping for 20 seconds")
+	time.Sleep(20 * time.Second)
+	// Confirm if the masking view got deleted
+	maskingView, err = client.GetMaskingViewByID(context.TODO(), symmetrixID, maskingViewID)
+	if err == nil {
+		t.Error("Expected a failure in fetching MV: " + maskingViewID + "but didn't")
+		fmt.Printf("%#v\n", maskingView)
+		return
+	}
+	fmt.Println(fmt.Sprintf("Error in fetching %s: %s", maskingViewID, err.Error()))
+	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
+	cleanupHost(symmetrixID, hostID, t)
 }
 
 func TestCreateFCMaskingView(t *testing.T) {

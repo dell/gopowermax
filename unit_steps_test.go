@@ -31,25 +31,27 @@ import (
 )
 
 const (
-	defaultUsername        = "username"
-	defaultPassword        = "password"
-	symID                  = "000197900046"
-	remoteSymID            = ""
-	srdfMode               = "ASYNC"
-	testPortGroup          = "12se0042-iscsi-PG"
-	testInitiator          = "SE-1E:000:iqn.1993-08.org.debian:01:5ae293b352a2"
-	testInitiatorIQN       = "iqn.1993-08.org.debian:01:5ae293b352a2"
-	testUpdateInitiatorIQN = "iqn.1993-08.org.debian:01:5ae293b352a3"
-	testUpdateInitiator    = "SE-1E:000:iqn.1993-08.org.debian:01:5ae293b352a3"
-	testHost               = "l2se0042_iscsi_ig"
-	testHostGroup          = "l2se0042_43_iscsi_ig"
-	testSG                 = "l2se0042_sg"
-	mvID                   = "12se0042_mv"
-	testFCInitiatorWWN     = "10000090fa66060a"
-	testFCInitiator        = "FA-1D:4:10000090fa66060a"
-	protocol               = "SCSI_FC"
-	queryNASServerID       = "nas_server_id"
-	queryName              = "name"
+	defaultUsername         = "username"
+	defaultPassword         = "password"
+	symID                   = "000197900046"
+	remoteSymID             = ""
+	srdfMode                = "ASYNC"
+	testPortGroup           = "12se0042-iscsi-PG"
+	testInitiator           = "SE-1E:000:iqn.1993-08.org.debian:01:5ae293b352a2"
+	testInitiatorIQN        = "iqn.1993-08.org.debian:01:5ae293b352a2"
+	testUpdateInitiatorIQN  = "iqn.1993-08.org.debian:01:5ae293b352a3"
+	testUpdateInitiator     = "SE-1E:000:iqn.1993-08.org.debian:01:5ae293b352a3"
+	testNVMETCPInitiatorNQN = "nqn.2014-08.org.nvmexpress:uuid:csi_k8_nvme:76b04d56eab26a2e1509a7e98d3dfdb6"
+	testNVMETCPInitiator    = "5e07d33b-d1ee-497c-97d8-22c0337ed8b8"
+	testHost                = "l2se0042_iscsi_ig"
+	testHostGroup           = "l2se0042_43_iscsi_ig"
+	testSG                  = "l2se0042_sg"
+	mvID                    = "12se0042_mv"
+	testFCInitiatorWWN      = "10000090fa66060a"
+	testFCInitiator         = "FA-1D:4:10000090fa66060a"
+	protocol                = "SCSI_FC"
+	queryNASServerID        = "nas_server_id"
+	queryName               = "name"
 )
 
 type uMV struct {
@@ -1219,6 +1221,14 @@ func (c *unitContext) iHaveAFCHost(hostName string) error {
 	mock.AddInitiator(testFCInitiator, testFCInitiatorWWN, "Fibre", []string{"FA-1D:4"}, "")
 	c.hostID = hostName
 	c.host, c.err = mock.AddHost(c.hostID, "Fibre", initiators)
+	return nil
+}
+
+func (c *unitContext) iHaveANVMETCPHost(hostName string) error {
+	initiators := []string{testNVMETCPInitiatorNQN}
+	mock.AddInitiator(testNVMETCPInitiator, testNVMETCPInitiatorNQN, "GigE", []string{"OR-1C:001"}, "")
+	c.hostID = hostName
+	c.host, c.err = mock.AddHost(c.hostID, "NVMe", initiators)
 	return nil
 }
 
@@ -2681,6 +2691,7 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	// Host
 	s.Step(`^I have a FC Host "([^"]*)"$`, c.iHaveAFCHost)
 	s.Step(`^I have a ISCSI Host "([^"]*)"$`, c.iHaveAISCSIHost)
+	s.Step(`^I have a NVMeTCP Host "([^"]*)"$`, c.iHaveANVMETCPHost)
 	s.Step(`^I call GetHostList$`, c.iCallGetHostList)
 	s.Step(`^I get a valid HostList if no error$`, c.iGetAValidHostListIfNoError)
 	s.Step(`^I call GetHostByID "([^"]*)"$`, c.iCallGetHostByID)
