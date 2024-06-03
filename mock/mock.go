@@ -251,6 +251,7 @@ var InducedErrors struct {
 	DeleteNFSExportError                   bool
 	GetFileInterfaceError                  bool
 	ExecuteActionError                     bool
+	GetFreshMetrics                        bool
 }
 
 // hasError checks to see if the specified error (via pointer)
@@ -391,6 +392,7 @@ func Reset() {
 	InducedErrors.DeleteNFSExportError = false
 	InducedErrors.GetFileInterfaceError = false
 	InducedErrors.ExecuteActionError = false
+	InducedErrors.GetFreshMetrics = false
 	Data.JSONDir = "mock"
 	Data.VolumeIDToIdentifier = make(map[string]string)
 	Data.VolumeIDToSize = make(map[string]int)
@@ -3308,7 +3310,11 @@ func handleVolumeMetrics(w http.ResponseWriter, r *http.Request) {
 		Writes:            0.0,
 		ReadResponseTime:  0.0,
 		WriteResponseTime: 0.0,
+		IoRate:            5.0,
 		Timestamp:         1671091500000,
+	}
+	if InducedErrors.GetFreshMetrics {
+		volumeMetric.Timestamp = time.Now().UnixMilli()
 	}
 	volumeResult := types.VolumeResult{
 		VolumeResult:  []types.VolumeMetric{volumeMetric},
@@ -3378,17 +3384,15 @@ func handleStorageGroupPerfKeys(w http.ResponseWriter, r *http.Request) {
 }
 
 // /univmax/restapi/performance/Array/keys
-func handleArrayPerfKeys(w http.ResponseWriter, r *http.Request) {
+func handleArrayPerfKeys(w http.ResponseWriter, _ *http.Request) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
-	vars := mux.Vars(r)
-	symmetrixID := vars["symmetrixId"]
 	if InducedErrors.GetArrayPerfKeyError {
 		writeError(w, "Error getting array perf key: induced error", http.StatusRequestTimeout)
 		return
 	}
 	arrayInfo := types.ArrayInfo{
-		SymmetrixID:        symmetrixID,
+		SymmetrixID:        DefaultSymmetrixID,
 		FirstAvailableDate: 0,
 		LastAvailableDate:  1671091597409,
 	}

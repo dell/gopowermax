@@ -40,6 +40,12 @@ type ISCSITarget struct {
 	PortalIPs []string
 }
 
+// NVMeTCPTarget is a structure representing a target NQN and associated IP addresses
+type NVMeTCPTarget struct {
+	NQN       string
+	PortalIPs []string
+}
+
 const (
 	// DefaultAPIVersion is the default API version you will get if not specified to NewClientWithArgs.
 	// The other supported versions are listed here.
@@ -251,6 +257,8 @@ type Pmax interface {
 	GetPort(ctx context.Context, symID string, directorID string, portID string) (*types.Port, error)
 	// GetListOfTargetAddresses returns an array of all IP addresses which expose iscsi targets.
 	GetListOfTargetAddresses(ctx context.Context, symID string) ([]string, error)
+	// GetNVMeTCPTargets returns a list of NVMeTCP targets for given sym id
+	GetNVMeTCPTargets(ctx context.Context, symID string) ([]NVMeTCPTarget, error)
 	// GetISCSITargets returns a list of ISCSI Targets for a given sym id
 	GetISCSITargets(ctx context.Context, symID string) ([]ISCSITarget, error)
 	// CreateHostGroup creates a hostGroup from a list of hostIDs (and optional HostFlags) and  returns a types.HostGroup.

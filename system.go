@@ -368,6 +368,59 @@ func (c *Client) GetISCSITargets(ctx context.Context, symID string) ([]ISCSITarg
 	return targets, nil
 }
 
+// GetNVMeTCPTargets returns list of target addresses
+func (c *Client) GetNVMeTCPTargets(ctx context.Context, symID string) ([]NVMeTCPTarget, error) {
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	targets := make([]NVMeTCPTarget, 0)
+	// Get list of all directors
+	directors, err := c.GetDirectorIDList(ctx, symID)
+	if err != nil {
+		return []NVMeTCPTarget{}, err
+	}
+
+	for _, d := range directors.DirectorIDs {
+		// Check if director is ISCSI
+		// To do this, check if any ports have ports with GigE enabled
+		ports, err := c.GetPortList(ctx, symID, d, "type=OSHostAndRDF")
+		if err != nil {
+			// Ignore the error and continue
+			log.Errorf("Failed to get ports of type OSHost for director: %s. Error: %s",
+				d, err.Error())
+			continue
+		}
+		if len(ports.SymmetrixPortKey) > 0 {
+			// This is a director with ISCSI port(s)
+			// Query for iscsi_targets
+			virtualPorts, err := c.GetPortList(ctx, symID, d, "nvmetcp_endpoint=true")
+			if err != nil {
+				return []NVMeTCPTarget{}, err
+			}
+			// we have a list of virtual director ports which have NVMeTCP endpoints
+			// and portal IPs associated with it
+			for _, vp := range virtualPorts.SymmetrixPortKey {
+				port, err := c.GetPort(ctx, symID, vp.DirectorID, vp.PortID)
+				if err != nil {
+					// Ignore the error and continue
+					log.Errorf("Failed to fetch port details for %s:%s. Error: %s",
+						vp.DirectorID, vp.PortID, err.Error())
+					continue
+				}
+				// this should always be set
+				if port.SymmetrixPort.Identifier != "" {
+					tgt := NVMeTCPTarget{
+						NQN:       port.SymmetrixPort.Identifier,
+						PortalIPs: port.SymmetrixPort.IPAddresses,
+					}
+					targets = append(targets, tgt)
+				}
+			}
+		}
+	}
+	return targets, nil
+}
+
 // RefreshSymmetrix refreshes symmetrix cache
 func (c *Client) RefreshSymmetrix(ctx context.Context, symID string) error {
 	defer c.TimeSpent("RefreshSymmetrix", time.Now())
