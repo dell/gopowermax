@@ -2349,6 +2349,7 @@ func newInitiator(initiatorID string, initiatorName string, initiatorType string
 		InitiatorType:        initiatorType,
 		FCID:                 "0",
 		IPAddress:            "192.168.1.175",
+		Host:                 hostID,
 		HostID:               hostID,
 		HostGroupIDs:         []string{},
 		LoggedIn:             true,
@@ -2464,6 +2465,7 @@ func AddHost(hostID string, hostType string, initiatorIDs []string) (*types.Host
 		for k, v := range Data.InitiatorIDToInitiator {
 			if v.InitiatorID == initID {
 				Data.InitiatorIDToInitiator[k].HostID = hostID
+				Data.InitiatorIDToInitiator[k].Host = hostID
 				break
 			}
 		}
