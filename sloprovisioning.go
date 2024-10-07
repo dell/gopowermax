@@ -624,7 +624,7 @@ func (c *Client) CreateVolumeInStorageGroup(ctx context.Context, symID string, s
 
 	switch job.Status {
 	case types.JobStatusFailed:
-		return nil, fmt.Errorf("The UpdateStorageGroup job failed: " + c.JobToString(job))
+		return nil, fmt.Errorf("the UpdateStorageGroup job failed: %s", c.JobToString(job))
 	}
 	volume, err := c.GetVolumeByIdentifier(ctx, symID, storageGroupID, volumeName, volumeSize, capUnit)
 	return volume, err
@@ -645,7 +645,7 @@ func (c *Client) GetVolumeByIdentifier(ctx context.Context, symID, storageGroupI
 	}
 	volIDList, err := c.GetVolumeIDList(ctx, symID, volumeName, false)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't get Volume ID List: " + err.Error())
+		return nil, fmt.Errorf("couldn't get Volume ID List: %s", err.Error())
 	}
 	if len(volIDList) > 1 {
 		log.Warning("Found multiple volumes matching the identifier " + volumeName)
@@ -663,9 +663,9 @@ func (c *Client) GetVolumeByIdentifier(ctx context.Context, symID, storageGroupI
 			}
 		}
 	}
-	errormsg := fmt.Sprintf("Failed to find newly created volume with name: %s in SG: %s", volumeName, storageGroupID)
-	log.Error(errormsg)
-	return nil, fmt.Errorf(errormsg)
+	err = fmt.Errorf("failed to find newly created volume with name: %s in SG: %s", volumeName, storageGroupID)
+	log.Error(err)
+	return nil, err
 }
 
 // CreateVolumeInStorageGroupS creates a volume in the specified Storage Group with a given volumeName
@@ -814,7 +814,7 @@ func (c *Client) AddVolumesToStorageGroup(ctx context.Context, symID, storageGro
 
 	switch job.Status {
 	case types.JobStatusFailed:
-		return fmt.Errorf("The UpdateStorageGroup job failed: " + c.JobToString(job))
+		return fmt.Errorf("error: UpdateStorageGroup job failed: %s", c.JobToString(job))
 	}
 	return nil
 }

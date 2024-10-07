@@ -1272,7 +1272,7 @@ func performActionOnRDFSG(w http.ResponseWriter, rdfNo, action string) {
 // GET /univmax/restapi/system/version
 func handleVersion(w http.ResponseWriter, r *http.Request) {
 	auth := defaultUsername + ":" + defaultPassword
-	authExpected := fmt.Sprintf("Basic " + base64.StdEncoding.EncodeToString([]byte(auth)))
+	authExpected := fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(auth)))
 	// Check for valid credentials
 	authSupplied := r.Header.Get("Authorization")
 	if authExpected != authSupplied {
@@ -2455,9 +2455,9 @@ func AddHost(hostID string, hostType string, initiatorIDs []string) (*types.Host
 		}
 	}
 	if !validInitiators {
-		errormsg := "Error! Some initiators don't exist or are not valid"
+		errormsg := errors.New("error: Some initiators don't exist or are not valid")
 		fmt.Println(errormsg)
-		return nil, fmt.Errorf(errormsg)
+		return nil, errormsg
 	}
 	newHost(hostID, hostType, initiatorIDs)
 	// Update the initiators
@@ -2615,9 +2615,9 @@ func AddPortGroup(portGroupID string, portGroupType string, portIdentifiers []st
 	for _, dirPortKey := range portIdentifiers {
 		dirPortDetails := strings.Split(dirPortKey, ":")
 		if len(dirPortDetails) != 2 {
-			errormsg := fmt.Sprintf("Invalid dir port specified: %s", dirPortKey)
+			errormsg := fmt.Errorf("invalid dir port specified: %s", dirPortKey)
 			log.Error(errormsg)
-			return nil, fmt.Errorf(errormsg)
+			return nil, errormsg
 		}
 		portKey := types.PortKey{
 			DirectorID: dirPortDetails[0],
