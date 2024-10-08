@@ -321,7 +321,7 @@ func TestGetSnapshotInfo(t *testing.T) {
 	if client == nil {
 		err := getClient()
 		if err != nil {
-			t.Errorf(err.Error())
+			t.Error(err)
 			return
 		}
 	}
@@ -347,7 +347,7 @@ func TestGetSnapshotGenerations(t *testing.T) {
 	if client == nil {
 		err := getClient()
 		if err != nil {
-			t.Errorf(err.Error())
+			t.Error(err)
 			return
 		}
 	}
@@ -372,7 +372,7 @@ func TestGetSnapshotGenerationInfo(t *testing.T) {
 	if client == nil {
 		err := getClient()
 		if err != nil {
-			t.Errorf(err.Error())
+			t.Error(err)
 			return
 		}
 	}
