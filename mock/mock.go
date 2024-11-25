@@ -2304,6 +2304,7 @@ func newVolume(volumeID, volumeIdentifier string, size int, sgList []string) {
 		VolumeIdentifier:      volumeIdentifier,
 		WWN:                   "600009700001979000465330303" + volumeID,
 		EffectiveWWN:          "600009700001979000465330303" + volumeID,
+		NGUID:                 "600009700001979000465330303" + volumeID,
 		Encapsulated:          false,
 		NumberOfStorageGroups: 1,
 		NumberOfFrontEndPaths: 0,
