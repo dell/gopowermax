@@ -132,71 +132,95 @@ func NewClient() (client Pmax, err error) {
 // NewClientWithArgs allows the user to specify the endpoint, version, application name, insecure boolean, and useCerts boolean
 // as direct arguments rather than receiving them from the enviornment. See NewClient().
 func NewClientWithArgs(
-	endpoint string,
-	applicationName string,
-	insecure,
-	useCerts bool,
+    endpoint string,
+    applicationName string,
+    insecure,
+    useCerts bool,
+    certFile string, // Add certFile parameter
 ) (client Pmax, err error) {
-	logResponseTimes, _ = strconv.ParseBool(os.Getenv("X_CSI_POWERMAX_RESPONSE_TIMES"))
+    logResponseTimes, _ := strconv.ParseBool(os.Getenv("X_CSI_POWERMAX_RESPONSE_TIMES"))
 
-	contextTimeout := defaultPmaxTimeout
-	if timeoutStr := os.Getenv("X_CSI_UNISPHERE_TIMEOUT"); timeoutStr != "" {
-		if timeout, err := time.ParseDuration(timeoutStr); err == nil {
-			doLog(log.WithError(err).Error, "Unable to parse Unisphere timout")
-			contextTimeout = timeout
-		}
-	}
+    contextTimeout := defaultPmaxTimeout
+    if timeoutStr := os.Getenv("X_CSI_UNISPHERE_TIMEOUT"); timeoutStr != "" {
+        if timeout, err := time.ParseDuration(timeoutStr); err == nil {
+            contextTimeout = timeout
+        } else {
+            doLog(log.WithError(err).Error, "Unable to parse Unisphere timeout")
+        }
+    }
 
-	fields := map[string]interface{}{
-		"endpoint":         endpoint,
-		"applicationName":  applicationName,
-		"insecure":         insecure,
-		"useCerts":         useCerts,
-		"version":          DefaultAPIVersion,
-		"debug":            debug,
-		"logResponseTimes": logResponseTimes,
-	}
+    fields := map[string]interface{}{
+        "endpoint":         endpoint,
+        "applicationName":  applicationName,
+        "insecure":         insecure,
+        "useCerts":         useCerts,
+        "version":          DefaultAPIVersion,
+        "debug":            debug,
+        "logResponseTimes": logResponseTimes,
+    }
 
-	doLog(log.WithFields(fields).Debug, "pmax client init")
+    doLog(log.WithFields(fields).Debug, "pmax client init")
 
-	if endpoint == "" {
-		doLog(log.WithFields(fields).Error, "endpoint is required")
-		return nil, fmt.Errorf("Endpoint must be supplied, e.g. https://1.2.3.4:8443")
-	}
+    if endpoint == "" {
+        doLog(log.WithFields(fields).Error, "endpoint is required")
+        return nil, fmt.Errorf("Endpoint must be supplied, e.g. https://1.2.3.4:8443")
+    }
 
-	opts := api.ClientOptions{
-		Insecure: insecure,
-		UseCerts: useCerts,
-		ShowHTTP: debug,
-	}
+    opts := api.ClientOptions{
+        Insecure: insecure,
+        UseCerts: useCerts,
+        ShowHTTP: debug,
+    }
 
-	if applicationType != "" {
-		log.Debug(fmt.Sprintf("Application type already set to: %s, Resetting it to: %s",
-			applicationType, applicationName))
-	}
-	applicationType = applicationName
+    if applicationType != "" {
+        log.Debug(fmt.Sprintf("Application type already set to: %s, Resetting it to: %s",
+            applicationType, applicationName))
+    }
+    applicationType = applicationName
 
-	ac, err := api.New(endpoint, opts, debug)
-	if err != nil {
-		doLog(log.WithError(err).Error, "Unable to create HTTP client")
-		return nil, err
-	}
+    // Create TLS configuration
+    tlsConfig := &tls.Config{
+        InsecureSkipVerify: insecure,
+    }
+    if useCerts && certFile != "" {
+        caCert, err := ioutil.ReadFile(certFile)
+        if err != nil {
+            doLog(log.WithError(err).Error, "Unable to read certificate file")
+            return nil, err
+        }
+        caCertPool := x509.NewCertPool()
+        caCertPool.AppendCertsFromPEM(caCert)
+        tlsConfig.RootCAs = caCertPool
+    }
 
-	client = &Client{
-		api: ac,
-		configConnect: &ConfigConnect{
-			Version: DefaultAPIVersion,
-		},
-		allowedArrays:  []string{},
-		version:        DefaultAPIVersion,
-		contextTimeout: contextTimeout,
-	}
+    // Create HTTP client with TLS configuration
+    transport := &http.Transport{
+        TLSClientConfig: tlsConfig,
+    }
+    httpClient := &http.Client{
+        Transport: transport,
+    }
 
-	accHeader = api.HeaderValContentTypeJSON
-	accHeader = fmt.Sprintf("%s;version=%s", api.HeaderValContentTypeJSON, DefaultAPIVersion)
-	conHeader = accHeader
+    ac, err := api.NewWithClient(endpoint, opts, debug, httpClient)
+    if err != nil {
+        doLog(log.WithError(err).Error, "Unable to create HTTP client")
+        return nil, err
+    }
 
-	return client, nil
+    client = &Client{
+        api: ac,
+        configConnect: &ConfigConnect{
+            Version: DefaultAPIVersion,
+        },
+        allowedArrays:  []string{},
+        version:        DefaultAPIVersion,
+        contextTimeout: contextTimeout,
+    }
+
+    accHeader := fmt.Sprintf("%s;version=%s", api.HeaderValContentTypeJSON, DefaultAPIVersion)
+    conHeader := accHeader
+
+    return client, nil
 }
 
 // WithSymmetrixID sets the default array for the client
