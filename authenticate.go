@@ -126,7 +126,8 @@ func NewClient() (client Pmax, err error) {
 		os.Getenv("CSI_POWERMAX_ENDPOINT"),
 		os.Getenv("CSI_APPLICATION_NAME"),
 		os.Getenv("CSI_POWERMAX_INSECURE") == "true",
-		os.Getenv("CSI_POWERMAX_USECERTS") == "true")
+		os.Getenv("CSI_POWERMAX_USECERTS") == "true",
+		"")
 }
 
 // NewClientWithArgs allows the user to specify the endpoint, version, application name, insecure boolean, and useCerts boolean
@@ -136,13 +137,15 @@ func NewClientWithArgs(
 	applicationName string,
 	insecure,
 	useCerts bool,
+	certFile string,
 ) (client Pmax, err error) {
 	logResponseTimes, _ = strconv.ParseBool(os.Getenv("X_CSI_POWERMAX_RESPONSE_TIMES"))
 
 	contextTimeout := defaultPmaxTimeout
 	if timeoutStr := os.Getenv("X_CSI_UNISPHERE_TIMEOUT"); timeoutStr != "" {
-		if timeout, err := time.ParseDuration(timeoutStr); err == nil {
+		if timeout, err := time.ParseDuration(timeoutStr); err != nil {
 			doLog(log.WithError(err).Error, "Unable to parse Unisphere timout")
+		} else {
 			contextTimeout = timeout
 		}
 	}
@@ -168,6 +171,7 @@ func NewClientWithArgs(
 		Insecure: insecure,
 		UseCerts: useCerts,
 		ShowHTTP: debug,
+		CertFile: certFile,
 	}
 
 	if applicationType != "" {
