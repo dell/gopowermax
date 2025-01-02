@@ -177,6 +177,10 @@ func New(
 				return nil, err
 			}
 			pool.AppendCertsFromPEM(revProxyCert)
+			if !pool.AppendCertsFromPEM(revProxyCert) {
+				c.doLog(log.Error, "Failed to append reverse proxy certificate to pool")
+				return nil, errors.New("failed to append reverse proxy certificate to pool")
+			}
 		}
 		c.http.Transport = &http.Transport{
 			// #nosec G402
