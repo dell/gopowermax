@@ -148,8 +148,8 @@ Feature: PMAX SRDF test
       | volname                                                                         | size | induced                   | errormsg                                               | arrays    |
       | "IntgA"                                                                         | 1    | "none"                    | "none"                                                 | ""        |
       | "IntgB"                                                                         | 5    | "none"                    | "none"                                                 | ""        |
-      | "IntgG"                                                                         | 1    | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
-      | "IntgH"                                                                         | 1    | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
+      | "IntgG"                                                                         | 1    | "GetVolumeError"          | "failed to find newly created volume with name: IntgG" | ""        |
+      | "IntgH"                                                                         | 1    | "VolumeNotCreatedError"   | "failed to find newly created volume with name: IntgH" | ""        |
       | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy" | 1    | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
       | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"               | 1    | "none"                    | "none"                                                 | ""        |
       | "IntgA"                                                                         | 1    | "none"                    | "ignored as it is not managed"                         | "ignored" |
