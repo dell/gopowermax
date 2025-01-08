@@ -246,9 +246,9 @@ Feature: PMAX Client library
     | "IntgC"                                                                        | 1        | "UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"       | ""        |
     | "IntgD"                                                                        | 1        | "httpStatus500"           | "A job was not returned from UpdateStorageGroup"       | ""        |
     | "IntgE"                                                                        | 1        | "GetJobError"             | "induced error"                                        | ""        |
-    | "IntgF"                                                                        | 1        | "JobFailedError"          | "The UpdateStorageGroup job failed"                    | ""        |
-    | "IntgG"                                                                        | 1        | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
-    | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
+    | "IntgF"                                                                        | 1        | "JobFailedError"          | "the UpdateStorageGroup job failed"                    | ""        |
+    | "IntgG"                                                                        | 1        | "GetVolumeError"          | "failed to find newly created volume with name: IntgG" | ""        |
+    | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "failed to find newly created volume with name: IntgH" | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
@@ -299,9 +299,9 @@ Scenario Outline: Test cases for modifyMobility for volume
     | "IntgC"                                                                        | 1        | "GB"      | "UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"       | ""        |
     | "IntgD"                                                                        | 1        | "GB"      | "httpStatus500"           | "A job was not returned from UpdateStorageGroup"       | ""        |
     | "IntgE"                                                                        | 1        | "GB"      | "GetJobError"             | "induced error"                                        | ""        |
-    | "IntgF"                                                                        | 1        | "GB"      | "JobFailedError"          | "The UpdateStorageGroup job failed"                    | ""        |
-    | "IntgG"                                                                        | 1        | "GB"      | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
-    | "IntgH"                                                                        | 1        | "GB"      | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
+    | "IntgF"                                                                        | 1        | "GB"      | "JobFailedError"          | "the UpdateStorageGroup job failed"                    | ""        |
+    | "IntgG"                                                                        | 1        | "GB"      | "GetVolumeError"          | "failed to find newly created volume with name: IntgG" | ""        |
+    | "IntgH"                                                                        | 1        | "GB"      | "VolumeNotCreatedError"   | "failed to find newly created volume with name: IntgH" | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "GB"      | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "CYL"     | "none"                    | "none"                                                 | ""        |
     | "IntgA"                                                                        | 1        | "GB"      | "none"                    | "ignored as it is not managed"                         | "ignored" |
@@ -320,8 +320,8 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup for v90
     | volname                                                                        | size     | induced                   | errormsg                                               | arrays    |
     | "IntgA"                                                                        | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgB"                                                                        | 5        | "none"                    | "none"                                                 | ""        |
-    | "IntgG"                                                                        | 1        | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
-    | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
+    | "IntgG"                                                                        | 1        | "GetVolumeError"          | "failed to find newly created volume with name: IntgG" | ""        |
+    | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "failed to find newly created volume with name: IntgH" | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
@@ -338,8 +338,8 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup for v90 
     | volname                                                                        | size     |capUnit  | induced                   | errormsg                                               | arrays    |
     | "IntgA"                                                                        | 1        | "CYL"   | "none"                    | "none"                                                 | ""        |
     | "IntgB"                                                                        | 5        | "CYL"   | "none"                    | "none"                                                 | ""        |
-    | "IntgG"                                                                        | 1        | "CYL"   | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
-    | "IntgH"                                                                        | 1        | "CYL"   | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
+    | "IntgG"                                                                        | 1        | "CYL"   | "GetVolumeError"          | "failed to find newly created volume with name: IntgG" | ""        |
+    | "IntgH"                                                                        | 1        | "CYL"   | "VolumeNotCreatedError"   | "failed to find newly created volume with name: IntgH" | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "CYL"   | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "CYL"   | "none"                    | "none"                                                 | ""        |
     | "IntgA"                                                                        | 1        | "CYL"   | "none"                    | "ignored as it is not managed"                         | "ignored" |
@@ -356,8 +356,8 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with met
     | volname                                                                        | size     | induced                   | errormsg                                               | arrays    |
     | "IntgA"                                                                        | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgB"                                                                        | 5        | "none"                    | "none"                                                 | ""        |
-    | "IntgG"                                                                        | 1        | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
-    | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
+    | "IntgG"                                                                        | 1        | "GetVolumeError"          | "failed to find newly created volume with name: IntgG" | ""        |
+    | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "failed to find newly created volume with name: IntgH" | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
@@ -377,9 +377,9 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with met
     | "IntgC"                                                                        | 1        | "UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"       | ""        |
     | "IntgD"                                                                        | 1        | "httpStatus500"           | "A job was not returned from UpdateStorageGroup"       | ""        |
     | "IntgE"                                                                        | 1        | "GetJobError"             | "induced error"                                        | ""        |
-    | "IntgF"                                                                        | 1        | "JobFailedError"          | "The UpdateStorageGroup job failed"                    | ""        |
-    | "IntgG"                                                                        | 1        | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
-    | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
+    | "IntgF"                                                                        | 1        | "JobFailedError"          | "the UpdateStorageGroup job failed"                    | ""        |
+    | "IntgG"                                                                        | 1        | "GetVolumeError"          | "failed to find newly created volume with name: IntgG" | ""        |
+    | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "failed to find newly created volume with name: IntgH" | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
@@ -396,8 +396,8 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with met
     | volname                                                                        | size     | induced                   | errormsg                                               | arrays    |
     | "IntgA"                                                                        | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgB"                                                                        | 5        | "none"                    | "none"                                                 | ""        |
-    | "IntgG"                                                                        | 1        | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
-    | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
+    | "IntgG"                                                                        | 1        | "GetVolumeError"          | "failed to find newly created volume with name: IntgG" | ""        |
+    | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "failed to find newly created volume with name: IntgH" | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
@@ -414,8 +414,8 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with met
     | volname                                                                        | size     | induced                   | errormsg                                               | arrays    |
     | "IntgA"                                                                        | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgB"                                                                        | 5        | "none"                    | "none"                                                 | ""        |
-    | "IntgG"                                                                        | 1        | "GetVolumeError"          | "Failed to find newly created volume with name: IntgG" | ""        |
-    | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "Failed to find newly created volume with name: IntgH" | ""        |
+    | "IntgG"                                                                        | 1        | "GetVolumeError"          | "failed to find newly created volume with name: IntgG" | ""        |
+    | "IntgH"                                                                        | 1        | "VolumeNotCreatedError"   | "failed to find newly created volume with name: IntgH" | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxy"| 1        | "none"                    | "Length of volumeName exceeds max limit"               | ""        |
     | "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"              | 1        | "none"                    | "none"                                                 | ""        |
     | "IntgA"                                                                        | 1        | "none"                    | "ignored as it is not managed"                         | "ignored" |
@@ -944,7 +944,7 @@ Scenario Outline: Test GetHostList
     | 0     | "TestSG"      |"none"                    | "At least one volume id has to be specified"             | ""        |
     | 5     | "TestSG"      |"VolumeNotAddedError"     | "A job was not returned from UpdateStorageGroup"         | ""        |
     | 3     | "TestSG"      |"UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"         | ""        |
-    | 1     | "TestSG"      |"JobFailedError"          | "The UpdateStorageGroup job failed"                      | ""        |
+    | 1     | "TestSG"      |"JobFailedError"          | "UpdateStorageGroup job failed"                          | ""        |
     | 1     | "TestSG"      |"GetJobError"             | "induced error"                                          | ""        |
     | 1     | "TestSG"      |"none"                    | "ignored as it is not managed"                           | "ignored" |
 
@@ -982,7 +982,7 @@ Scenario Outline: Test GetHostList
     | 0     | "TestSG"      |"none"                    | "At least one volume id has to be specified"             | ""        |
     | 5     | "TestSG"      |"VolumeNotAddedError"     | "A job was not returned from UpdateStorageGroup"         | ""        |
     | 3     | "TestSG"      |"UpdateStorageGroupError" | "A job was not returned from UpdateStorageGroup"         | ""        |
-    | 1     | "TestSG"      |"JobFailedError"          | "The UpdateStorageGroup job failed"                      | ""        |
+    | 1     | "TestSG"      |"JobFailedError"          | "UpdateStorageGroup job failed"                          | ""        |
     | 1     | "TestSG"      |"GetJobError"             | "induced error"                                          | ""        |
     | 1     | "TestSG"      |"none"                    | "ignored as it is not managed"                           | "ignored" |
 

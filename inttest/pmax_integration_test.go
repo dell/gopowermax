@@ -339,7 +339,7 @@ func cleanupRDFSetup(t *testing.T) {
 func getClient() error {
 	var err error
 	client, err = pmax.NewClientWithArgs(endpoint, "CSI Driver for Dell EMC PowerMax v1.0",
-		true, false)
+		true, false, "")
 	if err != nil {
 		return err
 	}

@@ -25,6 +25,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -130,6 +131,9 @@ type ClientOptions struct {
 	// ShowHTTP is a flag that indicates whether or not HTTP requests and
 	// responses should be logged to stdout
 	ShowHTTP bool
+
+	// CertFile is the path to the reverseproxy tls certificate file
+	CertFile string
 }
 
 // New returns a new API client.
@@ -165,6 +169,17 @@ func New(
 		pool, err := x509.SystemCertPool()
 		if err != nil {
 			return nil, errSysCerts
+		}
+		if opts.CertFile != "" {
+			revProxyCert, err := os.ReadFile(opts.CertFile)
+			if err != nil {
+				c.doLog(log.WithError(err).Error, "Unable to read certificate file")
+				return nil, err
+			}
+			if ok := pool.AppendCertsFromPEM(revProxyCert); !ok {
+				c.doLog(log.Error, "Failed to append reverse proxy certificate to pool")
+				return nil, errors.New("failed to append reverse proxy certificate to pool")
+			}
 		}
 		c.http.Transport = &http.Transport{
 			// #nosec G402

@@ -515,7 +515,7 @@ func (c *unitContext) iCallAuthenticateWithEndpointCredentials(endpoint, credent
 		URL = ""
 	}
 	fmt.Printf("apiVersion: %s\n", apiVersion)
-	client, err := NewClientWithArgs(URL, "", true, false)
+	client, err := NewClientWithArgs(URL, "", true, false, "")
 	if err != nil {
 		c.err = err
 		return nil
