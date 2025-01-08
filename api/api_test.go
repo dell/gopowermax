@@ -393,6 +393,49 @@ func TestDoAndGetResponseBody(t *testing.T) {
 			mockError:     errors.New("unsupported type error"),
 			expectedError: "json: unsupported type: chan int",
 		},
+		{
+			name:   "Handle io.ReadCloser body",
+			method: http.MethodPost,
+			uri:    "/test",
+			headers: map[string]string{
+				"Content-Type": "application/octet-stream",
+			},
+			body: io.NopCloser(bytes.NewBufferString(`binary content`)),
+			mockResponse: &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewBufferString(`{"success": true}`)),
+			},
+			mockError:     nil,
+			expectedError: "",
+		},
+		{
+			name:   "POST request with JSON body and Content-Type header set",
+			method: http.MethodPost,
+			uri:    "/test",
+			headers: map[string]string{
+				"Content-Type": "application/json",
+			},
+			body: map[string]string{"key": "value"},
+			mockResponse: &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewBufferString(`{"success": true}`)),
+			},
+			mockError:     nil,
+			expectedError: "",
+		},
+		{
+			name:    "POST request with JSON body without Content-Type header set",
+			method:  http.MethodPost,
+			uri:     "/test",
+			headers: map[string]string{},
+			body:    map[string]string{"key": "value"},
+			mockResponse: &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewBufferString(`{"success": true}`)),
+			},
+			mockError:     nil,
+			expectedError: "",
+		},
 	}
 
 	for _, tt := range tests {
