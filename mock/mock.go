@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -128,8 +129,10 @@ var Data struct {
 	FileIntIDtoFileInterface map[string]*types.FileInterface
 }
 
+var InducedErrors = new(inducedErrors)
+
 // InducedErrors constants
-var InducedErrors struct {
+type inducedErrors struct {
 	NoConnection                           bool
 	InvalidJSON                            bool
 	BadHTTPStatus                          int
@@ -269,8 +272,48 @@ func hasError(errorType *bool) bool {
 	return false
 }
 
+func SafeSetInducedError(structPtr interface{}, fieldName string, value interface{}) error {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+
+	v := reflect.ValueOf(structPtr)
+
+	// Check if it is a pointer
+	if v.Kind() != reflect.Ptr {
+		return errors.New("expected a pointer to struct")
+	}
+
+	// Dereference the pointer
+	v = v.Elem()
+
+	// Check if it is a struct
+	if v.Kind() != reflect.Struct {
+		return errors.New("expected a struct")
+	}
+
+	field := v.FieldByName(fieldName)
+	if !field.IsValid() {
+		return errors.New("invalid field name")
+	}
+
+	if !field.CanSet() {
+		return errors.New("cannot set field")
+	}
+
+	// Check if the type of the value matches the field type
+	if field.Type() != reflect.TypeOf(value) {
+		return errors.New("incompatible type")
+	}
+
+	field.Set(reflect.ValueOf(value))
+	return nil
+}
+
 // Reset : re-initializes the variables
 func Reset() {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+
 	InducedErrors.NoConnection = false
 	InducedErrors.InvalidJSON = false
 	InducedErrors.BadHTTPStatus = 0
@@ -463,18 +506,18 @@ func Reset() {
 
 func initMockCache() {
 	// Initialize SGs
-	AddStorageGroup("CSI-Test-SG-1", "SRP_1", "Diamond")       // #nosec G20
-	AddStorageGroup("CSI-Test-SG-2", "SRP_1", "Diamond")       // #nosec G20
-	AddStorageGroup("CSI-Test-SG-3", "SRP_2", "Silver")        // #nosec G20
-	AddStorageGroup("CSI-Test-SG-4", "SRP_2", "Optimized")     // #nosec G20
-	AddStorageGroup("CSI-Test-SG-5", "SRP_2", "None")          // #nosec G20
-	AddStorageGroup("CSI-Test-SG-6", "None", "None")           // #nosec G20
-	AddStorageGroup("CSI-Test-Fake-Remote-SG", "None", "None") // #nosec G20
+	addStorageGroup("CSI-Test-SG-1", "SRP_1", "Diamond")       // #nosec G20
+	addStorageGroup("CSI-Test-SG-2", "SRP_1", "Diamond")       // #nosec G20
+	addStorageGroup("CSI-Test-SG-3", "SRP_2", "Silver")        // #nosec G20
+	addStorageGroup("CSI-Test-SG-4", "SRP_2", "Optimized")     // #nosec G20
+	addStorageGroup("CSI-Test-SG-5", "SRP_2", "None")          // #nosec G20
+	addStorageGroup("CSI-Test-SG-6", "None", "None")           // #nosec G20
+	addStorageGroup("CSI-Test-Fake-Remote-SG", "None", "None") // #nosec G20
 	// Initialize protected SG
-	AddStorageGroup(DefaultASYNCProtectedSG, "None", "None")        // #nosec G20
-	AddStorageGroup(DefaultMETROProtectedSG, "None", "None")        // #nosec G20
-	AddRDFStorageGroup(DefaultASYNCProtectedSG, DefaultRemoteSymID) // #nosec G20
-	AddRDFStorageGroup(DefaultMETROProtectedSG, DefaultRemoteSymID) // #nosec G20
+	addStorageGroup(DefaultASYNCProtectedSG, "None", "None")        // #nosec G20
+	addStorageGroup(DefaultMETROProtectedSG, "None", "None")        // #nosec G20
+	addRDFStorageGroup(DefaultASYNCProtectedSG, DefaultRemoteSymID) // #nosec G20
+	addRDFStorageGroup(DefaultMETROProtectedSG, DefaultRemoteSymID) // #nosec G20
 
 	// ISCSI directors
 	iscsiDir1 := "SE-1E"
@@ -493,7 +536,7 @@ func initMockCache() {
 	iqnNode1 := "iqn.1993-08.org.centos:01:5ae577b352a0"
 	initNode1 := iscsidir1PortKey1 + ":" + iqnNode1
 	initNode1List = append(initNode1List, iqnNode1)
-	AddInitiator(initNode1, iqnNode1, "GigE", []string{iscsidir1PortKey1}, "") // #nosec G20
+	addInitiator(initNode1, iqnNode1, "GigE", []string{iscsidir1PortKey1}, "") // #nosec G20
 	AddHost("CSI-Test-Node-1", "iSCSI", initNode1List)                         // #nosec G20
 	initNode2List := make([]string, 0)
 	iqn1Node2 := "iqn.1993-08.org.centos:01:5ae577b352a1"
@@ -502,10 +545,10 @@ func initMockCache() {
 	init2Node2 := iscsidir1PortKey1 + ":" + iqn2Node2
 	initNode2List = append(initNode2List, iqn1Node2)
 	initNode2List = append(initNode2List, iqn2Node2)
-	AddInitiator(init1Node2, iqn1Node2, "GigE", []string{iscsidir1PortKey1}, "")       // #nosec G20
-	AddInitiator(init2Node2, iqn2Node2, "GigE", []string{iscsidir1PortKey1}, "")       // #nosec G20
+	addInitiator(init1Node2, iqn1Node2, "GigE", []string{iscsidir1PortKey1}, "")       // #nosec G20
+	addInitiator(init2Node2, iqn2Node2, "GigE", []string{iscsidir1PortKey1}, "")       // #nosec G20
 	AddHost("CSI-Test-Node-2", "iSCSI", initNode2List)                                 // #nosec G20
-	AddMaskingView("CSI-Test-MV-1", "CSI-Test-SG-1", "CSI-Test-Node-1", "iscsi_ports") // #nosec G20
+	addMaskingView("CSI-Test-MV-1", "CSI-Test-SG-1", "CSI-Test-Node-1", "iscsi_ports") // #nosec G20
 
 	initNode3List := make([]string, 0)
 	hba1Node3 := "20000090fa9278dd"
@@ -514,10 +557,10 @@ func initMockCache() {
 	init2Node3 := fcDir2PortKey1 + ":" + hba1Node3
 	init3Node3 := fcDir1PortKey1 + ":" + hba2Node3
 	init4Node3 := fcDir2PortKey1 + ":" + hba2Node3
-	AddInitiator(init1Node3, hba1Node3, "Fibre", []string{fcDir1PortKey1}, "") // #nosec G20
-	AddInitiator(init2Node3, hba1Node3, "Fibre", []string{fcDir2PortKey1}, "") // #nosec G20
-	AddInitiator(init3Node3, hba2Node3, "Fibre", []string{fcDir1PortKey1}, "") // #nosec G20
-	AddInitiator(init4Node3, hba2Node3, "Fibre", []string{fcDir2PortKey1}, "") // #nosec G20
+	addInitiator(init1Node3, hba1Node3, "Fibre", []string{fcDir1PortKey1}, "") // #nosec G20
+	addInitiator(init2Node3, hba1Node3, "Fibre", []string{fcDir2PortKey1}, "") // #nosec G20
+	addInitiator(init3Node3, hba2Node3, "Fibre", []string{fcDir1PortKey1}, "") // #nosec G20
+	addInitiator(init4Node3, hba2Node3, "Fibre", []string{fcDir2PortKey1}, "") // #nosec G20
 	initNode3List = append(initNode3List, hba1Node3)
 	initNode3List = append(initNode3List, hba2Node3)
 	AddHost("CSI-Test-Node-3-FC", "Fibre", initNode3List) // #nosec G20
@@ -528,15 +571,15 @@ func initMockCache() {
 // AddFileObjects adds file objects for mock objects
 func AddFileObjects() {
 	// Add a File System
-	AddNewFileSystem("id1", DefaultFSName, 4000)
+	addNewFileSystem("id1", DefaultFSName, 4000)
 	// Add a NFS Export
-	AddNewNFSExport("id1", "nfs-0")
-	AddNewNFSExport("id2", "nfs-del")
+	addNewNFSExport("id1", "nfs-0")
+	addNewNFSExport("id2", "nfs-del")
 	// Add a NAS Server
-	AddNewNASServer("id1", "nas-1")
-	AddNewNASServer("id2", "nas-del")
+	addNewNASServer("id1", "nas-1")
+	addNewNASServer("id2", "nas-del")
 	// Add a FileInterface
-	AddNewFileInterface("id1", "interface-1")
+	addNewFileInterface("id1", "interface-1")
 }
 
 var mockRouter http.Handler
@@ -2055,12 +2098,18 @@ func newMaskingView(maskingViewID string, storageGroupID string, hostID string, 
 	Data.MaskingViewIDToMaskingView[maskingViewID] = maskingView
 }
 
-// AddStorageGroup - Adds a storage group to the mock data cache
 func AddStorageGroup(storageGroupID string, storageResourcePoolID string,
 	serviceLevel string,
 ) (*types.StorageGroup, error) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
+	return addStorageGroup(storageGroupID, storageResourcePoolID, serviceLevel)
+}
+
+// AddStorageGroup - Adds a storage group to the mock data cache
+func addStorageGroup(storageGroupID string, storageResourcePoolID string,
+	serviceLevel string,
+) (*types.StorageGroup, error) {
 	if _, ok := Data.StorageGroupIDToStorageGroup[storageGroupID]; ok {
 		return nil, errors.New("The requested storage group resource already exists")
 	}
@@ -2068,10 +2117,14 @@ func AddStorageGroup(storageGroupID string, storageResourcePoolID string,
 	return Data.StorageGroupIDToStorageGroup[storageGroupID], nil
 }
 
-// AddRDFStorageGroup ...
 func AddRDFStorageGroup(storageGroupID, symmetrixID string) (*types.RDFStorageGroup, error) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
+	return addRDFStorageGroup(storageGroupID, symmetrixID)
+}
+
+// AddRDFStorageGroup ...
+func addRDFStorageGroup(storageGroupID, symmetrixID string) (*types.RDFStorageGroup, error) {
 	if _, ok := Data.StorageGroupIDToRDFStorageGroup[storageGroupID]; ok {
 		return nil, fmt.Errorf("rdfStorageGroup already exists")
 	}
@@ -2364,10 +2417,14 @@ func newInitiator(initiatorID string, initiatorName string, initiatorType string
 	Data.InitiatorIDToInitiator[initiatorID] = initiator
 }
 
-// AddInitiator - Adds an initiator to the mock data cache
 func AddInitiator(initiatorID string, initiatorName string, initiatorType string, dirPortKeys []string, hostID string) (*types.Initiator, error) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
+	return addInitiator(initiatorID, initiatorName, initiatorType, dirPortKeys, hostID)
+}
+
+// AddInitiator - Adds an initiator to the mock data cache
+func addInitiator(initiatorID string, initiatorName string, initiatorType string, dirPortKeys []string, hostID string) (*types.Initiator, error) {
 	if _, ok := Data.InitiatorIDToInitiator[initiatorID]; ok {
 		return nil, errors.New("Error! Initiator already exists")
 	}
@@ -3469,9 +3526,9 @@ func AddTempSnapshots() {
 		id := fmt.Sprintf("%05d", i)
 		size := 7
 		volumeIdentifier := "Vol" + id
-		AddNewVolume(id, volumeIdentifier, size, DefaultStorageGroup) // #nosec G20
+		addNewVolume(id, volumeIdentifier, size, DefaultStorageGroup) // #nosec G20
 		SnapID := fmt.Sprintf("%s-%s-%d", "DEL", "snapshot", i)
-		AddNewSnapshot(id, SnapID)
+		addNewSnapshot(id, SnapID)
 	}
 }
 
