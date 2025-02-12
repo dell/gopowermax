@@ -407,9 +407,8 @@ func TestGetStorageGroupMigrationByID(t *testing.T) {
 
 func TestGetStorageGroupMigration(t *testing.T) {
 	type testCase struct {
-		server     *httptest.Server
-		localSymID string
-		//storageGroupID string
+		server      *httptest.Server
+		localSymID  string
 		expectedErr error
 	}
 
