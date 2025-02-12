@@ -108,7 +108,6 @@ func TestCreateMigrationEnvironment(t *testing.T) {
 				url := fmt.Sprintf("%s%s%s%s", urlPrefix, XMigration, SymmetrixX, "mock-local-sym-id")
 				switch req.RequestURI {
 				case url:
-					//case fmt.Sprintf("/api/instances/Sds::%v/relationships/Device", deviceID):
 					resp.WriteHeader(http.StatusOK)
 					response := &types.CreateMigrationEnv{
 						OtherArrayID:    "mock-storage-group-id",
@@ -359,7 +358,6 @@ func TestGetStorageGroupMigrationByID(t *testing.T) {
 				url := fmt.Sprintf("%s%s%s%s%s/%s", urlPrefix, XMigration, SymmetrixX, "mock-local-sym-id", XStorageGroup, "mock-storage-group-id")
 				switch req.RequestURI {
 				case url:
-					//case fmt.Sprintf("/api/instances/Sds::%v/relationships/Device", deviceID):
 					resp.WriteHeader(http.StatusOK)
 					response := &types.MigrationSession{
 						SourceArray:  "mock-local-sym-id",
@@ -418,7 +416,6 @@ func TestGetStorageGroupMigration(t *testing.T) {
 	cases := map[string]testCase{
 		"get one device success": {
 			localSymID: "mock-local-sym-id",
-			//storageGroupID: "mock-storage-group-id",
 			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 				queryParam := fmt.Sprintf("%s=%s", IncludeMigrations, "true")
 				url := fmt.Sprintf("%s%s%s%s%s%s", urlPrefix, XMigration, SymmetrixX, "mock-local-sym-id", XStorageGroup, queryParam)
