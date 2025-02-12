@@ -1075,7 +1075,7 @@ func (c *unitContext) iCallRenameMaskingViewWith(newName string) error {
 }
 
 func (c *unitContext) iHaveAPortGroup() error {
-	mock.AddPortGroup(testPortGroup, "ISCSI", []string{"SE-1E:000"})
+	mock.AddPortGroupWithPortID(testPortGroup, "ISCSI", []string{"SE-1E:000"})
 	return nil
 }
 
