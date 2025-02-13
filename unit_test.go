@@ -46,7 +46,9 @@ func TestScenarios(_ *testing.T) {
 	filename := ""
 	testPaths := []string{"unittest"}
 	testTags := ""
-	runOptions := godog.Options{}
+	runOptions := godog.Options{
+		Tags: "@bharath",
+	}
 	regex, _ := regexp.Compile("(\\S+)=(\\S+)")
 
 	// Read command line arguments
