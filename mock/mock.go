@@ -159,6 +159,7 @@ type inducedErrors struct {
 	GetPortError                           bool
 	GetSpecificPortError                   bool
 	GetPortISCSITargetError                bool
+	GetPortNVMeTCPTargetError              bool
 	GetPortGigEError                       bool
 	GetDirectorError                       bool
 	GetInitiatorError                      bool
@@ -365,6 +366,7 @@ func Reset() {
 	InducedErrors.GetPortError = false
 	InducedErrors.GetSpecificPortError = false
 	InducedErrors.GetPortISCSITargetError = false
+	InducedErrors.GetPortNVMeTCPTargetError = false
 	InducedErrors.GetPortGigEError = false
 	InducedErrors.GetDirectorError = false
 	InducedErrors.GetInitiatorError = false
@@ -686,6 +688,7 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIX+"/system/version", HandleVersion)
 	router.HandleFunc(PREFIX+"/version", HandleVersion)
 	router.HandleFunc(PREFIXNOVERSION+"/version", HandleVersion)
+	router.HandleFunc(PREFIX+"/system/symmetrix/{id}/refresh", HandleSymmetrix)
 	router.HandleFunc("/", HandleNotFound)
 
 	// StorageGroup Snapshots
@@ -3292,6 +3295,10 @@ func handlePort(w http.ResponseWriter, r *http.Request) {
 					writeError(w, "Error retrieving GigE ports: induced error", http.StatusRequestTimeout)
 					return
 				}
+				if queryType[0] == "OSHostAndRDF" { // The first ?type=<value>
+					writeError(w, "Error retrieving OSHostAndRDF ports: induced error", http.StatusRequestTimeout)
+					return
+				}
 			}
 		}
 		if InducedErrors.GetPortISCSITargetError {
@@ -3299,6 +3306,15 @@ func handlePort(w http.ResponseWriter, r *http.Request) {
 			if ok {
 				if queryType[0] == "true" { // The first ?iscsi_target=<value>
 					writeError(w, "Error retrieving ISCSI targets: induced error", http.StatusRequestTimeout)
+					return
+				}
+			}
+		}
+		if InducedErrors.GetPortNVMeTCPTargetError {
+			queryType, ok := queryString["nvmetcp_endpoint"]
+			if ok {
+				if queryType[0] == "true" { // The first ?nvmetcp_endpoint=<value>
+					writeError(w, "Error retrieving NVMeTCP targets: induced error", http.StatusRequestTimeout)
 					return
 				}
 			}

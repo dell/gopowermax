@@ -69,11 +69,21 @@ func TestModifyMigrationSession(t *testing.T) {
 			expectedErr: nil,
 		},
 		"bad request": {
+			localSymID:     "mock-local-sym-id",
+			storageGroupID: "mock-storage-group-id-2",
 			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
 				resp.WriteHeader(http.StatusBadRequest)
 				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
 			})),
 			expectedErr: errors.New("bad request"),
+		},
+		"invalid array": {
+			localSymID: "invalid-array-id",
+			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
+				resp.WriteHeader(http.StatusBadRequest)
+				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
+			})),
+			expectedErr: errors.New("the requested array (invalid-array-id) is ignored as it is not managed"),
 		},
 	}
 
@@ -82,13 +92,13 @@ func TestModifyMigrationSession(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		client.SetAllowedArrays([]string{"mock-local-sym-id"})
 		err = client.ModifyMigrationSession(context.TODO(), tc.localSymID, "mock-action", tc.storageGroupID)
 		if err != nil {
 			if tc.expectedErr.Error() != err.Error() {
 				t.Fatal(err)
 			}
 		}
-
 		tc.server.Close()
 	}
 }
@@ -130,11 +140,20 @@ func TestCreateMigrationEnvironment(t *testing.T) {
 			expectedErr: nil,
 		},
 		"bad request": {
+			localSymID: "mock-local-sym-id",
 			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
 				resp.WriteHeader(http.StatusBadRequest)
 				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
 			})),
 			expectedErr: errors.New("bad request"),
+		},
+		"invalid array": {
+			localSymID: "invalid-array-id",
+			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
+				resp.WriteHeader(http.StatusBadRequest)
+				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
+			})),
+			expectedErr: errors.New("the requested array (invalid-array-id) is ignored as it is not managed"),
 		},
 	}
 
@@ -143,13 +162,13 @@ func TestCreateMigrationEnvironment(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		client.SetAllowedArrays([]string{"mock-local-sym-id"})
 		_, err = client.CreateMigrationEnvironment(context.TODO(), tc.localSymID, tc.storageGroupID)
 		if err != nil {
 			if tc.expectedErr.Error() != err.Error() {
 				t.Fatal(err)
 			}
 		}
-
 		tc.server.Close()
 	}
 }
@@ -178,11 +197,20 @@ func TestDeleteMigrationEnvironment(t *testing.T) {
 			expectedErr: nil,
 		},
 		"bad request": {
+			localSymID: "mock-local-sym-id",
 			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
 				resp.WriteHeader(http.StatusBadRequest)
 				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
 			})),
 			expectedErr: errors.New("bad request"),
+		},
+		"invalid array": {
+			localSymID: "invalid-array-id",
+			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
+				resp.WriteHeader(http.StatusBadRequest)
+				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
+			})),
+			expectedErr: errors.New("the requested array (invalid-array-id) is ignored as it is not managed"),
 		},
 	}
 
@@ -191,13 +219,13 @@ func TestDeleteMigrationEnvironment(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		client.SetAllowedArrays([]string{"mock-local-sym-id"})
 		err = client.DeleteMigrationEnvironment(context.TODO(), tc.localSymID, tc.remoteSymID)
 		if err != nil {
 			if tc.expectedErr.Error() != err.Error() {
 				t.Fatal(err)
 			}
 		}
-
 		tc.server.Close()
 	}
 }
@@ -242,11 +270,20 @@ func TestCreateSGMigrationByID(t *testing.T) {
 			expectedErr: nil,
 		},
 		"bad request": {
+			localSymID: "mock-local-sym-id",
 			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
 				resp.WriteHeader(http.StatusBadRequest)
 				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
 			})),
 			expectedErr: errors.New("bad request"),
+		},
+		"invalid array": {
+			localSymID: "invalid-array-id",
+			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
+				resp.WriteHeader(http.StatusBadRequest)
+				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
+			})),
+			expectedErr: errors.New("the requested array (invalid-array-id) is ignored as it is not managed"),
 		},
 	}
 
@@ -255,13 +292,13 @@ func TestCreateSGMigrationByID(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		client.SetAllowedArrays([]string{"mock-local-sym-id"})
 		_, err = client.CreateSGMigration(context.TODO(), tc.localSymID, tc.remoteSymID, tc.storageGroupID)
 		if err != nil {
 			if tc.expectedErr.Error() != err.Error() {
 				t.Fatal(err)
 			}
 		}
-
 		tc.server.Close()
 	}
 }
@@ -318,11 +355,20 @@ func TestMigrateStorageGroup(t *testing.T) {
 			expectedErr: nil,
 		},
 		"bad request": {
+			localSymID: "mock-local-sym-id",
 			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
 				resp.WriteHeader(http.StatusBadRequest)
 				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
 			})),
 			expectedErr: errors.New("bad request"),
+		},
+		"invalid array": {
+			localSymID: "invalid-array-id",
+			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
+				resp.WriteHeader(http.StatusBadRequest)
+				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
+			})),
+			expectedErr: errors.New("the requested array (invalid-array-id) is ignored as it is not managed"),
 		},
 	}
 
@@ -331,13 +377,13 @@ func TestMigrateStorageGroup(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		client.SetAllowedArrays([]string{"mock-local-sym-id"})
 		_, err = client.MigrateStorageGroup(context.TODO(), tc.localSymID, tc.storageGroupID, tc.srpID, tc.serviceLevel, tc.thickVolumes)
 		if err != nil {
 			if tc.expectedErr.Error() != err.Error() {
 				t.Fatal(err)
 			}
 		}
-
 		tc.server.Close()
 	}
 }
@@ -381,11 +427,20 @@ func TestGetStorageGroupMigrationByID(t *testing.T) {
 			expectedErr: nil,
 		},
 		"bad request": {
+			localSymID: "mock-local-sym-id",
 			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
 				resp.WriteHeader(http.StatusBadRequest)
 				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
 			})),
 			expectedErr: errors.New("bad request"),
+		},
+		"invalid array": {
+			localSymID: "invalid-array-id",
+			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
+				resp.WriteHeader(http.StatusBadRequest)
+				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
+			})),
+			expectedErr: errors.New("the requested array (invalid-array-id) is ignored as it is not managed"),
 		},
 	}
 
@@ -394,13 +449,13 @@ func TestGetStorageGroupMigrationByID(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		client.SetAllowedArrays([]string{"mock-local-sym-id"})
 		_, err = client.GetStorageGroupMigrationByID(context.TODO(), tc.localSymID, tc.storageGroupID)
 		if err != nil {
 			if tc.expectedErr.Error() != err.Error() {
 				t.Fatal(err)
 			}
 		}
-
 		tc.server.Close()
 	}
 }
@@ -442,11 +497,20 @@ func TestGetStorageGroupMigration(t *testing.T) {
 			expectedErr: nil,
 		},
 		"bad request": {
+			localSymID: "mock-local-sym-id",
 			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
 				resp.WriteHeader(http.StatusBadRequest)
 				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
 			})),
 			expectedErr: errors.New("bad request"),
+		},
+		"invalid array": {
+			localSymID: "invalid-array-id",
+			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
+				resp.WriteHeader(http.StatusBadRequest)
+				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
+			})),
+			expectedErr: errors.New("the requested array (invalid-array-id) is ignored as it is not managed"),
 		},
 	}
 
@@ -455,13 +519,13 @@ func TestGetStorageGroupMigration(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		client.SetAllowedArrays([]string{"mock-local-sym-id"})
 		_, err = client.GetStorageGroupMigration(context.TODO(), tc.localSymID)
 		if err != nil {
 			if tc.expectedErr.Error() != err.Error() {
 				t.Fatal(err)
 			}
 		}
-
 		tc.server.Close()
 	}
 }
@@ -506,11 +570,20 @@ func TestGetMigrationEnvironment(t *testing.T) {
 			expectedErr: nil,
 		},
 		"bad request": {
+			localSymID: "mock-local-sym-id",
 			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
 				resp.WriteHeader(http.StatusBadRequest)
 				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
 			})),
 			expectedErr: errors.New("bad request"),
+		},
+		"invalid array": {
+			localSymID: "invalid-array-id",
+			server: httptest.NewServer(http.HandlerFunc(func(resp http.ResponseWriter, _ *http.Request) {
+				resp.WriteHeader(http.StatusBadRequest)
+				resp.Write([]byte(`{"message":"bad request","httpStatusCode":400,"errorCode":0}`))
+			})),
+			expectedErr: errors.New("the requested array (invalid-array-id) is ignored as it is not managed"),
 		},
 	}
 
@@ -520,13 +593,13 @@ func TestGetMigrationEnvironment(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		client.SetAllowedArrays([]string{"mock-local-sym-id"})
 		_, err = client.GetMigrationEnvironment(context.TODO(), tc.localSymID, tc.remoteSystemID)
 		if err != nil {
 			if tc.expectedErr.Error() != err.Error() {
 				t.Fatal(err)
 			}
 		}
-
 		tc.server.Close()
 	}
 }
