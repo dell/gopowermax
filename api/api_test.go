@@ -17,10 +17,12 @@ package api
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
@@ -582,6 +584,337 @@ func TestDoLog(t *testing.T) {
 				debug: tt.fields.debug,
 			}
 			c.doLog(tt.args.l, tt.args.msg)
+		})
+	}
+}
+
+func TestGet(t *testing.T) {
+	tests := []struct {
+		name         string
+		path         string
+		headers      map[string]string
+		resp         interface{}
+		expectedErr  error
+		expectedBody string
+	}{
+		{
+			name: "Successful Get Request",
+			path: "/api/test",
+			headers: map[string]string{
+				"content-type": "application/json",
+			},
+			resp:         nil,
+			expectedErr:  nil,
+			expectedBody: `{"message":"Success"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				for key, value := range tt.headers {
+					w.Header().Add(key, value)
+				}
+
+				if tt.expectedErr != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					errData, _ := json.Marshal(tt.expectedErr)
+					_, err := w.Write(errData)
+					if err != nil {
+						return
+					}
+				} else {
+					w.WriteHeader(http.StatusOK)
+					_, err := w.Write([]byte(tt.expectedBody))
+					if err != nil {
+						return
+					}
+				}
+			}))
+			defer ts.Close()
+
+			c, err := New(ts.URL, ClientOptions{Timeout: 10 * time.Second}, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = c.Get(context.Background(), tt.path, tt.headers, &tt.resp)
+			if !errors.Is(err, tt.expectedErr) {
+				t.Errorf("expected error %v, got %v", tt.expectedErr, err)
+			}
+
+			body, err := json.Marshal(tt.resp)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(body) != tt.expectedBody {
+				t.Errorf("expected body %s, got %s", tt.expectedBody, string(body))
+			}
+		})
+	}
+}
+
+func TestPost(t *testing.T) {
+	tests := []struct {
+		name         string
+		path         string
+		headers      map[string]string
+		resp         interface{}
+		body         interface{}
+		expectedErr  error
+		expectedBody string
+	}{
+		{
+			name: "Successful Post Request",
+			path: "/api/test",
+			headers: map[string]string{
+				"content-type": "application/json",
+			},
+			resp:         nil,
+			expectedErr:  nil,
+			expectedBody: `{"message":"Success"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				for key, value := range tt.headers {
+					w.Header().Add(key, value)
+				}
+
+				if tt.expectedErr != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					errData, _ := json.Marshal(tt.expectedErr)
+					_, err := w.Write(errData)
+					if err != nil {
+						t.Fatalf("error writing error response: %v", err)
+					}
+				} else {
+					w.WriteHeader(http.StatusOK)
+					_, err := w.Write([]byte(tt.expectedBody))
+					if err != nil {
+						t.Fatalf("error writing response: %v", err)
+					}
+				}
+			}))
+			defer ts.Close()
+
+			c, err := New(ts.URL, ClientOptions{Timeout: 10 * time.Second}, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = c.Post(context.Background(), tt.path, tt.headers, tt.body, &tt.resp)
+			if !errors.Is(err, tt.expectedErr) {
+				t.Errorf("expected error %v, got %v", tt.expectedErr, err)
+			}
+			body, err := json.Marshal(tt.resp)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(body) != tt.expectedBody {
+				t.Errorf("expected body %s, got %s", tt.expectedBody, string(body))
+			}
+		})
+	}
+}
+
+func TestPut(t *testing.T) {
+	tests := []struct {
+		name         string
+		path         string
+		headers      map[string]string
+		resp         interface{}
+		body         interface{}
+		expectedErr  error
+		expectedBody string
+	}{
+		{
+			name: "Successful Put Request",
+			path: "/api/test",
+			headers: map[string]string{
+				"content-type": "application/json",
+			},
+			resp:         nil,
+			body:         nil,
+			expectedErr:  nil,
+			expectedBody: `{"message":"Success"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				for key, value := range tt.headers {
+					w.Header().Add(key, value)
+				}
+
+				if tt.expectedErr != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					errData, _ := json.Marshal(tt.expectedErr)
+					_, err := w.Write(errData)
+					if err != nil {
+						t.Fatalf("error writing error response: %v", err)
+					}
+				} else {
+					w.WriteHeader(http.StatusOK)
+					_, err := w.Write([]byte(tt.expectedBody))
+					if err != nil {
+						t.Fatalf("error writing response: %v", err)
+					}
+				}
+			}))
+			defer ts.Close()
+
+			c, err := New(ts.URL, ClientOptions{Timeout: 10 * time.Second}, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = c.Put(context.Background(), tt.path, tt.headers, tt.body, &tt.resp)
+			if !errors.Is(err, tt.expectedErr) {
+				t.Errorf("expected error %v, got %v", tt.expectedErr, err)
+			}
+			body, err := json.Marshal(tt.resp)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(body) != tt.expectedBody {
+				t.Errorf("expected body %s, got %s", tt.expectedBody, string(body))
+			}
+		})
+	}
+}
+
+func TestDelete(t *testing.T) {
+	tests := []struct {
+		name         string
+		path         string
+		headers      map[string]string
+		resp         interface{}
+		expectedErr  error
+		expectedBody string
+	}{
+		{
+			name: "Successful Get Request",
+			path: "/api/test",
+			headers: map[string]string{
+				"content-type": "application/json",
+			},
+			resp:         nil,
+			expectedErr:  nil,
+			expectedBody: `{"message":"Success"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				for key, value := range tt.headers {
+					w.Header().Add(key, value)
+				}
+
+				if tt.expectedErr != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					errData, _ := json.Marshal(tt.expectedErr)
+					_, err := w.Write(errData)
+					if err != nil {
+						return
+					}
+				} else {
+					w.WriteHeader(http.StatusOK)
+					_, err := w.Write([]byte(tt.expectedBody))
+					if err != nil {
+						return
+					}
+				}
+			}))
+			defer ts.Close()
+
+			c, err := New(ts.URL, ClientOptions{Timeout: 10 * time.Second}, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = c.Delete(context.Background(), tt.path, tt.headers, &tt.resp)
+			if !errors.Is(err, tt.expectedErr) {
+				t.Errorf("expected error %v, got %v", tt.expectedErr, err)
+			}
+
+			body, err := json.Marshal(tt.resp)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(body) != tt.expectedBody {
+				t.Errorf("expected body %s, got %s", tt.expectedBody, string(body))
+			}
+		})
+	}
+}
+
+func TestDoMethod(t *testing.T) {
+	tests := []struct {
+		name         string
+		path         string
+		headers      map[string]string
+		resp         interface{}
+		expectedErr  error
+		expectedBody string
+	}{
+		{
+			name: "Successful Get Request",
+			path: "/api/test",
+			headers: map[string]string{
+				"content-type": "application/json",
+			},
+			resp:         nil,
+			expectedErr:  nil,
+			expectedBody: `{"message":"Success"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				for key, value := range tt.headers {
+					w.Header().Add(key, value)
+				}
+
+				if tt.expectedErr != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					errData, _ := json.Marshal(tt.expectedErr)
+					_, err := w.Write(errData)
+					if err != nil {
+						return
+					}
+				} else {
+					w.WriteHeader(http.StatusOK)
+					_, err := w.Write([]byte(tt.expectedBody))
+					if err != nil {
+						return
+					}
+				}
+			}))
+			defer ts.Close()
+
+			c, err := New(ts.URL, ClientOptions{Timeout: 10 * time.Second}, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = c.Do(context.Background(), http.MethodGet, tt.path, tt.headers, &tt.resp)
+			if !errors.Is(err, tt.expectedErr) {
+				t.Errorf("expected error %v, got %v", tt.expectedErr, err)
+			}
+
+			body, err := json.Marshal(tt.resp)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(body) != tt.expectedBody {
+				t.Errorf("expected body %s, got %s", tt.expectedBody, string(body))
+			}
 		})
 	}
 }
