@@ -633,8 +633,7 @@ func TestGet(t *testing.T) {
 			}))
 			defer ts.Close()
 
-			c, err := New(ts.URL, ClientOptions{
-				Timeout: 10 * time.Second}, true)
+			c, err := New(ts.URL, ClientOptions{Timeout: 10 * time.Second}, true)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -833,10 +832,7 @@ func TestDelete(t *testing.T) {
 			}))
 			defer ts.Close()
 
-			c, err := New(ts.URL, ClientOptions{
-				Timeout:  10 * time.Second,
-				Insecure: true,
-				ShowHTTP: true}, true)
+			c, err := New(ts.URL, ClientOptions{Timeout: 10 * time.Second}, true)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -902,10 +898,7 @@ func TestDoMethod(t *testing.T) {
 			}))
 			defer ts.Close()
 
-			c, err := New(ts.URL, ClientOptions{
-				Timeout:  10 * time.Second,
-				Insecure: true,
-				ShowHTTP: true}, true)
+			c, err := New(ts.URL, ClientOptions{Timeout: 10 * time.Second}, true)
 			if err != nil {
 				t.Fatal(err)
 			}
