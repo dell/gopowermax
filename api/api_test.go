@@ -634,7 +634,7 @@ func TestGet(t *testing.T) {
 			defer ts.Close()
 
 			c, err := New(ts.URL, ClientOptions{
-				Timeout:  10 * time.Second}, true)
+				Timeout: 10 * time.Second}, true)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -722,24 +722,24 @@ func TestPost(t *testing.T) {
 }
 
 func TestPut(t *testing.T) {
-	tests := []struct{
-		name string
-		path string
-		headers map[string]string
-		resp interface{}
-		body interface{}
-		expectedErr error
+	tests := []struct {
+		name         string
+		path         string
+		headers      map[string]string
+		resp         interface{}
+		body         interface{}
+		expectedErr  error
 		expectedBody string
-	} {
+	}{
 		{
 			name: "Successful Put Request",
 			path: "/api/test",
 			headers: map[string]string{
 				"content-type": "application/json",
 			},
-			resp: nil,
-			body: nil,
-			expectedErr: nil,
+			resp:         nil,
+			body:         nil,
+			expectedErr:  nil,
 			expectedBody: `{"message":"Success"}`,
 		},
 	}
@@ -787,7 +787,6 @@ func TestPut(t *testing.T) {
 		})
 	}
 }
-
 
 func TestDelete(t *testing.T) {
 	tests := []struct {
@@ -858,7 +857,6 @@ func TestDelete(t *testing.T) {
 	}
 }
 
-
 func TestDoMethod(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -912,7 +910,7 @@ func TestDoMethod(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = c.Do(context.Background(), http.MethodGet,tt.path, tt.headers, &tt.resp)
+			err = c.Do(context.Background(), http.MethodGet, tt.path, tt.headers, &tt.resp)
 			if !errors.Is(err, tt.expectedErr) {
 				t.Errorf("expected error %v, got %v", tt.expectedErr, err)
 			}
