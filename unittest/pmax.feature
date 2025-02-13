@@ -1248,4 +1248,4 @@ Scenario Outline: Test GetHostList
     Examples:
     | nvols      | vols  | induced  | errormsg                      | arrays          | sgname      | 
     | 7          | 7     | "none"   | "none"                        | "000197900046"  | "TestSG"    | 
-    | 5          | 5     | "none"   | "storageGroupID is empty"     | "000197900046"  | ""  | 
+    | 5          | 5     | "none"   | "storageGroupID is empty"     | "000197900046"  | ""          |
