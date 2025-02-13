@@ -59,10 +59,10 @@ func TestGetJobResource(t *testing.T) {
 }
 
 func TestError(t *testing.T) {
-	tests := []struct{
+	tests := []struct {
 		name string
-		err *Error
-	} {
+		err  *Error
+	}{
 		{
 			name: "valid error",
 			err: &Error{

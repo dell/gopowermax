@@ -26,13 +26,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type ErrorReader struct {}
+type ErrorReader struct{}
 
 func (r *ErrorReader) Close() error {
 	return fmt.Errorf("error closing the body")
 }
 
-func (r *ErrorReader) Read(p []byte) (n int, err error) {
+func (r *ErrorReader) Read(_ []byte) (n int, err error) {
 	return 0, fmt.Errorf("error reading the body")
 }
 
@@ -163,17 +163,17 @@ func TestDumpRequest(t *testing.T) {
 			expected:    []string{"GET / HTTP/1.1", "Host: example.com"},
 		},
 		{
-			name: "Request with empty Host",
-			method: http.MethodGet,
-			body: bytes.NewBufferString(""),
-			headers: map[string]string{"Authorization": "Basic dXNlcjpwYXNz"},
+			name:     "Request with empty Host",
+			method:   http.MethodGet,
+			body:     bytes.NewBufferString(""),
+			headers:  map[string]string{"Authorization": "Basic dXNlcjpwYXNz"},
 			expected: []string{"GET / HTTP/1.1", "Host: example.com"},
 		},
 		{
-			name:   "Request with invalid body",
-			method: http.MethodGet,
-			body:   &ErrorReader{},
-			headers: map[string]string{"Authorization": "Basic dXNlcjpwYXNz"},
+			name:        "Request with invalid body",
+			method:      http.MethodGet,
+			body:        &ErrorReader{},
+			headers:     map[string]string{"Authorization": "Basic dXNlcjpwYXNz"},
 			expectError: true,
 			expected:    []string{"GET / HTTP/1.1", "Host: example.com"},
 		},
