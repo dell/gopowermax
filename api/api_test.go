@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -33,6 +34,18 @@ import (
 )
 
 type stubTypeWithMetaData struct{}
+
+type MyReader struct {
+	reader io.Reader
+}
+
+func (r *MyReader) Read(p []byte) (int, error) {
+	return r.reader.Read(p)
+}
+
+func (r *MyReader) Close() error {
+	return nil
+}
 
 func (s stubTypeWithMetaData) MetaData() http.Header {
 	h := make(http.Header)
@@ -123,6 +136,15 @@ func TestNew(t *testing.T) {
 			},
 			debug:       false,
 			expectError: true,
+		},
+		{
+			name: "Host with showHTTP option",
+			host: "http://example.com",
+			opts: ClientOptions{
+				ShowHTTP: true,
+			},
+			debug:       false,
+			expectError: false,
 		},
 	}
 
@@ -351,12 +373,6 @@ func TestDoAndGetResponseBody(t *testing.T) {
 	httpClient := &http.Client{
 		Transport: &MockTransport{mockHTTPClient: mockHTTPClient},
 	}
-	c := &client{
-		http:     httpClient,
-		host:     "https://example.com",
-		token:    "mockToken",
-		showHTTP: false,
-	}
 
 	tests := []struct {
 		name          string
@@ -367,6 +383,7 @@ func TestDoAndGetResponseBody(t *testing.T) {
 		mockResponse  *http.Response
 		mockError     error
 		expectedError string
+		c             *client
 	}{
 		{
 			name:   "Successful GET request",
@@ -380,6 +397,12 @@ func TestDoAndGetResponseBody(t *testing.T) {
 				StatusCode: http.StatusOK,
 				Body:       io.NopCloser(bytes.NewBufferString(`{"success": true}`)),
 			},
+			c: &client{
+				http:     httpClient,
+				host:     "https://example.com",
+				token:    "mockToken",
+				showHTTP: false,
+			},
 			mockError:     nil,
 			expectedError: "",
 		},
@@ -390,8 +413,14 @@ func TestDoAndGetResponseBody(t *testing.T) {
 			headers: map[string]string{
 				"Content-Type": "application/json",
 			},
-			body:          make(chan int), // invalid JSON body
-			mockResponse:  nil,
+			body:         make(chan int), // invalid JSON body
+			mockResponse: nil,
+			c: &client{
+				http:     httpClient,
+				host:     "https://example.com",
+				token:    "mockToken",
+				showHTTP: false,
+			},
 			mockError:     errors.New("unsupported type error"),
 			expectedError: "json: unsupported type: chan int",
 		},
@@ -406,6 +435,12 @@ func TestDoAndGetResponseBody(t *testing.T) {
 			mockResponse: &http.Response{
 				StatusCode: http.StatusOK,
 				Body:       io.NopCloser(bytes.NewBufferString(`{"success": true}`)),
+			},
+			c: &client{
+				http:     httpClient,
+				host:     "https://example.com",
+				token:    "mockToken",
+				showHTTP: false,
 			},
 			mockError:     nil,
 			expectedError: "",
@@ -422,6 +457,12 @@ func TestDoAndGetResponseBody(t *testing.T) {
 				StatusCode: http.StatusOK,
 				Body:       io.NopCloser(bytes.NewBufferString(`{"success": true}`)),
 			},
+			c: &client{
+				http:     httpClient,
+				host:     "https://example.com",
+				token:    "mockToken",
+				showHTTP: false,
+			},
 			mockError:     nil,
 			expectedError: "",
 		},
@@ -429,11 +470,61 @@ func TestDoAndGetResponseBody(t *testing.T) {
 			name:    "POST request with JSON body without Content-Type header set",
 			method:  http.MethodPost,
 			uri:     "/test",
-			headers: map[string]string{},
-			body:    map[string]string{"key": "value"},
+			headers: map[string]string{"Custom-Header": "application/json"},
+			body: &MyReader{
+				reader: strings.NewReader("Success"),
+			},
 			mockResponse: &http.Response{
 				StatusCode: http.StatusOK,
 				Body:       io.NopCloser(bytes.NewBufferString(`{"success": true}`)),
+			},
+			c: &client{
+				http:     httpClient,
+				host:     "https://example.com",
+				token:    "mockToken",
+				showHTTP: false,
+			},
+			mockError:     nil,
+			expectedError: "",
+		},
+		{
+			name:   "Get request with path not starting with /",
+			method: http.MethodGet,
+			uri:    "test",
+			headers: map[string]string{
+				"content-type": "application/json",
+			},
+			body: nil,
+			mockResponse: &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewBufferString(`{"success": true}`)),
+			},
+			c: &client{
+				http:     httpClient,
+				host:     "https://example.com",
+				token:    "mockToken",
+				showHTTP: false,
+			},
+			mockError:     nil,
+			expectedError: "",
+		},
+		{
+			name:   "Successful GET request having client with showHTTP set to true",
+			method: http.MethodGet,
+			uri:    "test",
+			headers: map[string]string{
+				"content-type": "application/json",
+			},
+			body: nil,
+			mockResponse: &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewBufferString(`{"success": true}`)),
+			},
+			c: &client{
+				http:     httpClient,
+				host:     "https://example.com",
+				token:    "mockToken",
+				showHTTP: true,
 			},
 			mockError:     nil,
 			expectedError: "",
@@ -444,7 +535,7 @@ func TestDoAndGetResponseBody(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockHTTPClient.On("Do", mock.Anything).Return(tt.mockResponse, tt.mockError)
 
-			res, err := c.DoAndGetResponseBody(
+			res, err := tt.c.DoAndGetResponseBody(
 				context.Background(),
 				tt.method,
 				tt.uri,
