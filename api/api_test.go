@@ -35,17 +35,17 @@ import (
 
 type stubTypeWithMetaData struct{}
 
-// MyReader is an io.ReadCloser implementation for writing
+// httpBodyReadCloser is an io.ReadCloser implementation for writing
 // the body of an http request
-type MyReader struct {
+type httpBodyReadCloser struct {
 	reader io.Reader
 }
 
-func (r *MyReader) Read(p []byte) (int, error) {
+func (r *httpBodyReadCloser) Read(p []byte) (int, error) {
 	return r.reader.Read(p)
 }
 
-func (r *MyReader) Close() error {
+func (r *httpBodyReadCloser) Close() error {
 	return nil
 }
 
@@ -473,7 +473,7 @@ func TestDoAndGetResponseBody(t *testing.T) {
 			method:  http.MethodPost,
 			uri:     "/test",
 			headers: map[string]string{"Custom-Header": "application/json"},
-			body: &MyReader{
+			body: &httpBodyReadCloser{
 				reader: strings.NewReader("Success"),
 			},
 			mockResponse: &http.Response{
