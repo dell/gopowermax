@@ -3398,6 +3398,7 @@ func returnNVMePort(w http.ResponseWriter, dID, pID string) {
 	replacements["__DIRECTOR_ID__"] = dID
 	returnJSONFile(Data.JSONDir, "nvme_port_template.json", w, replacements)
 }
+
 func returnPortIDList(w http.ResponseWriter, dID string) {
 	replacements := make(map[string]string)
 	replacements["__DIRECTOR_ID__"] = dID
@@ -3509,22 +3510,12 @@ func handleHost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// Scan the initiators to see if there are any non iqn ones; then assume
-		// host type Fibre.
-		// isFibre := false
-		// isNVMe := false
-		// isISCSI := false
 		for _, initiator := range createHostParam.InitiatorIDs {
 			if strings.HasPrefix(initiator, "iqn.") {
-				//isFibre = true
-				// initNode := make([]string, 0)
-				// initNode = append(initNode, "iqn.1993-08.org.centos:01:5ae577b352a7")
 				addHost(createHostParam.HostID, "iSCSI", createHostParam.InitiatorIDs) // #nosec G20
 			} else if strings.HasPrefix(initiator, "nqn.") {
-				//isNVMe = true
 				addHost(createHostParam.HostID, "NVMETCP", createHostParam.InitiatorIDs) // #nosec G20
 			} else {
-				//isFibre = true
-				// Might need to add the Port information here
 				addHost(createHostParam.HostID, "Fibre", createHostParam.InitiatorIDs) // #nosec G20
 			}
 		}
