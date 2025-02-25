@@ -570,7 +570,7 @@ func initMockCache() {
 	initNode1 := iscsidir1PortKey1 + ":" + iqnNode1
 	initNode1List = append(initNode1List, iqnNode1)
 	addInitiator(initNode1, iqnNode1, "GigE", []string{iscsidir1PortKey1}, "") // #nosec G20
-	addHost("CSI-Test-Node-1", "iSCSI", initNode1List)                         // #nosec G20
+	addHost("CSI-Test-Node-1-ISCSI", "iSCSI", initNode1List)                   // #nosec G20
 	initNode2List := make([]string, 0)
 	iqn1Node2 := "iqn.1993-08.org.centos:01:5ae577b352a1"
 	iqn2Node2 := "iqn.1993-08.org.centos:01:5ae577b352a2"
@@ -580,7 +580,7 @@ func initMockCache() {
 	initNode2List = append(initNode2List, iqn2Node2)
 	addInitiator(init1Node2, iqn1Node2, "GigE", []string{iscsidir1PortKey1}, "")       // #nosec G20
 	addInitiator(init2Node2, iqn2Node2, "GigE", []string{iscsidir1PortKey1}, "")       // #nosec G20
-	addHost("CSI-Test-Node-2", "iSCSI", initNode2List)                                 // #nosec G20
+	addHost("CSI-Test-Node-2-ISCSI", "iSCSI", initNode2List)                           // #nosec G20
 	addMaskingView("CSI-Test-MV-1", "CSI-Test-SG-1", "CSI-Test-Node-1", "iscsi_ports") // #nosec G20
 
 	initNode3List := make([]string, 0)
@@ -3357,7 +3357,6 @@ func handlePort(w http.ResponseWriter, r *http.Request) {
 				}
 				return
 			}
-			fmt.Printf("in GetPORT : URL = %+v ---------------- > %+v", r.URL, r.URL.Query())
 			if Filters.GetNVMePorts {
 				returnNVMePort(w, dID, pID)
 			} else {
