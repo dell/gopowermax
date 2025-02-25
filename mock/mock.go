@@ -129,6 +129,12 @@ var Data struct {
 	FileIntIDtoFileInterface map[string]*types.FileInterface
 }
 
+var Filters = new(filters)
+
+type filters struct {
+	GetNVMePorts bool
+}
+
 var InducedErrors = new(inducedErrors)
 
 // InducedErrors constants
@@ -256,6 +262,7 @@ type inducedErrors struct {
 	GetFileInterfaceError                  bool
 	ExecuteActionError                     bool
 	GetFreshMetrics                        bool
+	GetNVMePorts                           bool
 }
 
 // hasError checks to see if the specified error (via pointer)
@@ -563,7 +570,7 @@ func initMockCache() {
 	initNode1 := iscsidir1PortKey1 + ":" + iqnNode1
 	initNode1List = append(initNode1List, iqnNode1)
 	addInitiator(initNode1, iqnNode1, "GigE", []string{iscsidir1PortKey1}, "") // #nosec G20
-	addHost("CSI-Test-Node-1", "iSCSI", initNode1List)                         // #nosec G20
+	addHost("CSI-Test-Node-1-ISCSI", "iSCSI", initNode1List)                   // #nosec G20
 	initNode2List := make([]string, 0)
 	iqn1Node2 := "iqn.1993-08.org.centos:01:5ae577b352a1"
 	iqn2Node2 := "iqn.1993-08.org.centos:01:5ae577b352a2"
@@ -573,7 +580,7 @@ func initMockCache() {
 	initNode2List = append(initNode2List, iqn2Node2)
 	addInitiator(init1Node2, iqn1Node2, "GigE", []string{iscsidir1PortKey1}, "")       // #nosec G20
 	addInitiator(init2Node2, iqn2Node2, "GigE", []string{iscsidir1PortKey1}, "")       // #nosec G20
-	addHost("CSI-Test-Node-2", "iSCSI", initNode2List)                                 // #nosec G20
+	addHost("CSI-Test-Node-2-ISCSI", "iSCSI", initNode2List)                           // #nosec G20
 	addMaskingView("CSI-Test-MV-1", "CSI-Test-SG-1", "CSI-Test-Node-1", "iscsi_ports") // #nosec G20
 
 	initNode3List := make([]string, 0)
@@ -590,6 +597,16 @@ func initMockCache() {
 	initNode3List = append(initNode3List, hba1Node3)
 	initNode3List = append(initNode3List, hba2Node3)
 	addHost("CSI-Test-Node-3-FC", "Fibre", initNode3List) // #nosec G20
+
+	nvmeDir1 := "OR-1C"
+	nvmedir1PortKey1 := nvmeDir1 + ":" + "001"
+	nqnNodeList := make([]string, 0)
+	nqnNode1 := "nqn.1988-11.com.dell.mock:00:e6e2d5b871f1403E169D0"
+	nqnInit1 := nvmedir1PortKey1 + ":" + nqnNode1
+	nqnNodeList = append(nqnNodeList, nqnInit1)
+	addInitiator(nqnNode1, nqnNode1, "OSHostAndRDF", []string{nvmedir1PortKey1}, "") // #nosec G20
+
+	addHost("CSI-Test-Node-4-NVMETCP", "NVMETCP", nqnNodeList) // #nosec G20
 	addTempSnapshots()
 	addFileObjects()
 }
@@ -3340,7 +3357,11 @@ func handlePort(w http.ResponseWriter, r *http.Request) {
 				}
 				return
 			}
-			returnPort(w, dID, pID)
+			if Filters.GetNVMePorts {
+				returnNVMePort(w, dID, pID)
+			} else {
+				returnPort(w, dID, pID)
+			}
 		}
 		// return a list of Ports
 		returnPortIDList(w, dID)
@@ -3369,6 +3390,13 @@ func returnPort(w http.ResponseWriter, dID, pID string) {
 	replacements["__PORT_ID__"] = pID
 	replacements["__DIRECTOR_ID__"] = dID
 	returnJSONFile(Data.JSONDir, "port_template.json", w, replacements)
+}
+
+func returnNVMePort(w http.ResponseWriter, dID, pID string) {
+	replacements := make(map[string]string)
+	replacements["__PORT_ID__"] = pID
+	replacements["__DIRECTOR_ID__"] = dID
+	returnJSONFile(Data.JSONDir, "nvme_port_template.json", w, replacements)
 }
 
 func returnPortIDList(w http.ResponseWriter, dID string) {
@@ -3482,21 +3510,16 @@ func handleHost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// Scan the initiators to see if there are any non iqn ones; then assume
-		// host type Fibre.
-		isFibre := false
 		for _, initiator := range createHostParam.InitiatorIDs {
-			if !strings.HasPrefix(initiator, "iqn.") {
-				isFibre = true
+			if strings.HasPrefix(initiator, "iqn.") {
+				addHost(createHostParam.HostID, "iSCSI", createHostParam.InitiatorIDs) // #nosec G20
+			} else if strings.HasPrefix(initiator, "nqn.") {
+				addHost(createHostParam.HostID, "NVMETCP", createHostParam.InitiatorIDs) // #nosec G20
+			} else {
+				addHost(createHostParam.HostID, "Fibre", createHostParam.InitiatorIDs) // #nosec G20
 			}
 		}
-		if isFibre {
-			// Might need to add the Port information here
-			addHost(createHostParam.HostID, "Fibre", createHostParam.InitiatorIDs) // #nosec G20
-		} else {
-			// initNode := make([]string, 0)
-			// initNode = append(initNode, "iqn.1993-08.org.centos:01:5ae577b352a7")
-			addHost(createHostParam.HostID, "iSCSI", createHostParam.InitiatorIDs) // #nosec G20
-		}
+
 		returnHost(w, createHostParam.HostID)
 
 	case http.MethodPut:
