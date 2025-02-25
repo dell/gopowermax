@@ -604,9 +604,9 @@ func initMockCache() {
 	nqnNode1 := "nqn.1988-11.com.dell.mock:00:e6e2d5b871f1403E169D0"
 	nqnInit1 := nvmedir1PortKey1 + ":" + nqnNode1
 	nqnNodeList = append(nqnNodeList, nqnInit1)
-	addInitiator(nqnNode1, nqnNode1, "OSHostAndRDF", []string{nvmedir1PortKey1}, "")
+	addInitiator(nqnNode1, nqnNode1, "OSHostAndRDF", []string{nvmedir1PortKey1}, "") // #nosec G20
 
-	addHost("CSI-Test-Node-4-NVMETCP", "NVMETCP", nqnNodeList)
+	addHost("CSI-Test-Node-4-NVMETCP", "NVMETCP", nqnNodeList) // #nosec G20
 	addTempSnapshots()
 	addFileObjects()
 }
