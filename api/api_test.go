@@ -35,6 +35,8 @@ import (
 
 type stubTypeWithMetaData struct{}
 
+// MyReader is an io.ReadCloser implementation for writing
+// the body of an http request
 type MyReader struct {
 	reader io.Reader
 }
