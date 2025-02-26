@@ -1,5 +1,5 @@
 /*
- Copyright © 2020 Dell Inc. or its subsidiaries. All Rights Reserved.
+ Copyright © 2020-2025 Dell Inc. or its subsidiaries. All Rights Reserved.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ const (
 
 // TimeSpent - Calculates and prints time spent for a caller function
 func (c *Client) TimeSpent(functionName string, startTime time.Time) {
-	if logResponseTimes {
+	if c.opts.logResponseTimes {
 		if functionName == "" {
 			pc, _, _, ok := runtime.Caller(1)
 			details := runtime.FuncForPC(pc)
