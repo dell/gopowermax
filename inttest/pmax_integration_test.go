@@ -1,5 +1,5 @@
 /*
- Copyright © 2020 Dell Inc. or its subsidiaries. All Rights Reserved.
+ Copyright © 2020-2025 Dell Inc. or its subsidiaries. All Rights Reserved.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -2065,6 +2065,22 @@ func TestGetISCSITargets(t *testing.T) {
 	targets, err := client.GetISCSITargets(context.TODO(), symmetrixID)
 	if err != nil {
 		t.Error("Error calling GetISCSITargets " + err.Error())
+		return
+	}
+	fmt.Printf("Targets: %v\n", targets)
+}
+
+func TestGetNVMeTCPTargets(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+	}
+	targets, err := client.GetNVMeTCPTargets(context.TODO(), symmetrixID)
+	if err != nil {
+		t.Error("Error calling GetNVMeTCPTargets " + err.Error())
 		return
 	}
 	fmt.Printf("Targets: %v\n", targets)
