@@ -39,6 +39,7 @@ const (
 	XVolume                = "/volume"
 	XStorageGroup          = "/storagegroup"
 	XPortGroup             = "/portgroup"
+	XPort                  = "/port"
 	XInitiator             = "/initiator"
 	XHost                  = "/host"
 	XHostGroup             = "/hostgroup"
@@ -2050,4 +2051,25 @@ func (c *Client) UpdateHostGroupHosts(ctx context.Context, symID string, hostGro
 		}
 	}
 	return updatedHostGroup, nil
+}
+
+// GetPortListForSymmetrix returns a list of all the ports on a specified Symmetrix array.
+func (c *Client) GetPortListForSymmetrix(ctx context.Context, symID string, protocol string) (*types.PortList, error) {
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	portList := &types.PortList{}
+	URL := c.urlPrefix() + SLOProvisioningX + SymmetrixX + symID + XPort
+	if protocol != "" {
+		URL = URL + "?enabled_protocol=" + protocol
+	}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), portList)
+	if err != nil {
+		log.Error("GetSymmetrixPortList failed: " + err.Error())
+		return nil, err
+	}
+
+	return portList, nil
 }

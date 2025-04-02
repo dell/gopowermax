@@ -253,6 +253,8 @@ type Pmax interface {
 	GetDirectorIDList(ctx context.Context, symID string) (*types.DirectorIDList, error)
 	// GetPortList returns a list of all the ports on a specified director/array.
 	GetPortList(ctx context.Context, symID string, directorID string, query string) (*types.PortList, error)
+	// GetPortListForSymmetrix returns a list of all the ports on a specified Symmetrix array.
+	GetPortListForSymmetrix(ctx context.Context, symID string, protocol string) (*types.PortList, error)
 	// GetPort returns port details.
 	GetPort(ctx context.Context, symID string, directorID string, portID string) (*types.Port, error)
 	// GetListOfTargetAddresses returns an array of all IP addresses which expose iscsi targets.
