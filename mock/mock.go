@@ -683,7 +683,7 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/initiator", HandleInitiator)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/portgroup/{id}", HandlePortGroup)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/portgroup", HandlePortGroup)
-	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/port", HandlePort)
+	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/port", HandleSymmetrixPort)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/storagegroup/{id}", HandleStorageGroup)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/storagegroup", HandleStorageGroup)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/maskingview/{mvID}/connections", HandleMaskingViewConnections)
@@ -3288,7 +3288,6 @@ func handlePortGroup(w http.ResponseWriter, r *http.Request) {
 
 // /univmax/restapi/90/system/symmetrix/{symid}/director/{director}/port/{id}
 // /univmax/restapi/90/system/symmetrix/{symid}/director/{director}/port
-// /univmax/restapi/100/sloprovisioning/symmetrix/{symid}/port
 func HandlePort(w http.ResponseWriter, r *http.Request) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
@@ -3365,6 +3364,34 @@ func handlePort(w http.ResponseWriter, r *http.Request) {
 				returnPort(w, dID, pID)
 			}
 		}
+		// return a list of Ports
+		returnPortIDList(w, dID)
+	default:
+		writeError(w, "Invalid Method", http.StatusBadRequest)
+	}
+}
+
+// /univmax/restapi/100/sloprovisioning/symmetrix/{symid}/port
+func HandleSymmetrixPort(w http.ResponseWriter, r *http.Request) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	handleSymmetrixPort(w, r)
+}
+
+func handleSymmetrixPort(w http.ResponseWriter, r *http.Request) {
+	dID := ""
+	queryString := r.URL.Query()
+	queryType, ok := queryString["enabled_protocol"]
+	if ok {
+		if queryType[0] == "SCSI_FC" {
+			dID = "FA-2D"
+		}
+		if queryType[0] == "SCSI" {
+			dID = "SE-1E"
+		}
+	}
+	switch r.Method {
+	case http.MethodGet:
 		// return a list of Ports
 		returnPortIDList(w, dID)
 	default:
