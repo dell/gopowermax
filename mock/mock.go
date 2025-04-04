@@ -3392,6 +3392,10 @@ func handleSymmetrixPort(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Method {
 	case http.MethodGet:
+		if InducedErrors.GetPortError {
+			writeError(w, "Error retrieving Port(s): induced error", http.StatusRequestTimeout)
+			return
+		}
 		// return a list of Ports
 		returnPortIDList(w, dID)
 	default:
