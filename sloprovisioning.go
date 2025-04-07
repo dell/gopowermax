@@ -2053,8 +2053,8 @@ func (c *Client) UpdateHostGroupHosts(ctx context.Context, symID string, hostGro
 	return updatedHostGroup, nil
 }
 
-// GetPortListForSymmetrix returns a list of all the ports on a specified Symmetrix array.
-func (c *Client) GetPortListForSymmetrix(ctx context.Context, symID string, protocol string) (*types.PortList, error) {
+// GetPortListByProtocol returns a list of ports associated with a given protocol for a specified Symmetrix array.
+func (c *Client) GetPortListByProtocol(ctx context.Context, symID string, protocol string) (*types.PortList, error) {
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}

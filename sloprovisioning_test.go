@@ -64,7 +64,7 @@ func TestGetSymmetrixPortList(t *testing.T) {
 			assert.NoError(t, err)
 			c.SetAllowedArrays([]string{allowdArray})
 
-			portList, err := c.GetPortListForSymmetrix(context.Background(), tc.symID, tc.protocol)
+			portList, err := c.GetPortListByProtocol(context.Background(), tc.symID, tc.protocol)
 			assert.Equal(t, tc.expectedPorts, portList)
 			if tc.expectedStatus != http.StatusOK {
 				assert.ErrorContains(t, err, tc.expectedErr)
