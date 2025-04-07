@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetSymmetrixPortList(t *testing.T) {
+func TestGetPortListByProtocol(t *testing.T) {
 	allowdArray := "testSymID"
 	tests := []struct {
 		name           string
