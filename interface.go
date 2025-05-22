@@ -443,4 +443,7 @@ type Pmax interface {
 
 	// RefreshSymmetrix refreshes cache on the symID
 	RefreshSymmetrix(ctx context.Context, symID string) error
+
+	// CloneVolumeFromVolume is an enhanced for volume clone.
+	CloneVolumeFromVolume(ctx context.Context, symID string, replicaPair []types.ReplicationPair, skipValidation bool, optionalPayload map[string]interface{}) error
 }

@@ -44,6 +44,7 @@ const (
 	XHost                  = "/host"
 	XHostGroup             = "/hostgroup"
 	XMaskingView           = "/maskingview"
+	XClone                 = "/clone"
 	Emulation              = "FBA"
 	MaxVolIdentifierLength = 64
 	Migration              = "migration/"

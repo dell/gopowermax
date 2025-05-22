@@ -651,3 +651,64 @@ func (c *Client) GetStorageGroupRDFInfo(ctx context.Context, symID, sgName, rdfG
 	}
 	return sgRdfInfo, nil
 }
+
+// CloneVolumeFromVolume creates a clone between the source volume and the target volume
+func (c *Client) CloneVolumeFromVolume(ctx context.Context, symID string, replicaPair []types.ReplicationPair, skipValidation bool, optionalPayload map[string]interface{}) error {
+	defer c.TimeSpent("CloneVolumeFromVolume", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return err
+	}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	URL := c.privURLPrefix() + ReplicationX + SymmetrixX + symID + XClone + XVolume
+	createReplicaPayload := c.GetCreateReplicaPayload(replicaPair, skipValidation, optionalPayload)
+	Debug = true
+	ifDebugLogPayload(createReplicaPayload)
+	defer cancel()
+	err := c.api.Post(ctx, URL, c.getDefaultHeaders(), createReplicaPayload, nil)
+	if err != nil {
+
+		return err
+	}
+	log.Infof("Successfully created volume replica for %s", replicaPair)
+	return nil
+}
+
+func (c *Client) GetCreateReplicaPayload(replicaPair []types.ReplicationPair, skipValidation bool, optionalPayload map[string]interface{}) *types.ClonePairParam {
+	createReplicaPair := &types.ClonePairParam{}
+	createReplicaPair.ReplicationPair = replicaPair
+	if len(optionalPayload) > 0 {
+		for key, value := range optionalPayload {
+			switch key {
+			case "Copy":
+				createReplicaPair.Copy = value.(bool)
+			case "NoCopy":
+				createReplicaPair.NoCopy = value.(bool)
+			case "Force":
+				createReplicaPair.Force = value.(bool)
+			case "PreCopy":
+				createReplicaPair.PreCopy = value.(bool)
+			case "Differential":
+				createReplicaPair.Differential = value.(bool)
+			case "NoDifferential":
+				createReplicaPair.NoDifferential = value.(bool)
+			case "Vse":
+				createReplicaPair.Vse = value.(bool)
+			case "Establish":
+				createReplicaPair.Establish = value.(bool)
+			case "EstablishTerminate":
+				createReplicaPair.EstablishTerminate = value.(bool)
+			case "Star":
+				createReplicaPair.Star = value.(bool)
+			case "Skip":
+				createReplicaPair.Skip = value.(bool)
+			default:
+				log.Warnf("Unknown key in optionalPayload: %s", key)
+			}
+		}
+		if skipValidation {
+			createReplicaPair.CommandParam = &types.CommandParam{SkipVolumeValidation: skipValidation}
+		}
+	}
+	return createReplicaPair
+}

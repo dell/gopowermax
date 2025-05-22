@@ -332,3 +332,29 @@ type StorageGroupRDFG struct {
 	Modes            []string `json:"modes"`
 	LargerRdfSides   []string `json:"largerRdfSides"`
 }
+
+type CommandParam struct {
+	SkipVolumeValidation bool `json:"skip_volume_validation"`
+}
+
+type ReplicationPair struct {
+	SourceVolumeName string `json:"source_volume_name"`
+	TargetVolumeName string `json:"target_volume_name"`
+}
+
+// ClonePairParam holds information for clone pair
+type ClonePairParam struct {
+	ReplicationPair    []ReplicationPair `json:"replication_pair"`
+	Copy               bool              `json:"copy"`
+	NoCopy             bool              `json:"no_copy"`
+	Force              bool              `json:"force"`
+	PreCopy            bool              `json:"pre_copy"`
+	Differential       bool              `json:"differential"`
+	NoDifferential     bool              `json:"no_differential"`
+	Vse                bool              `json:"vse"`
+	Establish          bool              `json:"establish"`
+	EstablishTerminate bool              `json:"establish_terminate"`
+	Star               bool              `json:"star"`
+	Skip               bool              `json:"skip"`
+	CommandParam       *CommandParam     `json:"command_param,omitempty"`
+}
