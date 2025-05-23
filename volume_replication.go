@@ -707,7 +707,7 @@ func (c *Client) GetCreateReplicaPayload(replicaPair []types.ReplicationPair, sk
 			}
 		}
 		if skipValidation {
-			createReplicaPair.CommandParam = &types.CommandParam{SkipVolumeValidation: skipValidation}
+			createReplicaPair.CommandParam = &types.CommandParams{SkipVolumeValidation: skipValidation}
 		}
 	}
 	return createReplicaPair
