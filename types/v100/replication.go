@@ -333,7 +333,7 @@ type StorageGroupRDFG struct {
 	LargerRdfSides   []string `json:"largerRdfSides"`
 }
 
-type CommandParam struct {
+type CommandParams struct {
 	SkipVolumeValidation bool `json:"skip_volume_validation"`
 }
 
@@ -356,5 +356,5 @@ type ClonePairParam struct {
 	EstablishTerminate bool              `json:"establish_terminate"`
 	Star               bool              `json:"star"`
 	Skip               bool              `json:"skip"`
-	CommandParam       *CommandParam     `json:"command_param,omitempty"`
+	CommandParam       *CommandParams    `json:"command_params,omitempty"`
 }
