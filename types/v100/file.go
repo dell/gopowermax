@@ -289,3 +289,20 @@ type FileInterface struct {
 	IsDisabled bool   `json:"is_disabled"`
 	Override   bool   `json:"override"`
 }
+
+// NFSServerList holds nfs server metadata items
+type NFSServerList struct {
+	ID string `json:"id"`
+}
+
+// NFSServerIterator holds the iterator of resultant NFS server list
+type NFSServerIterator struct {
+	Entries []NFSServerList `json:"entries"`
+}
+
+// NFSServer holds nfs server details
+type NFSServer struct {
+	ID           string `json:"id"`
+	NFSV3Enabled bool   `json:"nfsv3_enabled"`
+	NFSV4Enabled bool   `json:"nfsv4_enabled"`
+}
