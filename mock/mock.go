@@ -68,6 +68,7 @@ const (
 	DefaultNASServerName     = "nas-1"
 	DefaultFSID              = "64xxx7a6-03b5-xxx-xxx-0zzzz8200208"
 	DefaultFSName            = "fs-ds-1"
+	DefaultNFSServerID       = "678xx790-115e-xxxx-xxxx-0zzzz200205"
 )
 
 const (
@@ -127,6 +128,7 @@ var Data struct {
 	NFSExportIDToNFSExport   map[string]*types.NFSExport
 	NASServerIDToNASServer   map[string]*types.NASServer
 	FileIntIDtoFileInterface map[string]*types.FileInterface
+	NFSServerIDToNFSServer   map[string]*types.NFSServer
 }
 
 var Filters = new(filters)
@@ -263,6 +265,8 @@ type inducedErrors struct {
 	ExecuteActionError                     bool
 	GetFreshMetrics                        bool
 	GetNVMePorts                           bool
+	GetNFSServerListError                  bool
+	GetNFSServerError                      bool
 }
 
 // hasError checks to see if the specified error (via pointer)
@@ -469,6 +473,8 @@ func Reset() {
 	InducedErrors.GetFileInterfaceError = false
 	InducedErrors.ExecuteActionError = false
 	InducedErrors.GetFreshMetrics = false
+	InducedErrors.GetNFSServerListError = false
+	InducedErrors.GetNFSServerError = false
 	Data.JSONDir = "mock"
 	Data.VolumeIDToIdentifier = make(map[string]string)
 	Data.VolumeIDToSize = make(map[string]int)
@@ -498,6 +504,7 @@ func Reset() {
 	Data.NFSExportIDToNFSExport = make(map[string]*types.NFSExport)
 	Data.NASServerIDToNASServer = make(map[string]*types.NASServer)
 	Data.FileIntIDtoFileInterface = make(map[string]*types.FileInterface)
+	Data.NFSServerIDToNFSServer = make(map[string]*types.NFSServer)
 	Data.AsyncRDFGroup = &types.RDFGroup{
 		RdfgNumber:          DefaultAsyncRDFGNo,
 		Label:               DefaultAsyncRDFLabel,
@@ -629,6 +636,8 @@ func addFileObjects() {
 	addNewNASServer("id2", "nas-del")
 	// Add a FileInterface
 	addNewFileInterface("id1", "interface-1")
+	// Add a NFS server
+	addNewNFSServer("id1", true, true)
 }
 
 var mockRouter http.Handler
@@ -759,6 +768,8 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/nas_server", HandleNASServer)
 	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/file_interface", HandleFileInterface)
 	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/file_interface/{interfaceID}", HandleFileInterface)
+	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/nfs_server/{nfsID}", HandleNFSServer)
+	router.HandleFunc(PREFIX+"/file/symmetrix/{symid}/nfs_server", HandleNFSServer)
 
 	mockRouter = router
 	return router
@@ -5135,6 +5146,83 @@ func returnNFSExport(w http.ResponseWriter, nfsID string) {
 		return
 	}
 	writeJSON(w, nfsExport)
+}
+
+// /univmax/restapi/100/file/symmetrix/{symID}/nfs_server/
+// /univmax/restapi/100/file/symmetrix/{symID}/nfs_server/{nfsID}
+func HandleNFSServer(w http.ResponseWriter, r *http.Request) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	handleNFSServer(w, r)
+}
+
+func handleNFSServer(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	nfsID := vars["nfsID"]
+	switch r.Method {
+	case http.MethodGet:
+		if InducedErrors.GetNFSServerListError {
+			writeError(w, "Error retrieving NFS server: induced error", http.StatusRequestTimeout)
+			return
+		}
+		if InducedErrors.GetNFSServerError {
+			writeError(w, "Error retrieving NFS server: induced error", http.StatusRequestTimeout)
+			return
+		}
+		returnNFSServer(w, nfsID)
+	default:
+		writeError(w, "Invalid Method", http.StatusBadRequest)
+	}
+}
+
+func returnNFSServer(w http.ResponseWriter, nfsID string) {
+	if nfsID == "" {
+		// return NFS ServerList
+		nfsIter := &types.NFSServerIterator{
+			Entries: []types.NFSServerList{
+				{
+					ID: DefaultNFSServerID,
+				},
+				{
+					ID: "6xxx5803-1b0a-c5c0-xxxx-02zzzz200a05",
+				},
+			},
+		}
+		writeJSON(w, nfsIter)
+		return
+	}
+	var nfsServer *types.NFSServer
+	found := false
+	for _, ns := range Data.NFSServerIDToNFSServer {
+		if ns.ID == nfsID {
+			found = true
+			nfsServer = ns
+		}
+	}
+	if !found {
+		writeError(w, "NFSServer cannot be found", http.StatusNotFound)
+		return
+	}
+	writeJSON(w, nfsServer)
+}
+
+// AddNewNFSServer adds new NFS server into mock
+func AddNewNFSServer(id string, nfsV3Enabled, nfsV4Enabled bool) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	addNewNFSServer(id, nfsV3Enabled, nfsV4Enabled)
+}
+
+func addNewNFSServer(nfsID string, nfsV3Enabled, nfsV4Enabled bool) {
+	Data.NFSServerIDToNFSServer[nfsID] = newNFSServer(nfsID, nfsV3Enabled, nfsV4Enabled)
+}
+
+func newNFSServer(nfsID string, nfsV3Enabled, nfsV4Enabled bool) *types.NFSServer {
+	return &types.NFSServer{
+		ID:           nfsID,
+		NFSV3Enabled: nfsV3Enabled,
+		NFSV4Enabled: nfsV4Enabled,
+	}
 }
 
 // /univmax/restapi/100/file/symmetrix/{symID}/file_system/
