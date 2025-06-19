@@ -443,4 +443,10 @@ type Pmax interface {
 
 	// RefreshSymmetrix refreshes cache on the symID
 	RefreshSymmetrix(ctx context.Context, symID string) error
+
+	// GetNFSServerList get NFS Server list on a symID
+	GetNFSServerList(ctx context.Context, symID string) (*types.NFSServerIterator, error)
+
+	// GetNFSServerByID fetch specific NFS server on symID
+	GetNFSServerByID(ctx context.Context, symID, nfsID string) (*types.NFSServer, error)
 }
