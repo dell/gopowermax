@@ -283,3 +283,37 @@ Feature: PMAX file test
       | "id1"         | "httpStatus500"          | "Internal Error"              | ""        |
       | "id1"         | "InvalidJSON"            | "invalid character"           | ""        |
       | "id1"         | "none"                   | "ignored as it is not managed"| "ignored" |
+
+  @v2.4.0
+  Scenario Outline: TestCases for GetNFSServerList
+    Given a valid connection
+    And I induce error <induced>
+    When I call GetNFSServerList
+    Then the error message contains <errormsg>
+    And I get a valid NFS Server ID List if no error
+
+    Examples:
+      | induced                    | errormsg               |
+      | "none"                     | "none"                 |
+      | "GetNFSServerListError"    | "induced error"        |
+      | "InvalidResponse"          | "EOF"                  |
+
+  @v2.4.0
+  Scenario Outline: Test cases for GetNFSServerByID
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    When I call GetNFSServerByID <id>
+    Then the error message contains <errormsg>
+    And I get a valid nfsServer Object if no error
+
+    Examples:
+      | id            | induced                  | errormsg                      | arrays    |
+      | "id1"         | "none"                   | "none"                        | ""        |
+      | "id3"         | "none"                   | "cannot be found"             | ""        |
+      | "id1"         | "GetNFSServerError"      | "induced error"               | ""        |
+      | "id1"         | "InvalidResponse"        | "EOF"                         | ""        |
+      | "id1"         | "httpStatus500"          | "Internal Error"              | ""        |
+      | "id1"         | "InvalidJSON"            | "invalid character"           | ""        |
+      | "id1"         | "none"                   | "ignored as it is not managed"| "ignored" |
+

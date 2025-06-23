@@ -141,6 +141,8 @@ type unitContext struct {
 	nfsExport      *types.NFSExport
 	nasServer      *types.NASServer
 	fileInterface  *types.FileInterface
+	nfsServerList  *types.NFSServerIterator
+	nfsServer      *types.NFSServer
 }
 
 func (c *unitContext) reset() {
@@ -186,6 +188,7 @@ func (c *unitContext) reset() {
 	c.fileInterface = nil
 	c.volumesMetrics = nil
 	c.fileSystemMetrics = nil
+	c.nfsServer = nil
 }
 
 func (c *unitContext) iInduceError(errorType string) error {
@@ -271,6 +274,9 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.CreateSnapshotPolicyError = false
 	mock.InducedErrors.ModifySnapshotPolicyError = false
 	mock.InducedErrors.DeleteSnapshotPolicyError = false
+	mock.InducedErrors.GetNFSServerListError = false
+	mock.InducedErrors.GetNFSServerError = false
+
 	switch errorType {
 	case "InvalidJSON":
 		mock.InducedErrors.InvalidJSON = true
@@ -464,6 +470,10 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.GetFileInterfaceError = true
 	case "ExecuteActionError":
 		mock.InducedErrors.ExecuteActionError = true
+	case "GetNFSServerListError":
+		mock.InducedErrors.GetNFSServerListError = true
+	case "GetNFSServerError":
+		mock.InducedErrors.GetNFSServerError = true
 	case "none":
 	default:
 		return fmt.Errorf("unknown errorType: %s", errorType)
@@ -2473,6 +2483,11 @@ func (c *unitContext) iCallGetNASServerList() error {
 	return nil
 }
 
+func (c *unitContext) iCallGetNFSServerList() error {
+	c.nfsServerList, c.err = c.client.GetNFSServerList(context.TODO(), symID)
+	return nil
+}
+
 func (c *unitContext) iCallGetNASServerListWithParam() error {
 	query := types.QueryParams{queryName: mock.DefaultNASServerName}
 	c.nasServerList, c.err = c.client.GetNASServerList(context.TODO(), symID, query)
@@ -2497,6 +2512,18 @@ func (c *unitContext) iGetAValidNASServerIDListIfNoError() error {
 		}
 		if len(c.nasServerList.Entries) == 0 {
 			return fmt.Errorf("no IDs in nasServerList")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iGetAValidNFSServerIDListIfNoError() error {
+	if c.err == nil {
+		if c.nfsServerList == nil {
+			return fmt.Errorf("nfsServer List nil")
+		}
+		if len(c.nfsServerList.Entries) == 0 {
+			return fmt.Errorf("no IDs in nfsServerList")
 		}
 	}
 	return nil
@@ -2563,6 +2590,11 @@ func (c *unitContext) iCallGetNASServerByID(nasID string) error {
 	return nil
 }
 
+func (c *unitContext) iCallGetNFSServerByID(nfsID string) error {
+	c.nfsServer, c.err = c.client.GetNFSServerByID(context.TODO(), symID, nfsID)
+	return nil
+}
+
 func (c *unitContext) iCallModifyNASServerOn(nasID string) error {
 	payload := types.ModifyNASServer{Name: "new-name"}
 	c.nasServer, c.err = c.client.ModifyNASServer(context.TODO(), symID, nasID, payload)
@@ -2573,6 +2605,15 @@ func (c *unitContext) iGetAValidNASServerObjectIfNoError() error {
 	if c.err == nil {
 		if c.nasServer == nil {
 			return fmt.Errorf("nasServer nil")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iGetAValidNFSServerObjectIfNoError() error {
+	if c.err == nil {
+		if c.nfsServer == nil {
+			return fmt.Errorf("nfsServer nil")
 		}
 	}
 	return nil
@@ -2875,4 +2916,8 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^I call GetNFSExportListWithParam`, c.iCallGetNFSExportListWithParam)
 	s.Step(`^I call GetFileInterfaceByID "([^"]*)"$`, c.iCallGetFileInterfaceByID)
 	s.Step(`^I get a valid fileInterface Object if no error$`, c.iGetAValidFileInterfaceObjectIfNoError)
+	s.Step(`^I call GetNFSServerList$`, c.iCallGetNFSServerList)
+	s.Step(`^I get a valid NFS Server ID List if no error$`, c.iGetAValidNFSServerIDListIfNoError)
+	s.Step(`^I call GetNFSServerByID "([^"]*)"$`, c.iCallGetNFSServerByID)
+	s.Step(`^I get a valid nfsServer Object if no error$`, c.iGetAValidNFSServerObjectIfNoError)
 }
