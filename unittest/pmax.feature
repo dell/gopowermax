@@ -126,18 +126,20 @@ Feature: PMAX Client library
     Given a valid connection
     And I have an allowed list of <arrays>
     And I induce error <induced>
-    When I call GetStorageGroupIDList
+    When I call GetStorageGroupIDList with id <id> and like <like>
     Then the error message contains <errormsg>
     And I get a valid StorageGroupIDList if no errors
 
-    Examples:
-    | induced               | errormsg                      | arrays    |
-    | "none"                | "none"                        | ""        |
-    | "GetStorageGroupError"| "induced error"               | ""        |
-    | "httpStatus500"       | "Internal Error"              | ""        |
-    | "InvalidJSON"         | "invalid character"           | ""        |
-    | "none"                | "ignored as it is not managed"| "ignored" |
-    | "InvalidResponse"     | "EOF"                         | ""        |
+  Examples:
+    | id                | like    | induced               | errormsg                      | arrays    |
+    | ""                | "false" | "none"                | "none"                        | ""        |
+    | "CSI-Test-SG"     | "false" | "none"                | "none"                        | ""        |
+    | "CSI-Test"        | "true"  | "none"                | "none"                        | ""        |
+    | "test"            | "true"  | "GetStorageGroupError"| "induced error"               | ""        |
+    | "test"            | "false" | "httpStatus500"       | "Internal Error"              | ""        |
+    | "test"            | "true"  | "InvalidJSON"         | "invalid character"           | ""        |
+    | "test"            | "false" | "none"                | "ignored as it is not managed"| "ignored" |
+    | "test"            | "true"  | "InvalidResponse"     | "EOF"                         | ""        |
 
   Scenario Outline: Test cases for GetStorageGroup
     Given a valid connection
@@ -1018,6 +1020,22 @@ Scenario Outline: Test GetHostList
     | 0     | "GetDirectorError"        | "Error retrieving Director"                              | ""        |
     | 0     | "none"                    | "ignored as it is not managed"                           | "ignored" |
 
+  Scenario Outline: Test GetPorts
+    Given a valid connection
+    And I have an allowed list of "<arrays>"
+    And I induce error "<induced>"
+    When I call GetPorts
+    Then the error message contains "<errormsg>"
+
+    Examples:
+      | induced       | arrays            | errormsg                                  |
+      | none          | ""                | Not Found                                 |
+      | GetPortError  | ""                | induced error                             |
+      | httpStatus500 | ""                | Internal Error                            |
+      | InvalidJSON   | ""                | invalid character                         |
+      | none          | ignored           | ignored as it is not managed              |
+      | none          | 000197900046      | Not Found                                 |
+
   Scenario Outline: Test Array allowed lists
     Given a valid connection
     And I have an allowed list of <arrays>
@@ -1249,3 +1267,111 @@ Scenario Outline: Test GetHostList
     | nvols      | vols  | induced  | errormsg                      | arrays          | sgname      | 
     | 7          | 7     | "none"   | "none"                        | "000197900046"  | "TestSG"    | 
     | 5          | 5     | "none"   | "storageGroupID is empty"     | "000197900046"  | ""          |
+
+  
+  Scenario Outline: Retrieve version details from the array
+    Given a valid connection
+    And I induce error <errorType>
+    When I call GetVersionDetails
+    Then the error message contains <errormsg>
+    And the version details version is <version> and API version is <apiversion>
+
+    Examples:
+      | errorType       | errormsg               | version    | apiversion |
+      | "none"          | "none"                 | "V9.1.0.2" | ""         |
+      | "InvalidJSON"   | "invalid character"    | "none"     | "none"     |
+      | "httpStatus500" | "Internal Error"       | "none"     | "none"     |
+
+  Scenario Outline: Test cases for GetVolumesByIdentifier
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I have 5 volumes
+    And I induce error <induced>
+    When I call GetVolumesByIdentifier <id>
+    Then the error message contains <errormsg>
+    And I get a valid Volume Object <id> if no error
+
+    Examples:
+    | id              | induced               | errormsg                      | arrays    |
+    | "00001"         | "none"                | "Not Found"                   | ""        |
+    | "00003"         | "none"                | "Not Found"                   | ""        |
+    | "00010"         | "none"                | "Not Found"                   | ""        |
+    | "00001"         | "GetVolumeError"      | "Not Found"                   | ""        |
+    | "00001"         | "httpStatus500"       | "Internal Error"              | ""        |
+    | "00001"         | "InvalidJSON"         | "invalid character"           | ""        |
+    | "00001"         | "none"                | "ignored as it is not managed"| "ignored" |
+
+  Scenario Outline: Test GetPortListByProtocol
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I use protocol <protocol>
+    And I induce error <induced>
+    When I call GetPortListByProtocol
+    Then the error message contains <errormsg>
+    And I get a valid PortList
+
+    Examples:
+    | induced            | arrays         | protocol | errormsg                            |
+    | "none"             | "000197900046" | "fibre"  | "none"                              |
+    | "GetPortError"     | "000197900046" | "fibre"  | "induced error"                     |
+
+  Scenario Outline: Test GetPortGroupListByType
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I have a PortGroup
+    And I induce error <induced>
+    When I call GetPortGroupListByType
+    Then the error message contains <errormsg>
+    And I get a valid PortGroupListByID if no error
+
+    Examples:
+      | induced             | errormsg                              | arrays    |
+      | "none"              | "Not Found"                                | ""        |
+      | "GetPortGroupError" | "Not Found"                       | ""        |
+      | "none"              | "ignored as it is not managed"        | "ignored" |
+
+Scenario Outline: Test CloneVolumeFromVolume
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I have 2 volumes
+    And I induce error <induced>
+    When I call CloneVolumeFromVolume with source volume and target volume
+    Then the error message contains <errormsg>
+
+  Examples:
+    | induced                    |  errormsg                   | arrays    |
+    | "none"                     |  "none"                    | ""        |
+    | "none"                     |  "none"                    | ""        |
+    | "none"                     |  "none"                    | ""        |
+    | "none"                     |  "none"                    | ""        |
+    | "none"                     |  "none"                    | ""        |
+    | "none"                     |  "none"                    | ""        |
+    | "none"                     |  "none"                    | ""        |
+    | "CloneVolumeError"         |  "induced error"           | ""        |
+    | "httpStatus500"            |  "Internal Error"          | ""        |
+    | "InvalidJSON"              |  "none"                    | ""        |
+    | "none"                     |  "none"                    | ""        |
+    | "none"                     |  "ignored as it is not managed" | "ignored" |
+
+Scenario Outline: Test cases for GetStorageGroupVolumeCounts
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    And I have a StorageGroup <sg1name> with volume count <volcount1>
+    And I have a StorageGroup <sg2name> with volume count <volcount2>
+    When I call GetStorageGroupVolumeCounts with prefix <prefix>
+    And I get a valid StorageGroupVolumeCounts with total sgcount <sgcount> if no error
+    And I get a valid StorageGroupVolumeCounts with total volume count <totvolcount> if no error
+    Then the error message contains <errormsg>
+
+    Examples:
+    | arrays    | induced          | sg1name     | sg2name    | volcount1 | volcount2 | prefix | errormsg      | sgcount | totvolcount |
+    | ""        | "none"           | "TestSG1"   | "TestSG2"  | 1         | 2         |    ""  | "none"       | 2       | 3           |
+    | ""        | "none"           | "TestSG1"   | "TestSG2"  | 1         | 0         |    ""  | "none"       | 2       | 1           |
+    | ""        | "none"           | "sg--1"     | "sg--2"    | 1         | 2         |  "sg"  | "none"       | 2       | 3           |
+    | ""        | "none"           | "TestSG1"   | ""         | 1         | 0         |    ""  | "none"       | 1       | 1           |
+    | ""        | "none"           | ""          | ""         | 0         | 0         |    ""  | "none"       | 0       | 0           |
+    | ""        | "httpStatus500"  | "TestSG1"   | ""         | 1         | 0         |    ""  | "Internal Error"       | 0       | 0           |
+    | ""        | "InvalidJSON"    | "TestSG1"   | ""         | 1         | 0         |    ""  | "invalid character"       | 0       | 0           |
+    | ""        | "GetStorageGroupError" | "TestSG1"   | ""   | 1         | 0         |    ""  | "induced error"       | 0       | 0           |
+    | "ignored" | "none"           | ""          | ""         | 0         | 0         |    ""  |  "ignored as it is not managed"       | 0       | 0           |

@@ -26,6 +26,7 @@ import (
 
 	pmax "github.com/dell/gopowermax/v2"
 	types "github.com/dell/gopowermax/v2/types/v100"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -65,6 +66,8 @@ var (
 	defaultSRP                = "storage-pool"
 	defaultServiceLevel       = "Diamond"
 	volumePrefix              = "xx"
+	sourceVolumePrefix        = "sx"
+	targetVolumePrefix        = "tx"
 	sgPrefix                  = "zz"
 	snapshotPrefix            = "snap"
 	csiPrefix                 = "csi"
@@ -147,7 +150,7 @@ func TestMain(m *testing.M) {
 	}
 	fmt.Printf("status %d\n", status)
 	doCleanUp := setenvVariable("Cleanup", "true")
-	cleanupTests := []testing.InternalTest{}
+	var cleanupTests []testing.InternalTest
 	if doCleanUp != "false" {
 		fmt.Println("========= CLEANUP ==========")
 		cleanupTests = append(cleanupTests, testing.InternalTest{
@@ -500,6 +503,60 @@ func TestGetNonExistentVolume(t *testing.T) {
 		fmt.Printf("%#v\n", volume)
 		t.Error("Expected volume 88888 to be non-existent")
 	}
+}
+
+func TestGetVolumesByIdentifier(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+
+	now := time.Now()
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
+	fmt.Printf("volumeName: %s\n", volumeName)
+	volOpts := make(map[string]interface{})
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1, volOpts)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Printf("volume:\n%#v\n", vol)
+	err = client.AddVolumesToStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG, true, vol.VolumeID)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	sg, err := client.GetStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Printf("SG after adding volume: %#v\n", sg)
+
+	volumes, err := client.GetVolumesByIdentifier(context.TODO(), symmetrixID, vol.VolumeIdentifier)
+	if err != nil || volumes == nil {
+		t.Errorf("cannot get volumes by identifier: %v", err)
+		return
+	}
+	if len(volumes.Volumes) == 0 {
+		t.Error("expected at least one volume in list")
+		return
+	}
+	for _, v := range volumes.Volumes {
+		log.Infof("Volume ID: %v\n", v.ID)
+	}
+
+	// Remove the volume from SG as part of cleanup
+	sg, err = client.RemoveVolumesFromStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG, true, vol.VolumeID)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Printf("SG after removing volume: %#v\n", sg)
+	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
 }
 
 func TestGetStorageGroupIDs(t *testing.T) {
@@ -1106,6 +1163,25 @@ func TestGetPorts(t *testing.T) {
 	fmt.Printf("port %s:%s %#v\n", dirName, portName, port)
 }
 
+func TestGetPortsEnhancedAPI(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+	dirName := defaultFCdirname
+	portName := defaultFCportName
+	port, err := client.GetPorts(context.Background(), symmetrixID)
+	if err != nil {
+		t.Errorf("Unable to get storage ports %s %s: %s", dirName, portName, err)
+		return
+	}
+
+	fmt.Printf("port %s:%s %#v\n", dirName, portName, port)
+}
+
 func TestGetPortGroupIDs(t *testing.T) {
 	if client == nil {
 		err := getClient()
@@ -1172,6 +1248,39 @@ func TestGetPortGroupByiSCSIID(t *testing.T) {
 		return
 	}
 	fmt.Printf("PortGroup: %#v\n", portGroup)
+}
+
+func TestGetPortGroupListByType(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+	log.Info("Attempting to get PortGroupList")
+	pgList, err := client.GetPortGroupListByType(context.TODO(), symmetrixID, "")
+	if err != nil || pgList == nil {
+		t.Error("cannot get PortGroupList: ", err.Error())
+		return
+	}
+	log.Info("Successfully got PortGroupList")
+	if len(pgList.Results) == 0 {
+		t.Error("expected at least one PortGroup ID in list")
+		return
+	}
+	pgList, err = client.GetPortGroupListByType(context.TODO(), symmetrixID, "ISCSI")
+	if err != nil || pgList == nil {
+		t.Error("cannot get iSCSI PortGroupList: ", err.Error())
+		return
+	}
+	if len(pgList.Results) == 0 {
+		t.Error("expected at least one iSCSI PortGroup ID in list")
+		return
+	}
+	for pg := range pgList.Results {
+		log.Infof("PortGroup ID: %v\n", pg)
+	}
 }
 
 func TestGetInitiatorIDs(t *testing.T) {
@@ -2426,4 +2535,96 @@ func TestGetVolumesMetrics(t *testing.T) {
 		return
 	}
 	fmt.Printf("MBRead of volume %s: %f \n", metrics.ResultList.Result[0].VolumeID, metrics.ResultList.Result[0].VolumeResult[0].MBRead)
+}
+
+func TestCloneVolumeFromVolume(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+
+	now := time.Now()
+	sourceVolumeName := fmt.Sprintf("csi%s-Int%d", sourceVolumePrefix, now.Nanosecond())
+	fmt.Printf("Source volumeName: %s\n", sourceVolumeName)
+
+	volOpts := make(map[string]interface{})
+	sourcevol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, sourceVolumeName, 1, volOpts)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Printf("Source Volume:\n%#v\n", sourcevol)
+
+	err = client.AddVolumesToStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG, true, sourcevol.VolumeID)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Creating target volume
+	targetVolumeName := fmt.Sprintf("csi%s-Int%d", targetVolumePrefix, now.Nanosecond())
+	fmt.Printf("Target volumeName: %s\n", targetVolumeName)
+	targetvol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, targetVolumeName, 1, volOpts)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Printf("Target Volume:\n%#v\n", targetvol)
+
+	err = client.AddVolumesToStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG, true, targetvol.VolumeID)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	sg, err := client.GetStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	fmt.Printf("SG after adding volume: %#v\n", sg)
+
+	repReq := types.ReplicationRequest{
+		ReplicationPair: []types.ReplicationPair{
+			{
+				SourceVolumeName: sourcevol.VolumeID,
+				TargetVolumeName: targetvol.VolumeID,
+			},
+		},
+		// set establish/terminate flags as needed for the test
+		Establish:          true,
+		EstablishTerminate: true,
+	}
+
+	resp := client.CloneVolumeFromVolume(context.TODO(), symmetrixID, repReq)
+	if resp != nil {
+		t.Errorf("error in cloning the volumes: %v", err)
+		return
+	}
+	if resp == nil {
+		fmt.Printf("Volume cloning got successful")
+	}
+
+	fmt.Printf("---------- Sleeping for 5 seconds ----------\n")
+	time.Sleep(5 * time.Second)
+
+	// Remove the volume from SG as part of cleanup
+	sg, err = client.RemoveVolumesFromStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG, true, sourcevol.VolumeID)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	cleanupVolume(sourcevol.VolumeID, sourceVolumeName, defaultStorageGroup, t)
+
+	sg, err = client.RemoveVolumesFromStorageGroup(context.TODO(), symmetrixID, nonFASTManagedSG, true, targetvol.VolumeID)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	cleanupVolume(targetvol.VolumeID, targetVolumeName, defaultStorageGroup, t)
+
+	fmt.Printf("SG after removing volume: %#v\n", sg)
 }

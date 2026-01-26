@@ -30,6 +30,7 @@ import (
 // The following constants are for internal use of the pmax library.
 const (
 	RESTPrefix          = "univmax/restapi/"
+	RESTPrefixV1        = "univmax/rest/v1"
 	StorageResourcePool = "srp"
 )
 
@@ -43,6 +44,10 @@ var (
 
 func (c *Client) urlPrefix() string {
 	return RESTPrefix + c.version + "/"
+}
+
+func (c *Client) urlPrefixV1() string {
+	return RESTPrefixV1 + "/systems/"
 }
 
 // There are many internal REST APIs provided by U4P, Defining the internal RESTAPI signature
@@ -277,6 +282,25 @@ func (c *Client) GetPort(ctx context.Context, symID string, directorID string, p
 	return port, nil
 }
 
+// GetPorts returns port details (Enhanced API)
+func (c *Client) GetPorts(ctx context.Context, symID string) (*types.PortV1, error) {
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	port := &types.PortV1{}
+	URL := c.urlPrefixV1() + symID + XPortsEnhance + SelectQuery + SelectID + SelectResourceType + SelectPortNumber + SelectPortIdentifier + SelectDirector
+
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), port)
+	if err != nil {
+		log.Error("GetPorts failed: " + err.Error())
+		return nil, err
+	}
+
+	return port, nil
+}
+
 // GetListOfTargetAddresses returns list of target addresses
 func (c *Client) GetListOfTargetAddresses(ctx context.Context, symID string) ([]string, error) {
 	if _, err := c.IsAllowedArray(symID); err != nil {
@@ -470,4 +494,30 @@ func (c *Client) IsAllowedArray(array string) (bool, error) {
 	}
 	// we did not find the array
 	return false, fmt.Errorf("the requested array (%s) is ignored as it is not managed", array)
+}
+
+func (c *Client) GetVersionDetails(ctx context.Context) (*types.VersionDetails, error) {
+	URL := RESTPrefix + "version"
+	log.Debug("==URL", URL)
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	resp, err := c.api.DoAndGetResponseBody(
+		ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
+	if err != nil {
+		log.Error("GetVersion failed: " + err.Error())
+		return nil, err
+	}
+	if err = c.checkResponse(resp); err != nil {
+		return nil, err
+	}
+	versionDetails := &types.VersionDetails{}
+	decoder := json.NewDecoder(resp.Body)
+	if err = decoder.Decode(versionDetails); err != nil {
+		return nil, err
+	}
+	err = resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	return versionDetails, nil
 }
