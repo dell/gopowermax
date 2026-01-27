@@ -100,11 +100,17 @@ type Pmax interface {
 	// GetVolumeByID returns a Volume given the volumeID.
 	GetVolumeByID(ctx context.Context, symID string, volumeID string) (*types.Volume, error)
 
+	// GetVolumesByIdentifier returns a Volume given the volume identifier.
+	GetVolumesByIdentifier(ctx context.Context, symID string, identifier string) (*types.Volumev1, error)
+
 	// GetStorageGroupIDList returns a list of all the StorageGroup ids.
 	GetStorageGroupIDList(ctx context.Context, symID, storageGroupIDMatch string, like bool) (*types.StorageGroupIDList, error)
 
 	// GetStorageGroup returns a storage group given the StorageGroup id.
 	GetStorageGroup(ctx context.Context, symID string, storageGroupID string) (*types.StorageGroup, error)
+
+	// GetStorageGroupVolumeCounts returns a StorageGroupVolumeCounts object, which contains a list of storage groups with their respective volume counts
+	GetStorageGroupVolumeCounts(ctx context.Context, symID string, prefix string) (*types.StorageGroupVolumeCounts, error)
 
 	// GetStorageGroupSnapshotPolicy returns a storage group snapshot policy details.
 	GetStorageGroupSnapshotPolicy(ctx context.Context, symID, snapshotPolicyID, storageGroupID string) (*types.StorageGroupSnapshotPolicy, error)
@@ -253,6 +259,12 @@ type Pmax interface {
 	GetDirectorIDList(ctx context.Context, symID string) (*types.DirectorIDList, error)
 	// GetPortList returns a list of all the ports on a specified director/array.
 	GetPortList(ctx context.Context, symID string, directorID string, query string) (*types.PortList, error)
+
+	// GetPorts returns a list of all the ports on a specified director/array-Enhanced API.
+	GetPorts(ctx context.Context, symID string) (*types.PortV1, error)
+
+	// GetPortGroupListByType returns a list of all the Port Group ids.
+	GetPortGroupListByType(ctx context.Context, symID string, portGroupType string) (*types.PortGroupListResult, error)
 	// GetPortListByProtocol returns a list of ports associated with a given protocol for a specified Symmetrix array.
 	GetPortListByProtocol(ctx context.Context, symID string, protocol string) (*types.PortList, error)
 	// GetPort returns port details.
@@ -440,7 +452,6 @@ type Pmax interface {
 	DeleteNASServer(ctx context.Context, symID, nasID string) error
 	// GetFileInterfaceByID gets a FileInterface
 	GetFileInterfaceByID(ctx context.Context, symID, interfaceID string) (*types.FileInterface, error)
-
 	// RefreshSymmetrix refreshes cache on the symID
 	RefreshSymmetrix(ctx context.Context, symID string) error
 
@@ -449,4 +460,10 @@ type Pmax interface {
 
 	// GetNFSServerByID fetch specific NFS server on symID
 	GetNFSServerByID(ctx context.Context, symID, nfsID string) (*types.NFSServer, error)
+
+	// GetVersionDetails fetch array API version details
+	GetVersionDetails(ctx context.Context) (*types.VersionDetails, error)
+
+	// CloneVolumeFromVolume is an enhanced for volume clone.
+	CloneVolumeFromVolume(ctx context.Context, symID string, replicaPair types.ReplicationRequest) error
 }

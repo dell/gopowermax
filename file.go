@@ -119,7 +119,7 @@ func (c *Client) CreateFileSystem(ctx context.Context, symID, name, nasServer, s
 		NasServer:    nasServer,
 		ServiceLevel: serviceLevel,
 	}
-	Debug = true
+
 	ifDebugLogPayload(createFSPayload)
 	URL := c.urlPrefix() + XFile + SymmetrixX + symID + XFileSystem
 
@@ -268,7 +268,7 @@ func (c *Client) CreateNFSExport(ctx context.Context, symID string, createNFSExp
 	if _, err := c.IsAllowedArray(symID); err != nil {
 		return nil, err
 	}
-	Debug = true
+
 	ifDebugLogPayload(createNFSExportPayload)
 	URL := c.urlPrefix() + XFile + SymmetrixX + symID + XNFSExport
 

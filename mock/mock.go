@@ -36,39 +36,41 @@ import (
 
 // constants
 const (
-	APIVersion               = "{apiversion}"
-	PREFIX                   = "/univmax/restapi/" + APIVersion
-	PREFIXNOVERSION          = "/univmax/restapi"
-	PRIVATEPREFIX            = "/univmax/restapi/private/" + APIVersion
-	INTERNALPREFIX           = "/univmax/restapi/internal/100"
-	defaultUsername          = "username"
-	defaultPassword          = "password"
-	Debug                    = false
-	DefaultStorageGroup      = "CSI-Test-SG-1"
-	DefaultStorageGroup1     = "CSI-Test-SG-2"
-	DefaultASYNCProtectedSG  = "csi-rep-sg-ns-test"
-	DefaultMETROProtectedSG  = "csi-rep-sg-ns-test"
-	DefaultSymmetrixID       = "000197900046"
-	DefaultRemoteSymID       = "000000000013"
-	DefaultRDFDir            = "OR-1C"
-	DefaultRDFPort           = 3
-	PostELMSRSymmetrixID     = "000197900047"
-	DefaultStoragePool       = "SRP_1"
-	DefaultServiceLevel      = "Optimized"
-	DefaultFcStoragePortWWN  = "5000000000000001"
-	DefaultAsyncRDFGNo       = 13
-	DefaultAsyncRemoteRDFGNo = 13
-	DefaultAsyncRDFLabel     = "csi-mock-async"
-	DefaultMetroRDFGNo       = 14
-	DefaultRemoteRDFGNo      = 14
-	DefaultMetroRDFLabel     = "csi-mock-metro"
-	RemoteArrayHeaderKey     = "RemoteArray"
-	RemoteArrayHeaderValue   = "true"
-	DefaultNASServerID       = "64xxx7a6-03b5-xxx-xxx-0zzzz8200209"
-	DefaultNASServerName     = "nas-1"
-	DefaultFSID              = "64xxx7a6-03b5-xxx-xxx-0zzzz8200208"
-	DefaultFSName            = "fs-ds-1"
-	DefaultNFSServerID       = "678xx790-115e-xxxx-xxxx-0zzzz200205"
+	APIVersion                 = "{apiversion}"
+	PREFIX                     = "/univmax/restapi/" + APIVersion
+	PREFIXV1                   = "/univmax/rest/v1"
+	PREFIXNOVERSION            = "/univmax/restapi"
+	PRIVATEPREFIX              = "/univmax/restapi/private/" + APIVersion
+	INTERNALPREFIX             = "/univmax/restapi/internal/100"
+	defaultUsername            = "username"
+	defaultPassword            = "password"
+	Debug                      = false
+	DefaultStorageGroup        = "CSI-Test-SG-1"
+	DefaultStorageGroup1       = "CSI-Test-SG-2"
+	DefaultASYNCProtectedSG    = "csi-rep-sg-ns-test"
+	DefaultMETROProtectedSG    = "csi-rep-sg-ns-test"
+	DefaultSymmetrixID         = "000197900046"
+	DefaultEnhancedSymmetrixID = "000197900048"
+	DefaultRemoteSymID         = "000000000013"
+	DefaultRDFDir              = "OR-1C"
+	DefaultRDFPort             = 3
+	PostELMSRSymmetrixID       = "000197900047"
+	DefaultStoragePool         = "SRP_1"
+	DefaultServiceLevel        = "Optimized"
+	DefaultFcStoragePortWWN    = "5000000000000001"
+	DefaultAsyncRDFGNo         = 13
+	DefaultAsyncRemoteRDFGNo   = 13
+	DefaultAsyncRDFLabel       = "csi-mock-async"
+	DefaultMetroRDFGNo         = 14
+	DefaultRemoteRDFGNo        = 14
+	DefaultMetroRDFLabel       = "csi-mock-metro"
+	RemoteArrayHeaderKey       = "RemoteArray"
+	RemoteArrayHeaderValue     = "true"
+	DefaultNASServerID         = "64xxx7a6-03b5-xxx-xxx-0zzzz8200209"
+	DefaultNASServerName       = "nas-1"
+	DefaultFSID                = "64xxx7a6-03b5-xxx-xxx-0zzzz8200208"
+	DefaultFSName              = "fs-ds-1"
+	DefaultNFSServerID         = "678xx790-115e-xxxx-xxxx-0zzzz200205"
 )
 
 const (
@@ -111,6 +113,7 @@ var Data struct {
 	HostGroupIDToHostGroup        map[string]*types.HostGroup
 	JSONDir                       string
 	InitiatorHost                 string
+	StorageGroupVolumeCounts      *types.StorageGroupVolumeCounts
 
 	// Snapshots
 	VolIDToSnapshots  map[string]map[string]*types.Snapshot
@@ -148,6 +151,7 @@ type inducedErrors struct {
 	GetVolumeIteratorError                 bool
 	GetVolumeError                         bool
 	UpdateVolumeError                      bool
+	CloneVolumeError                       bool
 	DeleteVolumeError                      bool
 	DeviceInSGError                        bool
 	GetStorageGroupError                   bool
@@ -357,6 +361,7 @@ func Reset() {
 	InducedErrors.GetVolumeIteratorError = false
 	InducedErrors.GetVolumeError = false
 	InducedErrors.UpdateVolumeError = false
+	InducedErrors.CloneVolumeError = false
 	InducedErrors.DeleteVolumeError = false
 	InducedErrors.DeviceInSGError = false
 	InducedErrors.GetStorageGroupError = false
@@ -541,6 +546,7 @@ func Reset() {
 		Modes:          []string{"Active"},
 		LargerRdfSides: []string{"Equal"},
 	}
+	Data.StorageGroupVolumeCounts = &types.StorageGroupVolumeCounts{}
 	initMockCache()
 }
 
@@ -692,6 +698,7 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/initiator", HandleInitiator)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/portgroup/{id}", HandlePortGroup)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/portgroup", HandlePortGroup)
+	router.HandleFunc(PRIVATEPREFIX+"/replication/symmetrix/{symid}/clone/volume", HandleCloneVolume)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/port", HandleSymmetrixPort)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/storagegroup/{id}", HandleStorageGroup)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/storagegroup", HandleStorageGroup)
@@ -716,6 +723,10 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIX+"/version", HandleVersion)
 	router.HandleFunc(PREFIXNOVERSION+"/version", HandleVersion)
 	router.HandleFunc(PREFIX+"/system/symmetrix/{id}/refresh", HandleSymmetrix)
+	router.HandleFunc(PREFIXV1+"/systems/{symid}/storage-groups", HandleGetStorageGroups)
+
+	// /univmax/rest/v1/systems/000120001920/
+	router.HandleFunc(PREFIXV1+"/systems/{symid}/volumes", HandleVolumes) // 10.3 api
 	router.HandleFunc("/", HandleNotFound)
 
 	// StorageGroup Snapshots
@@ -1303,7 +1314,7 @@ func handleSGRDFFetch(w http.ResponseWriter, r *http.Request) {
 		ok              bool
 	)
 	if _, ok = Data.StorageGroupIDToStorageGroup[storageGroupID]; !ok {
-		writeError(w, "The requested storage group does not exist", http.StatusNotFound)
+		writeError(w, "The requested storage group cannot be found", http.StatusNotFound)
 		return
 	}
 	if rdfStorageGroup, ok = Data.StorageGroupIDToRDFStorageGroup[storageGroupID]; !ok {
@@ -1480,6 +1491,12 @@ func handleVersion(w http.ResponseWriter, r *http.Request) {
 	authExpected := fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(auth)))
 	// Check for valid credentials
 	authSupplied := r.Header.Get("Authorization")
+	symID := r.Header.Get("Symid") // this will be used for 10.3 API-> 000197900048
+
+	if symID == DefaultEnhancedSymmetrixID {
+		w.Write([]byte(`{ "api_version": "103" }`)) // #nosec G20
+		return
+	}
 	if authExpected != authSupplied {
 		writeError(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -1517,7 +1534,7 @@ func handleSymmetrix(w http.ResponseWriter, r *http.Request) {
 	if id == "" {
 		returnJSONFile(Data.JSONDir, "symmetrixList.json", w, nil)
 	}
-	if id != "000197900046" && id != "000197900047" && id != DefaultRemoteSymID {
+	if id != "000197900046" && id != "000197900047" && id != "000197900048" && id != DefaultRemoteSymID {
 		writeError(w, "Symmetrix not found", http.StatusNotFound)
 		return
 	}
@@ -1525,6 +1542,8 @@ func handleSymmetrix(w http.ResponseWriter, r *http.Request) {
 		returnJSONFile(Data.JSONDir, "symmetrix46.json", w, nil)
 	} else if id == "000197900047" {
 		returnJSONFile(Data.JSONDir, "symmetrix47.json", w, nil)
+	} else if id == "000197900048" {
+		returnJSONFile(Data.JSONDir, "symmetrix48.json", w, nil)
 	} else {
 		returnJSONFile(Data.JSONDir, "symmetrix13.json", w, nil)
 	}
@@ -1561,6 +1580,43 @@ func HandleVolume(w http.ResponseWriter, r *http.Request) {
 	mockCacheMutex.Lock()
 	defer mockCacheMutex.Unlock()
 	handleVolume(w, r)
+}
+
+func HandleVolumes(w http.ResponseWriter, r *http.Request) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	handleVolumes(w, r)
+}
+
+func handleVolumes(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	volID := vars["volID"]
+	fmt.Println(volID)
+	switch r.Method {
+	case http.MethodGet:
+		var data map[string]interface{}
+		jsonFile, err := os.Open("./mock-data/enhanced-vol.json")
+		if err != nil {
+			writeError(w, "mock file open error", http.StatusInternalServerError)
+		}
+		defer jsonFile.Close()
+		jsonDecoder := json.NewDecoder(jsonFile)
+		err = jsonDecoder.Decode(&data)
+		if err != nil {
+			writeError(w, "json encoding error", http.StatusInternalServerError)
+		}
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			writeError(w, "json encoding error", http.StatusInternalServerError)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, err = w.Write(jsonData)
+		if err != nil {
+			writeError(w, "Method["+r.Method+"] not allowed", http.StatusBadRequest)
+		}
+	default:
+		writeError(w, "Method["+r.Method+"] not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func handleVolume(w http.ResponseWriter, r *http.Request) {
@@ -5593,6 +5649,31 @@ func handleFileInterface(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func HandleCloneVolume(w http.ResponseWriter, r *http.Request) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	handleCloneVolume(w, r)
+}
+
+func handleCloneVolume(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// If the test set the induced CloneVolumeError flag, return an error response
+	if InducedErrors.CloneVolumeError {
+		writeError(w, "Error creating clone: induced error", http.StatusBadRequest)
+		return
+	}
+
+	// On success, return an empty JSON / 200 (client.Post ignores response body)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("{}"))
+	return
+}
+
 // ReturnFileInterface returns File Interface object
 func ReturnFileInterface(w http.ResponseWriter, interfaceID string) {
 	mockCacheMutex.Lock()
@@ -5618,4 +5699,48 @@ func stringInSlice(a string, list []string) bool {
 		}
 	}
 	return false
+}
+
+// GET /univmax/rest/v1/systems/{symid}/storage-groups
+func HandleGetStorageGroups(w http.ResponseWriter, r *http.Request) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	handleGetStorageGroups(w, r)
+}
+
+func handleGetStorageGroups(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// If the test set the induced httpStatus500 flag, return an error response
+	if InducedErrors.BadHTTPStatus != 0 {
+		writeError(w, "Error creating clone: induced error", http.StatusBadRequest)
+		writeError(w, "Internal Error", http.StatusInternalServerError)
+		return
+	}
+
+	if InducedErrors.GetStorageGroupError {
+		writeError(w, "Error getting Storage Group: induced error", http.StatusRequestTimeout)
+		return
+	}
+
+	writeJSON(w, Data.StorageGroupVolumeCounts)
+	return
+}
+
+// AddNewStorageGroupVolumeCount Add a storage group volume count to the mock data cache
+func AddNewStorageGroupVolumeCount(id string, count int) error {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	return addNewStorageGroupVolumeCount(id, count)
+}
+
+func addNewStorageGroupVolumeCount(id string, count int) error {
+	if id != "" {
+		storageGroupVolumeCount := types.StorageGroupVolumeCount{ID: id, VolumeCount: count}
+		Data.StorageGroupVolumeCounts.StorageGroups = append(Data.StorageGroupVolumeCounts.StorageGroups, storageGroupVolumeCount)
+	}
+	return nil
 }

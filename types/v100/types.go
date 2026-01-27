@@ -378,3 +378,44 @@ type Port struct {
 	ExecutionOption string            `json:"executionOption,omitempty"`
 	SymmetrixPort   SymmetrixPortType `json:"symmetrixPort"`
 }
+
+type VersionDetails struct {
+	Version    string `json:"version"`
+	APIVersion string `json:"api_version"`
+}
+
+type PortGroupListResult struct {
+	Results []PortGroupListv1 `json:"results,omitempty"`
+}
+
+// PortGroupListByID : list of port groups by ID
+type PortGroupListv1 struct {
+	ID       string       `json:"id,omitempty"`
+	Protocol string       `json:"protocol,omitempty"`
+	Ports    []PortValues `json:"ports,omitempty"`
+}
+
+// PortValues : list of port values
+type PortValues struct {
+	PortID   string     `json:"id,omitempty"`
+	Type     string     `json:"type,omitempty"`
+	Director DirectorID `json:"director,omitempty"`
+}
+
+// DirectorID : list of director IDs
+type DirectorID struct {
+	ID string `json:"id,omitempty"`
+}
+
+type PortV1 struct {
+	ID             string         `json:"id,omitempty"`
+	ResourceType   string         `json:"resource_type,omitempty"`
+	PortNumber     string         `json:"port_number,omitempty"`
+	PortIdentifier string         `json:"port_identifier,omitempty"`
+	PortStatus     string         `json:"port_status"`
+	DirectorStatus string         `json:"director_status"`
+	Director       []PortDirector `json:"director,omitempty"`
+}
+type PortDirector struct {
+	ID string `json:"id,omitempty"`
+}

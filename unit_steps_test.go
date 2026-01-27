@@ -25,9 +25,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cucumber/godog"
 	"github.com/dell/gopowermax/v2/mock"
 	types "github.com/dell/gopowermax/v2/types/v100"
+	"github.com/cucumber/godog"
 )
 
 const (
@@ -71,6 +71,7 @@ type unitContext struct {
 	client91    Pmax
 	err         error // First error observed
 	flag91      bool
+	protocol    string
 
 	symIDList                  *types.SymmetrixIDList
 	sym                        *types.Symmetrix
@@ -84,6 +85,7 @@ type unitContext struct {
 	job                        *types.Job
 	storagePoolList            *types.StoragePoolList
 	portGroupList              *types.PortGroupList
+	portGroupListResult        *types.PortGroupListResult
 	portGroup                  *types.PortGroup
 	initiatorList              *types.InitiatorList
 	initiator                  *types.Initiator
@@ -95,6 +97,7 @@ type unitContext struct {
 	maskingView                *types.MaskingView
 	uMaskingView               *uMV
 	addressList                []string
+	portv1                     *types.PortV1
 	targetList                 []ISCSITarget
 	nvmeTCPTargetList          []NVMeTCPTarget
 	storagePool                *types.StoragePool
@@ -102,6 +105,8 @@ type unitContext struct {
 	hostID                     string
 	hostGroupID                string
 	sgID                       string
+	PortList                   *types.PortList
+	Volumev1                   *types.Volumev1
 
 	symRepCapabilities    *types.SymReplicationCapabilities
 	sourceVolumeList      []types.VolumeList
@@ -119,6 +124,8 @@ type unitContext struct {
 	storageGroupSnapSetting *types.CreateStorageGroupSnapshot
 	storageGroupSnap        *types.StorageGroupSnap
 	storageGroupSnapIDs     *types.SnapID
+
+	storageGroupVolumeCounts *types.StorageGroupVolumeCounts
 
 	storageGroupPerfKeys *types.StorageGroupKeysResult
 	arrayPerfKeys        *types.ArrayKeysResult
@@ -143,6 +150,7 @@ type unitContext struct {
 	fileInterface  *types.FileInterface
 	nfsServerList  *types.NFSServerIterator
 	nfsServer      *types.NFSServer
+	versionDetails *types.VersionDetails
 }
 
 func (c *unitContext) reset() {
@@ -198,6 +206,7 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.GetVolumeIteratorError = false
 	mock.InducedErrors.GetVolumeError = false
 	mock.InducedErrors.UpdateVolumeError = false
+	mock.InducedErrors.CloneVolumeError = false
 	mock.InducedErrors.DeleteVolumeError = false
 	mock.InducedErrors.DeviceInSGError = false
 	mock.InducedErrors.GetStorageGroupError = false
@@ -290,6 +299,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.GetVolumeError = true
 	case "UpdateVolumeError":
 		mock.InducedErrors.UpdateVolumeError = true
+	case "CloneVolumeError":
+		mock.InducedErrors.CloneVolumeError = true
 	case "DeleteVolumeError":
 		mock.InducedErrors.DeleteVolumeError = true
 	case "DeviceInSGError":
@@ -624,6 +635,11 @@ func (c *unitContext) iCallGetVolumeByID(volID string) error {
 	return nil
 }
 
+func (c *unitContext) iCallGetVolumesByIdentifier(identifier string) error {
+	c.Volumev1, c.err = c.client.GetVolumesByIdentifier(context.TODO(), symID, identifier)
+	return nil
+}
+
 func (c *unitContext) iGetAValidVolumeObjectIfNoError(id string) error {
 	if c.err != nil {
 		return nil
@@ -722,8 +738,9 @@ func (c *unitContext) iValidateVolumeSize(volumeID string, sizeStr string) error
 	return nil
 }
 
-func (c *unitContext) iCallGetStorageGroupIDList() error {
-	c.storageGroupIDList, c.err = c.client.GetStorageGroupIDList(context.TODO(), symID, "", false)
+func (c *unitContext) iCallGetStorageGroupIDListWithIDAndLike(id string, like string) error {
+	likeBool, _ := strconv.ParseBool(like)
+	c.storageGroupIDList, c.err = c.client.GetStorageGroupIDList(context.TODO(), symID, id, likeBool)
 	return nil
 }
 
@@ -852,6 +869,24 @@ func (c *unitContext) iCallCreateVolumeInStorageGroupWithNameAndSizeAndUnit(volu
 	} else {
 		c.vol, c.err = c.client91.CreateVolumeInStorageGroup(context.TODO(), symID, mock.DefaultStorageGroup, volumeName, sizeInCylinders, volOpts)
 	}
+	return nil
+}
+
+func (c *unitContext) iCallCloneVolumeFromVolumeWithSourceVolumeAndTargetVolume() error {
+	establish := false
+	establishTerminate := false
+	replicationPairList := []types.ReplicationPair{
+		{
+			SourceVolumeName: "00001",
+			TargetVolumeName: "00002",
+		},
+	}
+	replicaPair := types.ReplicationRequest{
+		ReplicationPair:    replicationPairList,
+		Establish:          establish,
+		EstablishTerminate: establishTerminate,
+	}
+	c.err = c.client.CloneVolumeFromVolume(context.Background(), symID, replicaPair)
 	return nil
 }
 
@@ -1103,6 +1138,11 @@ func (c *unitContext) iCallGetPortGroupList() error {
 	return nil
 }
 
+func (c *unitContext) iCallGetPortGroupListByType() error {
+	c.portGroupListResult, c.err = c.client.GetPortGroupListByType(context.TODO(), symID, "")
+	return nil
+}
+
 func (c *unitContext) iGetAValidPortGroupListIfNoError() error {
 	if c.err != nil {
 		return nil
@@ -1115,6 +1155,16 @@ func (c *unitContext) iGetAValidPortGroupListIfNoError() error {
 
 func (c *unitContext) iCallGetPortGroupByID() error {
 	c.portGroup, c.err = c.client.GetPortGroupByID(context.TODO(), symID, testPortGroup)
+	return nil
+}
+
+func (c *unitContext) iUseProtocol(protocol string) error {
+	c.protocol = protocol
+	return nil
+}
+
+func (c *unitContext) iCallGetPortListByProtocol() error {
+	c.PortList, c.err = c.client.GetPortListByProtocol(context.TODO(), symID, c.protocol)
 	return nil
 }
 
@@ -1452,6 +1502,11 @@ func (c *unitContext) thenTheVolumesArePartOfStorageGroupIfNoError() error {
 
 func (c *unitContext) iCallGetListOfTargetAddresses() error {
 	c.addressList, c.err = c.client.GetListOfTargetAddresses(context.TODO(), symID)
+	return nil
+}
+
+func (c *unitContext) iCallGetPorts() error {
+	c.portv1, c.err = c.client.GetPorts(context.TODO(), symID)
 	return nil
 }
 
@@ -2676,6 +2731,89 @@ func (c *unitContext) iCallGetDirectorIDList() error {
 	return nil
 }
 
+func (c *unitContext) iCallGetVersionDetails() error {
+	if !c.flag91 {
+		c.versionDetails, c.err = c.client.GetVersionDetails(context.TODO())
+	} else {
+		c.versionDetails, c.err = c.client91.GetVersionDetails(context.TODO())
+	}
+	return nil
+}
+
+func (c *unitContext) iGetAValidVersionDetailsIfNoError() error {
+	if c.err != nil {
+		return nil
+	}
+	if c.versionDetails == nil {
+		return fmt.Errorf("expected VersionDetails but got nil")
+	}
+	if c.versionDetails.Version == "" && c.versionDetails.APIVersion == "" {
+		return fmt.Errorf("VersionDetails fields appear empty: %+v", c.versionDetails)
+	}
+	return nil
+}
+
+func (c *unitContext) theVersionDetailsVersionIsAndAPIVersionIs(version, apiversion string) error {
+	if c.err != nil {
+		return nil // error already tested elsewhere
+	}
+	if c.versionDetails == nil {
+		return fmt.Errorf("expected version details, got nil (err: %v)", c.err)
+	}
+	if version != "none" && c.versionDetails.Version != version {
+		return fmt.Errorf("version mismatch: expected %q got %q", version, c.versionDetails.Version)
+	}
+	if apiversion != "none" && c.versionDetails.APIVersion != apiversion {
+		return fmt.Errorf("API version mismatch: expected %q got %q", apiversion, c.versionDetails.APIVersion)
+	}
+	return nil
+}
+
+func (c *unitContext) iGetAValidPortGroupListByIDIfNoError() error {
+	return godog.ErrPending
+}
+
+func (c *unitContext) iGetAValidPortList() error {
+	return godog.ErrPending
+}
+
+func (c *unitContext) iHaveAStorageGroupWithVolumeCount(sgname string, volcount int) error {
+	mock.AddNewStorageGroupVolumeCount(sgname, volcount)
+	return nil
+}
+
+func (c *unitContext) iCallGetStorageGroupVolumeCounts(prefix string) error {
+	c.storageGroupVolumeCounts, c.err = c.client.GetStorageGroupVolumeCounts(context.TODO(), symID, prefix)
+	return nil
+}
+
+func (c *unitContext) iGetAValidStorageGroupVolumeCountsWithTotalSgcountIfNoError(count int) error {
+	if c.err != nil {
+		return nil
+	}
+
+	if len(c.storageGroupVolumeCounts.StorageGroups) != count {
+		return fmt.Errorf("Expected %d storage groups but got %d", count, len(c.storageGroupVolumeCounts.StorageGroups))
+	}
+	return nil
+}
+
+func (c *unitContext) iGetAValidStorageGroupVolumeCountsWithTotalVolumeCountIfNoError(count int) error {
+	if c.err != nil {
+		return nil
+	}
+
+	tot := 0
+	for _, sg := range c.storageGroupVolumeCounts.StorageGroups {
+		tot += sg.VolumeCount
+	}
+
+	if tot != count {
+		return fmt.Errorf("Expected %d volumes but got %d", count, tot)
+	}
+	return nil
+}
+
 func UnitTestContext(s *godog.ScenarioContext) {
 	c := &unitContext{}
 	s.Step(`^I induce error "([^"]*)"$`, c.iInduceError)
@@ -2689,11 +2827,12 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^I get a valid Symmetrix Object if no error$`, c.iGetAValidSymmetrixObjectIfNoError)
 	s.Step(`^I have (\d+) volumes$`, c.iHaveVolumes)
 	s.Step(`^I call GetVolumeByID "([^"]*)"$`, c.iCallGetVolumeByID)
+	s.Step(`^I call GetVolumesByIdentifier "([^"]*)"$`, c.iCallGetVolumesByIdentifier)
 	s.Step(`^I get a valid Volume Object "([^"]*)" if no error$`, c.iGetAValidVolumeObjectIfNoError)
 	s.Step(`^I call GetVolumeIDList "([^"]*)"$`, c.iCallGetVolumeIDList)
 	s.Step(`^I get a valid VolumeIDList with (\d+) if no error$`, c.iGetAValidVolumeIDListWithIfNoError)
 	s.Step(`^I call GetVolumeIDListWithParams`, c.iCallGetVolumeIDListWithParams)
-	s.Step(`^I call GetStorageGroupIDList$`, c.iCallGetStorageGroupIDList)
+	s.Step(`^I call GetStorageGroupIDList with id "([^"]*)" and like "([^"]*)"$`, c.iCallGetStorageGroupIDListWithIDAndLike)
 	s.Step(`^I get a valid StorageGroupIDList if no errors$`, c.iGetAValidStorageGroupIDListIfNoErrors)
 	s.Step(`^I call GetStorageGroup "([^"]*)"$`, c.iCallGetStorageGroup)
 	s.Step(`^I call GetStorageGroupSnapshotPolicy with "([^"]*)" "([^"]*)" "([^"]*)"$`, c.iCallGetStorageGroupSnapshotPolicy)
@@ -2709,6 +2848,8 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^I call WaitOnJobCompletion$`, c.iCallWaitOnJobCompletion)
 	s.Step(`^I call RefreshSymmetrix "([^"]*)"$`, c.iCallRefreshSymmetrix)
 	// Volumes
+	s.Step(`^I call CloneVolumeFromVolume with source volume and target volume$`, c.iCallCloneVolumeFromVolumeWithSourceVolumeAndTargetVolume)
+	// s.Step(`^I get a valid volume clone for replicaPair "([^"]*)" if no error$`, c.iGetValidVolumeCloneForReplicaPairIfNoError)
 	s.Step(`^I call CreateVolumeInStorageGroup with name "([^"]*)" and size (\d+)$`, c.iCallCreateVolumeInStorageGroupWithNameAndSize)
 	s.Step(`^I call CreateVolumeInStorageGroup with name "([^"]*)" and size (\d+) and unit "([^"]*)"$`, c.iCallCreateVolumeInStorageGroupWithNameAndSizeAndUnit)
 	s.Step(`^I call CreateVolumeInStorageGroupS with name "([^"]*)" and size (\d+)$`, c.iCallCreateVolumeInStorageGroupSWithNameAndSize)
@@ -2731,6 +2872,11 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^I expand volume "([^"]*)" to "([^"]*)" in GB$`, c.iExpandVolumeToSize)
 	s.Step(`^I validate that volume "([^"]*)" has has size "([^"]*)" in GB$`, c.iValidateVolumeSize)
 	s.Step(`^I expand volume "([^"]*)" to "([^"]*)" in "([^"]*)"$`, c.iExpandVolumeToSizeWithUnit)
+	s.Step(`^I have a StorageGroup "([^"]*)" with volume count (\d+)$`, c.iHaveAStorageGroupWithVolumeCount)
+	s.Step(`^I call GetStorageGroupVolumeCounts with prefix "([^"]*)"$`, c.iCallGetStorageGroupVolumeCounts)
+	s.Step(`^I get a valid StorageGroupVolumeCounts with total sgcount (\d+) if no error$`, c.iGetAValidStorageGroupVolumeCountsWithTotalSgcountIfNoError)
+	s.Step(`^I get a valid StorageGroupVolumeCounts with total volume count (\d+) if no error$`, c.iGetAValidStorageGroupVolumeCountsWithTotalVolumeCountIfNoError)
+
 	// Masking View
 	s.Step(`^I have a MaskingView "([^"]*)"$`, c.iHaveAMaskingView)
 	s.Step(`^I call GetMaskingViewList$`, c.iCallGetMaskingViewList)
@@ -2744,8 +2890,11 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	// Port Group
 	s.Step(`^I have a PortGroup$`, c.iHaveAPortGroup)
 	s.Step(`^I call GetPortGroupList$`, c.iCallGetPortGroupList)
+	s.Step(`^I call GetPortGroupListByType$`, c.iCallGetPortGroupListByType)
 	s.Step(`^I get a valid PortGroupList if no error$`, c.iGetAValidPortGroupListIfNoError)
 	s.Step(`^I call GetPortGroupByID$`, c.iCallGetPortGroupByID)
+	s.Step(`^I use protocol "([^"]*)"$`, c.iUseProtocol)
+	s.Step(`^I call GetPortListByProtocol$`, c.iCallGetPortListByProtocol)
 	s.Step(`^I get a valid PortGroup if no error$`, c.iGetAValidPortGroupIfNoError)
 	s.Step(`^I get PortGroup "([^"]*)" if no error$`, c.iGetPortGroupIfNoError)
 	s.Step(`^I call CreatePortGroup "([^"]*)" with ports "([^"]*)"$`, c.iCallCreatePortGroup)
@@ -2791,6 +2940,7 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^I call GetVolumeIDListInStorageGroup "([^"]*)"$`, c.iCallGetVolumeIDListInStorageGroup)
 	// GetListOftargetAddresses
 	s.Step(`^I call GetListOfTargetAddresses$`, c.iCallGetListOfTargetAddresses)
+	s.Step(`^I call GetPorts$`, c.iCallGetPorts)
 	s.Step(`^I recieve (\d+) IP addresses$`, c.iRecieveIPAddresses)
 	s.Step(`^I call GetStoragePool "([^"]*)"$`, c.iCallGetStoragePool)
 	s.Step(`^I get a valid GetStoragePool if no errors$`, c.iGetAValidGetStoragePoolIfNoErrors)
@@ -2920,4 +3070,11 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^I get a valid NFS Server ID List if no error$`, c.iGetAValidNFSServerIDListIfNoError)
 	s.Step(`^I call GetNFSServerByID "([^"]*)"$`, c.iCallGetNFSServerByID)
 	s.Step(`^I get a valid nfsServer Object if no error$`, c.iGetAValidNFSServerObjectIfNoError)
+
+	s.Step(`^I call GetVersionDetails$`, c.iCallGetVersionDetails)
+	s.Step(`^I get a valid VersionDetails if no error$`, c.iGetAValidVersionDetailsIfNoError)
+	s.Step(`^the version details version is "([^"]*)" and API version is "([^"]*)"$`, c.theVersionDetailsVersionIsAndAPIVersionIs)
+
+	s.Step(`^I get a valid PortGroupListByID if no error$`, c.iGetAValidPortGroupListByIDIfNoError)
+	s.Step(`^I get a valid PortList$`, c.iGetAValidPortList)
 }
