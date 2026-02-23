@@ -23,8 +23,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cucumber/godog"
 	"github.com/dell/gopowermax/v2/mock"
+	"github.com/cucumber/godog"
 )
 
 var mockServer *httptest.Server
