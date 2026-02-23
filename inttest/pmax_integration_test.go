@@ -397,6 +397,29 @@ func TestGetSymmetrix(t *testing.T) {
 		return
 	}
 	fmt.Printf("Symmetrix %s: %#v\n", symmetrixID, symmetrix)
+	if symmetrix.SymmetrixID == "" {
+		t.Error("Expected non-empty SymmetrixID")
+	}
+	if symmetrix.Model == "" {
+		t.Error("Expected non-empty Model")
+	}
+	if symmetrix.Microcode == "" {
+		t.Error("Expected non-empty Microcode")
+	}
+	if symmetrix.MicrocodeDate == "" {
+		t.Error("Expected non-empty MicrocodeDate")
+	}
+	if symmetrix.MicrocodeRegisteredBuild <= 0 {
+		t.Error("Expected MicrocodeRegisteredBuild > 0")
+	}
+	if symmetrix.MicrocodePackageVersion == "" {
+		t.Error("Expected non-empty MicrocodePackageVersion")
+	}
+	if symmetrix.DellServiceTag == "" {
+		t.Error("Expected non-empty DellServiceTag")
+	}
+	fmt.Printf("Microcode: %s, MicrocodeDate: %s, MicrocodeRegisteredBuild: %d, MicrocodePackageVersion: %s\n",
+		symmetrix.Microcode, symmetrix.MicrocodeDate, symmetrix.MicrocodeRegisteredBuild, symmetrix.MicrocodePackageVersion)
 }
 
 func TestGetVolumeIDs(t *testing.T) {

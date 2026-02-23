@@ -41,27 +41,31 @@ type SymmetrixIDList struct {
 
 // Symmetrix : information about a Symmetrix system
 type Symmetrix struct {
-	SymmetrixID          string                `json:"symmetrixId"`
-	DellServiceTag       string                `json:"dell_service_tag"`
-	DeviceCount          int                   `json:"device_count"`
-	Ucode                string                `json:"ucode"`
-	UcodeDate            string                `json:"ucode_date"`
-	Model                string                `json:"model"`
-	Local                bool                  `json:"local"`
-	AllFlash             bool                  `json:"all_flash"`
-	DisplayName          string                `json:"display_name"`
-	DiskCount            int                   `json:"disk_count"`
-	CacheSizeMB          int                   `json:"cache_size_mb"`
-	DataEncryption       string                `json:"data_encryption"`
-	FEDirCount           int                   `json:"fe_dir_count"`
-	BEDirCount           int                   `json:"be_dir_count"`
-	RDFDirCount          int                   `json:"rdf_dir_count"`
-	MaxHyperPerDisk      int                   `json:"max_hyper_per_disk"`
-	VCMState             string                `json:"vcm_state"`
-	VCMDBState           string                `json:"vcmdb_state"`
-	ReliabilityState     string                `json:"reliability_state"`
-	UcodeRegisteredBuild int                   `json:"ucode_registered_build"`
-	SystemSizedProperty  []SystemSizedProperty `json:"system_sized_property"`
+	SymmetrixID              string                `json:"symmetrixId"`
+	DellServiceTag           string                `json:"dell_service_tag"`
+	DeviceCount              int                   `json:"device_count"`
+	Ucode                    string                `json:"ucode"`
+	UcodeDate                string                `json:"ucode_date"`
+	Model                    string                `json:"model"`
+	Local                    bool                  `json:"local"`
+	AllFlash                 bool                  `json:"all_flash"`
+	DisplayName              string                `json:"display_name"`
+	DiskCount                int                   `json:"disk_count"`
+	CacheSizeMB              int                   `json:"cache_size_mb"`
+	DataEncryption           string                `json:"data_encryption"`
+	FEDirCount               int                   `json:"fe_dir_count"`
+	BEDirCount               int                   `json:"be_dir_count"`
+	RDFDirCount              int                   `json:"rdf_dir_count"`
+	MaxHyperPerDisk          int                   `json:"max_hyper_per_disk"`
+	VCMState                 string                `json:"vcm_state"`
+	VCMDBState               string                `json:"vcmdb_state"`
+	ReliabilityState         string                `json:"reliability_state"`
+	UcodeRegisteredBuild     int                   `json:"ucode_registered_build"`
+	Microcode                string                `json:"microcode"`
+	MicrocodeDate            string                `json:"microcode_date"`
+	MicrocodeRegisteredBuild int                   `json:"microcode_registered_build"`
+	MicrocodePackageVersion  string                `json:"microcode_package_version"`
+	SystemSizedProperty      []SystemSizedProperty `json:"system_sized_property"`
 }
 
 // SystemSizedProperty contains information about size data

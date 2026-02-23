@@ -613,6 +613,9 @@ func (c *unitContext) iGetAValidSymmetrixObjectIfNoError() error {
 		if c.sym.SymmetrixID == "" || c.sym.Ucode == "" || c.sym.Model == "" || c.sym.DiskCount <= 0 {
 			return fmt.Errorf("Problem with Symmetrix fields SymmetrixID Ucode Model or DiskCount")
 		}
+		if c.sym.Microcode == "" || c.sym.MicrocodeDate == "" || c.sym.MicrocodeRegisteredBuild <= 0 || c.sym.MicrocodePackageVersion == "" {
+			return fmt.Errorf("Problem with Symmetrix fields Microcode MicrocodeDate MicrocodeRegisteredBuild or MicrocodePackageVersion")
+		}
 	}
 	return nil
 }
