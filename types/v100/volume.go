@@ -102,7 +102,14 @@ type Srp struct {
 
 // Volumev1 : simplified volume information
 type Volumev1 struct {
-	Volumes []VolumeEnhanced `json:"volumes,omitempty"`
+	Volumes      []VolumeEnhanced `json:"volumes,omitempty"`
+	VolumePaging VolumePaging     `json:"paging,omitempty"`
+}
+
+type VolumePaging struct {
+	ResumeToken        string `json:"resume_token,omitempty"`
+	TotalInstances     int    `json:"total_instances,omitempty"`
+	RemainingInstances int    `json:"remaining_instances,omitempty"`
 }
 
 // StorageGroupName holds group name in which volume exists

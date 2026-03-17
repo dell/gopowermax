@@ -374,6 +374,57 @@ func (c *Client) GetVolumesByIdentifier(ctx context.Context, symID string, ident
 	return volume, nil
 }
 
+// GetVolumesByIdentifierMatch returns a Volume structure given the symmetrix ID and volume identifier that matches the regex - Feasible only for 10.1 and above
+func (c *Client) GetVolumesByIdentifierMatch(ctx context.Context, symID string, identifierMatcher string) (*types.Volumev1, error) {
+	defer c.TimeSpent("GetVolumesByIdentifierMatch", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	baseURL := c.urlPrefixV1() + symID + XVolumeV1 + SelectQuery + SelectType + SelectID + SelectIdentifier +
+		SelectStorageGroup + SelectMaskingViews + SelectCapCyl +
+		"&filter=identifier%20like%20" + identifierMatcher +
+		"&limit=100&expiration_delay_secs=30"
+
+	allVolumes := make([]types.VolumeEnhanced, 0)
+	requestURL := baseURL
+
+	for {
+		ctx, cancel := c.GetTimeoutContext(ctx)
+		resp, err := c.api.DoAndGetResponseBody(
+			ctx, http.MethodGet, requestURL, c.getDefaultHeaders(), nil)
+		if err != nil {
+			cancel()
+			log.Error("GetVolume info failed: " + err.Error())
+			return nil, err
+		}
+		if err = c.checkResponse(resp); err != nil {
+			cancel()
+			return nil, err
+		}
+		page := &types.Volumev1{}
+		decoder := json.NewDecoder(resp.Body)
+		if err = decoder.Decode(page); err != nil {
+			resp.Body.Close()
+			cancel()
+			return nil, err
+		}
+
+		resp.Body.Close()
+		cancel()
+
+		log.Debugf("Page remaining %d, out of total %d", page.VolumePaging.RemainingInstances, page.VolumePaging.TotalInstances)
+		if page.Volumes != nil {
+			allVolumes = append(allVolumes, page.Volumes...)
+		}
+		if page.VolumePaging.RemainingInstances == 0 {
+			break
+		}
+		requestURL = baseURL + "&resume_token=" + page.VolumePaging.ResumeToken
+	}
+
+	return &types.Volumev1{Volumes: allVolumes}, nil
+}
+
 // GetStorageGroupIDList returns a list of StorageGroupIds in a StorageGroupIDList type.
 func (c *Client) GetStorageGroupIDList(ctx context.Context, symID, storageGroupIDMatch string, like bool) (*types.StorageGroupIDList, error) {
 	defer c.TimeSpent("GetStorageGroupIDList", time.Now())

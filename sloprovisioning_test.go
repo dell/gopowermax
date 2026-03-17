@@ -164,6 +164,152 @@ func TestGetVolumesByIdentifier(t *testing.T) {
 	}
 }
 
+func TestGetVolumesByIdentifierMatch(t *testing.T) {
+	allowedArray := "testSymID"
+	identifierMatcher := "vol-.*"
+	tests := []struct {
+		name            string
+		symID           string
+		expectedVolumes *types.Volumev1
+		expectedStatus  int
+		expectedErr     string
+		responseBody    string
+	}{
+		{
+			name:  "Valid symID with matching volumes",
+			symID: "testSymID",
+			expectedVolumes: &types.Volumev1{
+				Volumes: []types.VolumeEnhanced{
+					{
+						ID:         "0001",
+						Type:       "TD",
+						System:     types.SystemInfo{ID: "testSymID"},
+						Identifier: "vol-0001",
+						StorageGroups: []types.StorageGroupID{
+							{StorageGroupID: "SG1"},
+						},
+						CapCyl: 1000,
+						MaskingViews: []types.MaskingViewID{
+							{MaskingViewID: "MV1"},
+						},
+						VolumeHostPaths:      []types.VolumeHostPath{{ID: "1"}},
+						NumberOfMaskingViews: 1,
+						SRP:                  types.Srp{ID: "1"},
+					},
+				},
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:            "Valid symID with no volumes returns empty slice",
+			symID:           "testSymID",
+			expectedVolumes: &types.Volumev1{Volumes: []types.VolumeEnhanced{}},
+			expectedStatus:  http.StatusOK,
+		},
+		{
+			name:        "Error from IsAllowedArray",
+			symID:       "",
+			expectedErr: "the requested array () is ignored as it is not managed",
+		},
+		{
+			name:           "HTTP error from API",
+			symID:          "testSymID",
+			expectedStatus: http.StatusInternalServerError,
+			expectedErr:    "Internal Server Error",
+		},
+		{
+			name:           "Invalid JSON response",
+			symID:          "testSymID",
+			expectedStatus: http.StatusOK,
+			responseBody:   "not-valid-json",
+			expectedErr:    "invalid character",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "/univmax/rest/v1/systems/"+tc.symID+"/volumes", r.URL.Path, "Expected URL path")
+				assert.Contains(t, r.URL.RawQuery, "filter=identifier%20like%20"+identifierMatcher, "Expected like filter in query")
+				assert.Contains(t, r.URL.RawQuery, "limit=100", "Expected limit param")
+				assert.Contains(t, r.URL.RawQuery, "expiration_delay_secs=30", "Expected expiration_delay_secs param")
+				w.WriteHeader(tc.expectedStatus)
+				if tc.responseBody != "" {
+					w.Write([]byte(tc.responseBody))
+				} else if tc.expectedStatus == http.StatusOK {
+					json.NewEncoder(w).Encode(tc.expectedVolumes)
+				}
+			}))
+			defer server.Close()
+
+			c, err := NewClientWithArgs(server.URL, "", true, true, "")
+			assert.NoError(t, err)
+			c.SetAllowedArrays([]string{allowedArray})
+
+			volumes, err := c.GetVolumesByIdentifierMatch(context.Background(), tc.symID, identifierMatcher)
+			if tc.expectedErr != "" {
+				assert.ErrorContains(t, err, tc.expectedErr)
+				assert.Nil(t, volumes)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedVolumes, volumes)
+			}
+		})
+	}
+}
+
+func TestGetVolumesByIdentifierMatchPagination(t *testing.T) {
+	allowedArray := "testSymID"
+	identifierMatcher := "vol-.*"
+	requestCount := 0
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		w.WriteHeader(http.StatusOK)
+		switch requestCount {
+		case 1:
+			// First page: return a volume and a resume token
+			assert.NotContains(t, r.URL.RawQuery, "resume_token", "First request should not have resume_token")
+			json.NewEncoder(w).Encode(types.Volumev1{
+				Volumes: []types.VolumeEnhanced{
+					{ID: "0001", Identifier: "vol-0001"},
+				},
+				VolumePaging: types.VolumePaging{ResumeToken: "token-page-2", RemainingInstances: 2},
+			})
+		case 2:
+			// Second page: return another volume and a resume token
+			assert.Contains(t, r.URL.RawQuery, "resume_token=token-page-2", "Second request should have resume_token")
+			json.NewEncoder(w).Encode(types.Volumev1{
+				Volumes: []types.VolumeEnhanced{
+					{ID: "0002", Identifier: "vol-0002"},
+				},
+				VolumePaging: types.VolumePaging{ResumeToken: "token-page-3", RemainingInstances: 1},
+			})
+		case 3:
+			// Last page: return a volume with no resume token
+			assert.Contains(t, r.URL.RawQuery, "resume_token=token-page-3", "Third request should have resume_token")
+			json.NewEncoder(w).Encode(types.Volumev1{
+				Volumes: []types.VolumeEnhanced{
+					{ID: "0003", Identifier: "vol-0003"},
+				},
+			})
+		}
+	}))
+	defer server.Close()
+
+	c, err := NewClientWithArgs(server.URL, "", true, true, "")
+	assert.NoError(t, err)
+	c.SetAllowedArrays([]string{allowedArray})
+
+	volumes, err := c.GetVolumesByIdentifierMatch(context.Background(), "testSymID", identifierMatcher)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, requestCount, "Expected 3 paginated requests")
+	assert.Equal(t, 3, len(volumes.Volumes), "Expected 3 volumes across all pages")
+	assert.Equal(t, "0001", volumes.Volumes[0].ID)
+	assert.Equal(t, "0002", volumes.Volumes[1].ID)
+	assert.Equal(t, "0003", volumes.Volumes[2].ID)
+}
+
 func TestStorageGroupVolumeCounts(t *testing.T) {
 	allowedArray := "testSymID"
 	tests := []struct {
