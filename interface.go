@@ -103,6 +103,9 @@ type Pmax interface {
 	// GetVolumesByIdentifier returns a Volume given the volume identifier.
 	GetVolumesByIdentifier(ctx context.Context, symID string, identifier string) (*types.Volumev1, error)
 
+	// GetVolumesByIdentifierMatch returns a Volume structure given the symmetrix ID and volume identifier that matches the regex.
+	GetVolumesByIdentifierMatch(ctx context.Context, symID string, identifierMatcher string) (*types.Volumev1, error)
+
 	// GetStorageGroupIDList returns a list of all the StorageGroup ids.
 	GetStorageGroupIDList(ctx context.Context, symID, storageGroupIDMatch string, like bool) (*types.StorageGroupIDList, error)
 

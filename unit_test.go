@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -80,7 +81,7 @@ func TestScenarios(_ *testing.T) {
 			filename = fmt.Sprintf("%s.txt", filename)
 		}
 
-		outputFile, err := os.Create(filename)
+		outputFile, err := os.Create(filepath.Clean(filename)) //nolint: gosec
 		if err != nil {
 			fmt.Printf("Could not create output file %s - %v\n", filename, err)
 			os.Exit(1)
