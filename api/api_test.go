@@ -253,10 +253,11 @@ func TestDoWithHeaders(t *testing.T) {
 		Transport: &MockTransport{mockHTTPClient: mockHTTPClient},
 	}
 	mockClient := &client{
-		http:     httpClient,
-		host:     "https://example.com",
-		token:    "mockToken",
-		showHTTP: false,
+		http:              httpClient,
+		host:              "https://example.com",
+		token:             "mockToken",
+		showHTTP:          false,
+		customHTTPHeaders: NewSafeHeader(),
 	}
 
 	tests := []struct {
@@ -400,10 +401,11 @@ func TestDoAndGetResponseBody(t *testing.T) {
 				Body:       io.NopCloser(bytes.NewBufferString(`{"success": true}`)),
 			},
 			c: &client{
-				http:     httpClient,
-				host:     "https://example.com",
-				token:    "mockToken",
-				showHTTP: false,
+				http:              httpClient,
+				host:              "https://example.com",
+				token:             "mockToken",
+				showHTTP:          false,
+				customHTTPHeaders: NewSafeHeader(),
 			},
 			mockError:     nil,
 			expectedError: "",
@@ -418,10 +420,11 @@ func TestDoAndGetResponseBody(t *testing.T) {
 			body:         make(chan int), // invalid JSON body
 			mockResponse: nil,
 			c: &client{
-				http:     httpClient,
-				host:     "https://example.com",
-				token:    "mockToken",
-				showHTTP: false,
+				http:              httpClient,
+				host:              "https://example.com",
+				token:             "mockToken",
+				showHTTP:          false,
+				customHTTPHeaders: NewSafeHeader(),
 			},
 			mockError:     errors.New("unsupported type error"),
 			expectedError: "json: unsupported type: chan int",
@@ -439,10 +442,11 @@ func TestDoAndGetResponseBody(t *testing.T) {
 				Body:       io.NopCloser(bytes.NewBufferString(`{"success": true}`)),
 			},
 			c: &client{
-				http:     httpClient,
-				host:     "https://example.com",
-				token:    "mockToken",
-				showHTTP: false,
+				http:              httpClient,
+				host:              "https://example.com",
+				token:             "mockToken",
+				showHTTP:          false,
+				customHTTPHeaders: NewSafeHeader(),
 			},
 			mockError:     nil,
 			expectedError: "",
@@ -460,10 +464,11 @@ func TestDoAndGetResponseBody(t *testing.T) {
 				Body:       io.NopCloser(bytes.NewBufferString(`{"success": true}`)),
 			},
 			c: &client{
-				http:     httpClient,
-				host:     "https://example.com",
-				token:    "mockToken",
-				showHTTP: false,
+				http:              httpClient,
+				host:              "https://example.com",
+				token:             "mockToken",
+				showHTTP:          false,
+				customHTTPHeaders: NewSafeHeader(),
 			},
 			mockError:     nil,
 			expectedError: "",
@@ -481,10 +486,11 @@ func TestDoAndGetResponseBody(t *testing.T) {
 				Body:       io.NopCloser(bytes.NewBufferString(`{"success": true}`)),
 			},
 			c: &client{
-				http:     httpClient,
-				host:     "https://example.com",
-				token:    "mockToken",
-				showHTTP: false,
+				http:              httpClient,
+				host:              "https://example.com",
+				token:             "mockToken",
+				showHTTP:          false,
+				customHTTPHeaders: NewSafeHeader(),
 			},
 			mockError:     nil,
 			expectedError: "",
@@ -502,10 +508,11 @@ func TestDoAndGetResponseBody(t *testing.T) {
 				Body:       io.NopCloser(bytes.NewBufferString(`{"success": true}`)),
 			},
 			c: &client{
-				http:     httpClient,
-				host:     "https://example.com",
-				token:    "mockToken",
-				showHTTP: false,
+				http:              httpClient,
+				host:              "https://example.com",
+				token:             "mockToken",
+				showHTTP:          false,
+				customHTTPHeaders: NewSafeHeader(),
 			},
 			mockError:     nil,
 			expectedError: "",
@@ -523,10 +530,11 @@ func TestDoAndGetResponseBody(t *testing.T) {
 				Body:       io.NopCloser(bytes.NewBufferString(`{"success": true}`)),
 			},
 			c: &client{
-				http:     httpClient,
-				host:     "https://example.com",
-				token:    "mockToken",
-				showHTTP: true,
+				http:              httpClient,
+				host:              "https://example.com",
+				token:             "mockToken",
+				showHTTP:          true,
+				customHTTPHeaders: NewSafeHeader(),
 			},
 			mockError:     nil,
 			expectedError: "",
@@ -588,6 +596,27 @@ func TestSetToken(t *testing.T) {
 	c.SetToken("token2")
 	if c.token != "token2" {
 		t.Errorf("Expected token to be 'token2', got '%s'", c.token)
+	}
+}
+
+func TestCustomHTTPHeaders(t *testing.T) {
+	c := client{customHTTPHeaders: NewSafeHeader()}
+
+	want := http.Header{
+		"Forwarded": {"by=csm-authorization;powermax"},
+	}
+	c.SetCustomHTTPHeaders(want)
+
+	got := c.GetCustomHTTPHeaders()
+	if got.Get("Forwarded") != "by=csm-authorization;powermax" {
+		t.Errorf("Expected Forwarded header, got %v", got)
+	}
+
+	// Verify mutations to the returned header don't affect the stored copy
+	got.Set("Extra", "value")
+	got2 := c.GetCustomHTTPHeaders()
+	if got2.Get("Extra") != "" {
+		t.Error("Expected stored headers to be isolated from external mutations")
 	}
 }
 

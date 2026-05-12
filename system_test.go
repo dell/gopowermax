@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -159,5 +160,230 @@ func TestGetPorts(t *testing.T) {
 		t.Errorf("Expected error but got none")
 	} else {
 		fmt.Printf("Expected error received: %s\n", err.Error())
+	}
+}
+
+func TestGetISCSIEndpoints(t *testing.T) {
+	tests := []struct {
+		name          string
+		directorsResp string
+		endpointsResp string
+		portDetails   string
+		expectedError bool
+		expectedCount int
+	}{
+		{
+			name:          "Successful retrieval with valid endpoints",
+			directorsResp: `["dir-1", "dir-2"]`,
+			endpointsResp: `{
+				"symmetrixPortKey": [
+					{"directorId": "dir-1", "portId": "port-1"},
+					{"directorId": "dir-1", "portId": "port-2"}
+				]
+			}`,
+			portDetails: `{
+				"symmetrixPort": {
+					"port_status": "ON",
+					"identifier": "iqn.2020-01.com.example:test",
+					"ip_addresses": ["10.0.0.1", "10.0.0.2"]
+				}
+			}`,
+			expectedError: false,
+			expectedCount: 2,
+		},
+		{
+			name:          "No directors found",
+			directorsResp: `[]`,
+			endpointsResp: `{"symmetrixPortKey": []}`,
+			portDetails:   `{}`,
+			expectedError: false,
+			expectedCount: 0,
+		},
+		{
+			name:          "Directors error",
+			directorsResp: `[]`,
+			endpointsResp: `{"symmetrixPortKey": []}`,
+			portDetails:   `{}`,
+			expectedError: true,
+			expectedCount: 0,
+		},
+		{
+			name:          "No endpoints on directors",
+			directorsResp: `["dir-1"]`,
+			endpointsResp: `{"symmetrixPortKey": []}`,
+			portDetails:   `{}`,
+			expectedError: false,
+			expectedCount: 0,
+		},
+		{
+			name:          "Endpoint without IP addresses filtered out",
+			directorsResp: `["dir-1"]`,
+			endpointsResp: `{
+				"symmetrixPortKey": [
+					{"directorId": "dir-1", "portId": "port-1"}
+				]
+			}`,
+			portDetails: `{
+				"symmetrixPort": {
+					"port_status": "ON",
+					"identifier": "iqn.2020-01.com.example:test",
+					"ip_addresses": []
+				}
+			}`,
+			expectedError: false,
+			expectedCount: 0,
+		},
+		{
+			name:          "Endpoint without identifier filtered out",
+			directorsResp: `["dir-1"]`,
+			endpointsResp: `{
+				"symmetrixPortKey": [
+					{"directorId": "dir-1", "portId": "port-1"}
+				]
+			}`,
+			portDetails: `{
+				"symmetrixPort": {
+					"port_status": "ON",
+					"identifier": "",
+					"ip_addresses": ["10.0.0.1"]
+				}
+			}`,
+			expectedError: false,
+			expectedCount: 0,
+		},
+		{
+			name:          "Port details error - function continues",
+			directorsResp: `["dir-1"]`,
+			endpointsResp: `{
+				"symmetrixPortKey": [
+					{"directorId": "dir-1", "portId": "port-1"}
+				]
+			}`,
+			portDetails:   `{"error": "Port not found"}`,
+			expectedError: false,
+			expectedCount: 0,
+		},
+		{
+			name:          "Mixed success and failures",
+			directorsResp: `["dir-1", "dir-2"]`,
+			endpointsResp: `{
+				"symmetrixPortKey": [
+					{"directorId": "dir-1", "portId": "port-1"}
+				]
+			}`,
+			portDetails: `{
+				"symmetrixPort": {
+					"port_status": "ON",
+					"identifier": "iqn.2020-01.com.example:test",
+					"ip_addresses": ["10.0.0.1"]
+				}
+			}`,
+			expectedError: false,
+			expectedCount: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a mock server
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Directors list request
+				if strings.Contains(r.URL.Path, "/symmetrix/") && strings.Contains(r.URL.Path, "/director") && r.Method == "GET" && !strings.Contains(r.URL.Path, "/director/") {
+					if tt.name == "Directors error" {
+						w.WriteHeader(500)
+					}
+					w.Header().Set("Content-Type", "application/json")
+					fmt.Fprint(w, `{"directorId": `+tt.directorsResp+`}`)
+				}
+
+				// Port list request (any port request)
+				if strings.Contains(r.URL.Path, "/director/") && strings.Contains(r.URL.Path, "/port") && !strings.Contains(r.URL.Path, "/port/") {
+					// Check if this is an iSCSI endpoint query
+					if strings.Contains(r.URL.RawQuery, "iscsi_endpoint=true") {
+						// Only return endpoints for dir-1
+						if strings.Contains(r.URL.Path, "/director/dir-1/port") {
+							w.Header().Set("Content-Type", "application/json")
+							fmt.Fprint(w, tt.endpointsResp)
+						} else {
+							// Empty response for other directors
+							w.Header().Set("Content-Type", "application/json")
+							fmt.Fprint(w, `{"symmetrixPortKey": []}`)
+						}
+					} else {
+						// Default empty response for other port queries
+						w.Header().Set("Content-Type", "application/json")
+						fmt.Fprint(w, `{"symmetrixPortKey": []}`)
+					}
+					return
+				}
+
+				// Port details request
+				if strings.Contains(r.URL.Path, "/director/") && strings.Contains(r.URL.Path, "/port/") {
+					// Extract director and port from URL
+					parts := strings.Split(r.URL.Path, "/")
+					var directorID, portID string
+					for i, part := range parts {
+						if part == "director" && i+1 < len(parts) {
+							directorID = parts[i+1]
+						}
+						if part == "port" && i+1 < len(parts) {
+							portID = parts[i+1]
+						}
+					}
+
+					// Only respond to valid port requests
+					if directorID != "" && portID != "" {
+						w.Header().Set("Content-Type", "application/json")
+						fmt.Fprint(w, tt.portDetails)
+					} else {
+						w.WriteHeader(404)
+					}
+					return
+				}
+
+				// Default response
+				w.WriteHeader(200)
+				w.Header().Set("Content-Type", "application/json")
+				fmt.Fprint(w, `{}`)
+			}))
+			defer srv.Close()
+
+			// Create client
+			client, err := NewClientWithArgs(srv.URL, "", true, false, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Call GetISCSIEndpoints
+			targets, err := client.(*Client).GetISCSIEndpoints(context.Background(), "000197900046")
+
+			// Check error expectation
+			if tt.expectedError && err == nil {
+				t.Errorf("Expected error but got none")
+			}
+			if !tt.expectedError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+
+			// Check target count
+			if len(targets) != tt.expectedCount {
+				t.Errorf("Expected %d targets, got %d", tt.expectedCount, len(targets))
+			}
+
+			// Verify target details if we expect any
+			if len(targets) > 0 && tt.expectedCount > 0 {
+				for _, target := range targets {
+					if target.IQN == "" {
+						t.Errorf("Expected non-empty IQN")
+					}
+					if len(target.PortalIPs) == 0 {
+						t.Errorf("Expected non-empty portal IPs")
+					}
+					if target.PortStatus == "" {
+						t.Errorf("Expected non-empty PortStatus")
+					}
+				}
+			}
+		})
 	}
 }

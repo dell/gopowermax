@@ -36,41 +36,43 @@ import (
 
 // constants
 const (
-	APIVersion                 = "{apiversion}"
-	PREFIX                     = "/univmax/restapi/" + APIVersion
-	PREFIXV1                   = "/univmax/rest/v1"
-	PREFIXNOVERSION            = "/univmax/restapi"
-	PRIVATEPREFIX              = "/univmax/restapi/private/" + APIVersion
-	INTERNALPREFIX             = "/univmax/restapi/internal/100"
-	defaultUsername            = "username"
-	defaultPassword            = "password"
-	Debug                      = false
-	DefaultStorageGroup        = "CSI-Test-SG-1"
-	DefaultStorageGroup1       = "CSI-Test-SG-2"
-	DefaultASYNCProtectedSG    = "csi-rep-sg-ns-test"
-	DefaultMETROProtectedSG    = "csi-rep-sg-ns-test"
-	DefaultSymmetrixID         = "000197900046"
-	DefaultEnhancedSymmetrixID = "000197900048"
-	DefaultRemoteSymID         = "000000000013"
-	DefaultRDFDir              = "OR-1C"
-	DefaultRDFPort             = 3
-	PostELMSRSymmetrixID       = "000197900047"
-	DefaultStoragePool         = "SRP_1"
-	DefaultServiceLevel        = "Optimized"
-	DefaultFcStoragePortWWN    = "5000000000000001"
-	DefaultAsyncRDFGNo         = 13
-	DefaultAsyncRemoteRDFGNo   = 13
-	DefaultAsyncRDFLabel       = "csi-mock-async"
-	DefaultMetroRDFGNo         = 14
-	DefaultRemoteRDFGNo        = 14
-	DefaultMetroRDFLabel       = "csi-mock-metro"
-	RemoteArrayHeaderKey       = "RemoteArray"
-	RemoteArrayHeaderValue     = "true"
-	DefaultNASServerID         = "64xxx7a6-03b5-xxx-xxx-0zzzz8200209"
-	DefaultNASServerName       = "nas-1"
-	DefaultFSID                = "64xxx7a6-03b5-xxx-xxx-0zzzz8200208"
-	DefaultFSName              = "fs-ds-1"
-	DefaultNFSServerID         = "678xx790-115e-xxxx-xxxx-0zzzz200205"
+	APIVersion                    = "{apiversion}"
+	PREFIX                        = "/univmax/restapi/" + APIVersion
+	PREFIXV1                      = "/univmax/rest/v1"
+	PREFIXNOVERSION               = "/univmax/restapi"
+	PRIVATEPREFIX                 = "/univmax/restapi/private/" + APIVersion
+	PRIVATEV1PREFIX               = "/univmax/rest/private/v1"
+	INTERNALPREFIX                = "/univmax/restapi/internal/100"
+	defaultUsername               = "username"
+	defaultPassword               = "password"
+	Debug                         = false
+	DefaultStorageGroup           = "CSI-Test-SG-1"
+	DefaultStorageGroup1          = "CSI-Test-SG-2"
+	DefaultASYNCProtectedSG       = "csi-rep-sg-ns-test"
+	DefaultMETROProtectedSG       = "csi-rep-sg-ns-test"
+	DefaultSymmetrixID            = "000197900046"
+	DefaultEnhancedSymmetrixID    = "000197900048"
+	DefaultEnhancedSymmetrixID104 = "000197900049"
+	DefaultRemoteSymID            = "000000000013"
+	DefaultRDFDir                 = "OR-1C"
+	DefaultRDFPort                = 3
+	PostELMSRSymmetrixID          = "000197900047"
+	DefaultStoragePool            = "SRP_1"
+	DefaultServiceLevel           = "Optimized"
+	DefaultFcStoragePortWWN       = "5000000000000001"
+	DefaultAsyncRDFGNo            = 13
+	DefaultAsyncRemoteRDFGNo      = 13
+	DefaultAsyncRDFLabel          = "csi-mock-async"
+	DefaultMetroRDFGNo            = 14
+	DefaultRemoteRDFGNo           = 14
+	DefaultMetroRDFLabel          = "csi-mock-metro"
+	RemoteArrayHeaderKey          = "RemoteArray"
+	RemoteArrayHeaderValue        = "true"
+	DefaultNASServerID            = "64xxx7a6-03b5-xxx-xxx-0zzzz8200209"
+	DefaultNASServerName          = "nas-1"
+	DefaultFSID                   = "64xxx7a6-03b5-xxx-xxx-0zzzz8200208"
+	DefaultFSName                 = "fs-ds-1"
+	DefaultNFSServerID            = "678xx790-115e-xxxx-xxxx-0zzzz200205"
 )
 
 const (
@@ -118,6 +120,8 @@ var Data struct {
 	// Snapshots
 	VolIDToSnapshots  map[string]map[string]*types.Snapshot
 	SnapIDToLinkedVol map[string]map[string]*types.LinkedVolumes
+	SnapNameToSnapID  map[string]int64 // maps "volID:snapName" to a numeric snap_id
+	NextSnapID        int64            // counter for generating unique snap_ids
 
 	// SRDF
 	StorageGroupIDToRDFStorageGroup map[string]*types.RDFStorageGroup
@@ -132,6 +136,7 @@ var Data struct {
 	NASServerIDToNASServer   map[string]*types.NASServer
 	FileIntIDtoFileInterface map[string]*types.FileInterface
 	NFSServerIDToNFSServer   map[string]*types.NFSServer
+	NextVolumeIndex          int // counter for generating unique 10.4 volume IDs
 }
 
 var Filters = new(filters)
@@ -166,6 +171,7 @@ type inducedErrors struct {
 	CreateStorageGroupError                bool
 	StorageGroupAlreadyExists              bool
 	DeleteStorageGroupError                bool
+	CreateVolumeError                      bool
 	GetStoragePoolListError                bool
 	GetPortGroupError                      bool
 	GetPortError                           bool
@@ -185,6 +191,7 @@ type inducedErrors struct {
 	UpdateMaskingViewError                 bool
 	MaskingViewAlreadyExists               bool
 	DeleteMaskingViewError                 bool
+	PublishMaskingViewsError               bool
 	PortGroupNotFoundError                 bool
 	InitiatorGroupNotFoundError            bool
 	StorageGroupNotFoundError              bool
@@ -376,6 +383,7 @@ func Reset() {
 	InducedErrors.CreateStorageGroupError = false
 	InducedErrors.StorageGroupAlreadyExists = false
 	InducedErrors.DeleteStorageGroupError = false
+	InducedErrors.CreateVolumeError = false
 	InducedErrors.GetStoragePoolListError = false
 	InducedErrors.GetStoragePoolError = false
 	InducedErrors.GetPortGroupError = false
@@ -396,6 +404,7 @@ func Reset() {
 	InducedErrors.UpdateMaskingViewError = false
 	InducedErrors.MaskingViewAlreadyExists = false
 	InducedErrors.DeleteMaskingViewError = false
+	InducedErrors.PublishMaskingViewsError = false
 	InducedErrors.PortGroupNotFoundError = false
 	InducedErrors.InitiatorGroupNotFoundError = false
 	InducedErrors.StorageGroupNotFoundError = false
@@ -503,6 +512,9 @@ func Reset() {
 	Data.StorageGroupIDToVolumes = make(map[string][]string)
 	Data.VolIDToSnapshots = make(map[string]map[string]*types.Snapshot)
 	Data.SnapIDToLinkedVol = make(map[string]map[string]*types.LinkedVolumes)
+	Data.SnapNameToSnapID = make(map[string]int64)
+	Data.NextSnapID = 100661523201 // start with a realistic snap_id value
+	Data.NextVolumeIndex = 187     // start volume IDs from 00187
 	Data.StorageGroupIDToRDFStorageGroup = make(map[string]*types.RDFStorageGroup)
 	Data.HostGroupIDToHostGroup = make(map[string]*types.HostGroup)
 	Data.FileSysIDToFileSystem = make(map[string]*types.FileSystem)
@@ -705,6 +717,8 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/maskingview/{mvID}/connections", HandleMaskingViewConnections)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/maskingview/{mvID}", HandleMaskingView)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/maskingview", HandleMaskingView)
+	router.HandleFunc(PRIVATEV1PREFIX+"/systems/{symid}/masking-views", HandlePublishMaskingViews)
+	router.HandleFunc(PRIVATEV1PREFIX+"/systems/{symid}/volumes", HandleCreateVolume)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/srp/{id}", HandleStorageResourcePool)
 	router.HandleFunc(PREFIX+"/sloprovisioning/symmetrix/{symid}/srp", HandleStorageResourcePool)
 	router.HandleFunc(PREFIXNOVERSION+"/common/Iterator/{iterId}/page", HandleIterator)
@@ -1497,6 +1511,10 @@ func handleVersion(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`{ "api_version": "103" }`)) // #nosec G20
 		return
 	}
+	if symID == DefaultEnhancedSymmetrixID104 {
+		w.Write([]byte(`{ "api_version": "104" }`)) // #nosec G20
+		return
+	}
 	if authExpected != authSupplied {
 		writeError(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -1506,13 +1524,13 @@ func handleVersion(w http.ResponseWriter, r *http.Request) {
 	// check the apiversion
 	switch apiversion {
 	case "90":
-		w.Write([]byte(`{ "version": "V9.0.1.6" }`)) // #nosec G20
+		w.Write([]byte(`{ "version": "V9.0.1.6", "api_version": "90" }`)) // #nosec G20
 		break
 	case "": // for version 91, as URL does not have apiversion in V9.1
-		w.Write([]byte(`{ "version": "V9.1.0.2" }`)) // #nosec G20
+		w.Write([]byte(`{ "version": "V9.1.0.2", "api_version": "91" }`)) // #nosec G20
 		break
 	default:
-		writeError(w, "Unsupport API version: "+apiversion, http.StatusServiceUnavailable)
+		w.Write([]byte(`{ "version": "V10.0.0.0", "api_version": "100" }`)) // #nosec G20
 	}
 }
 
@@ -1534,7 +1552,7 @@ func handleSymmetrix(w http.ResponseWriter, r *http.Request) {
 	if id == "" {
 		returnJSONFile(Data.JSONDir, "symmetrixList.json", w, nil)
 	}
-	if id != "000197900046" && id != "000197900047" && id != "000197900048" && id != DefaultRemoteSymID {
+	if id != "000197900046" && id != "000197900047" && id != "000197900048" && id != "000197900049" && id != DefaultRemoteSymID {
 		writeError(w, "Symmetrix not found", http.StatusNotFound)
 		return
 	}
@@ -1544,6 +1562,8 @@ func handleSymmetrix(w http.ResponseWriter, r *http.Request) {
 		returnJSONFile(Data.JSONDir, "symmetrix47.json", w, nil)
 	} else if id == "000197900048" {
 		returnJSONFile(Data.JSONDir, "symmetrix48.json", w, nil)
+	} else if id == "000197900049" {
+		returnJSONFile(Data.JSONDir, "symmetrix49.json", w, nil)
 	} else {
 		returnJSONFile(Data.JSONDir, "symmetrix13.json", w, nil)
 	}
@@ -1594,25 +1614,39 @@ func handleVolumes(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(volID)
 	switch r.Method {
 	case http.MethodGet:
-		var data map[string]interface{}
-		jsonFile, err := os.Open("./mock-data/enhanced-vol.json")
-		if err != nil {
-			writeError(w, "mock file open error", http.StatusInternalServerError)
+		// Parse the identifier filter from query parameters
+		queryParams := r.URL.Query()
+		filter := queryParams.Get("filter")
+		identifier := ""
+		if strings.Contains(filter, "identifier EQ ") {
+			identifier = strings.TrimPrefix(filter, "identifier EQ ")
 		}
-		defer jsonFile.Close()
-		jsonDecoder := json.NewDecoder(jsonFile)
-		err = jsonDecoder.Decode(&data)
-		if err != nil {
-			writeError(w, "json encoding error", http.StatusInternalServerError)
+
+		// Search mock data for matching volumes by identifier
+		result := &types.Volumev1{
+			Volumes: make([]types.VolumeEnhanced, 0),
 		}
-		jsonData, err := json.Marshal(data)
-		if err != nil {
-			writeError(w, "json encoding error", http.StatusInternalServerError)
+		for _, vol := range Data.VolumeIDToVolume {
+			if vol != nil && (identifier == "" || vol.VolumeIdentifier == identifier) {
+				sgIDs := make([]types.StorageGroupID, 0)
+				for _, sg := range vol.StorageGroupIDList {
+					sgIDs = append(sgIDs, types.StorageGroupID{StorageGroupID: sg})
+				}
+				enhanced := types.VolumeEnhanced{
+					ID:            vol.VolumeID,
+					Type:          vol.Type,
+					Identifier:    vol.VolumeIdentifier,
+					StorageGroups: sgIDs,
+					CapCyl:        float64(vol.CapacityCYL),
+				}
+				result.Volumes = append(result.Volumes, enhanced)
+			}
 		}
+
 		w.Header().Set("Content-Type", "application/json")
-		_, err = w.Write(jsonData)
-		if err != nil {
-			writeError(w, "Method["+r.Method+"] not allowed", http.StatusBadRequest)
+		encoder := json.NewEncoder(w)
+		if err := encoder.Encode(result); err != nil {
+			writeError(w, "json encoding error", http.StatusInternalServerError)
 		}
 	default:
 		writeError(w, "Method["+r.Method+"] not allowed", http.StatusMethodNotAllowed)
@@ -2318,6 +2352,376 @@ func handleMaskingView(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// HandlePublishMaskingViews handles the POST /univmax/rest/private/v1/systems/{symid}/masking-views
+func HandlePublishMaskingViews(w http.ResponseWriter, r *http.Request) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	handlePublishMaskingViews(w, r)
+}
+
+func handlePublishMaskingViews(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		if InducedErrors.PublishMaskingViewsError {
+			writeError(w, "Failed to publish masking views: induced error", http.StatusRequestTimeout)
+			return
+		}
+		decoder := json.NewDecoder(r.Body)
+		publishPayload := &types.PublishMaskingViewsParam{}
+		err := decoder.Decode(publishPayload)
+		if err != nil {
+			writeError(w, "problem decoding POST PublishMaskingViews payload: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		fmt.Printf("POST PublishMaskingViews payload: %#v\n", publishPayload)
+
+		// Process each masking view in the request and build results
+		publishResults := make([]types.PublishResult, 0)
+		for _, mv := range publishPayload.MaskingViews {
+			result := types.PublishResult{
+				Status:     "success",
+				RequestID:  mv.ID,
+				ResourceID: "MaskingView",
+			}
+			publishResults = append(publishResults, result)
+
+			// Add the masking view to mock data
+			if mv.StorageGroup != nil && mv.Host != nil && mv.PortGroup != nil {
+				addMaskingViewFromPublishParams(mv)
+			}
+		}
+
+		response := &types.PublishMaskingViewResponse{
+			HTTPStatusCode: http.StatusOK,
+			Summary: types.PublishSummary{
+				Total:     len(publishResults),
+				Succeeded: len(publishResults),
+			},
+			Results: types.PublishResultsBlock{
+				Result: publishResults,
+			},
+		}
+		writeJSON(w, response)
+
+	default:
+		writeError(w, "Invalid Method", http.StatusBadRequest)
+	}
+}
+
+func addMaskingViewFromPublishParams(mv types.MaskingViewPublishParam) {
+	maskingView := &types.MaskingView{
+		MaskingViewID:  mv.ID,
+		StorageGroupID: mv.StorageGroup.ID,
+		HostID:         mv.Host.ID,
+		PortGroupID:    mv.PortGroup.ID,
+	}
+	Data.MaskingViewIDToMaskingView[mv.ID] = maskingView
+}
+
+// HandleCreateVolume handles the POST /univmax/restapi/private/{version}/sloprovisioning/systems/{symid}/volumes
+func HandleCreateVolume(w http.ResponseWriter, r *http.Request) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	handleCreateVolume(w, r)
+}
+
+func handleCreateVolume(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		if InducedErrors.CreateVolumeError {
+			writeError(w, "Failed to create volume: induced error", http.StatusRequestTimeout)
+			return
+		}
+		decoder := json.NewDecoder(r.Body)
+		createReq := &types.CreateVolumesRequest{}
+		err := decoder.Decode(createReq)
+		if err != nil {
+			writeError(w, "problem decoding POST CreateVolume payload: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		fmt.Printf("POST CreateVolume payload: %#v\n", createReq)
+
+		if len(createReq.Volumes) == 0 {
+			writeError(w, "create volumes request cannot be empty", http.StatusBadRequest)
+			return
+		}
+
+		// Process each volume in the request and build results
+		createResults := make([]types.CreateVolumeResponseItem, 0)
+		for _, vol := range createReq.Volumes {
+			volumeID := fmt.Sprintf("%05d", Data.NextVolumeIndex)
+			Data.NextVolumeIndex++
+			identifier := ""
+			storageGroupID := ""
+			capCyl := 0
+
+			// Extract identifier: prefer Volume.Identifier (10.4 path), fall back to ManageIdentifier
+			if vol.Volume != nil && vol.Volume.Identifier != "" {
+				identifier = vol.Volume.Identifier
+			} else if vol.Actions != nil && vol.Actions.ManageIdentifier != nil {
+				identifier = vol.Actions.ManageIdentifier.Identifier
+			}
+
+			// Extract storage group from ManageVolumeStorageGroup action
+			if vol.Actions != nil && vol.Actions.ManageVolumeStorageGroup != nil {
+				storageGroupID = vol.Actions.ManageVolumeStorageGroup.StorageGroup.ID
+			}
+
+			// Extract capacity from create_new
+			if vol.CreateNew != nil {
+				if vol.CreateNew.CreateNewFromAttributes != nil {
+					attrs := vol.CreateNew.CreateNewFromAttributes
+					switch strings.ToUpper(attrs.CapacityUnit) {
+					case "CYL":
+						capCyl = int(attrs.VolumeSize)
+					case "GB":
+						capCyl = int(attrs.VolumeSize * 1075.2) // approx 1 GB = 1075.2 CYL
+					default:
+						capCyl = int(attrs.VolumeSize)
+					}
+				} else if vol.CreateNew.CreateNewFromSnapshot != nil {
+					// Size must always be provided explicitly via new_volume_attributes.
+					if vol.CreateNew.CreateNewFromSnapshot.NewVolumeAttributes != nil {
+						nva := vol.CreateNew.CreateNewFromSnapshot.NewVolumeAttributes
+						switch strings.ToUpper(nva.CapacityUnit) {
+						case "CYL":
+							capCyl = int(nva.VolumeSize)
+						case "GB":
+							capCyl = int(nva.VolumeSize * 1075.2) // approx 1 GB = 1075.2 CYL
+						default:
+							capCyl = int(nva.VolumeSize)
+						}
+						log.Printf("Snapshot with new_volume_attributes: capCyl=%d", capCyl)
+					}
+				}
+			}
+			// Check for idempotency: if a volume with the same identifier already exists,
+			// return the full volume object to match the real PowerMax API behavior.
+			existingVolFound := false
+			if identifier != "" {
+				for _, existingVol := range Data.VolumeIDToVolume {
+					if existingVol != nil && existingVol.VolumeIdentifier == identifier {
+						log.Printf("Idempotent CreateVolume: volume with identifier %s already exists (ID: %s)", identifier, existingVol.VolumeID)
+						// Size mismatch check: if the requested size differs from the existing volume, return a failed result
+						if capCyl > 0 && existingVol.CapacityCYL > 0 && capCyl != existingVol.CapacityCYL {
+							log.Printf("Idempotent CreateVolume: size mismatch for %s — requested %d CYL, existing %d CYL", identifier, capCyl, existingVol.CapacityCYL)
+							failedResult := createVolumeFailedResult(vol.RequestID,
+								"0x020e0105",
+								fmt.Sprintf("defined volume size [%d]Cyls does not match existing volume size [%d]Cyls", capCyl, existingVol.CapacityCYL))
+							createResults = append(createResults, failedResult)
+							existingVolFound = true
+							break
+						}
+						result := types.CreateVolumeResponseItem{
+							Volume: &types.VolumeRefResponse{
+								ID:         existingVol.VolumeID,
+								Identifier: existingVol.VolumeIdentifier,
+								CapCyl:     float64(existingVol.CapacityCYL),
+							},
+							Status:     "success",
+							RequestID:  vol.RequestID,
+							ResourceID: "Volume",
+						}
+						if storageGroupID != "" {
+							result.Volume.StorageGroups = []types.StorageGroupID{
+								{StorageGroupID: storageGroupID},
+							}
+							result.StorageGroup = &types.StorageGroupRefResponse{
+								ID: storageGroupID,
+							}
+							if sg, exists := Data.StorageGroupIDToStorageGroup[storageGroupID]; exists {
+								result.StorageGroup.NumOfVolumes = sg.NumOfVolumes
+							}
+						}
+						createResults = append(createResults, result)
+						existingVolFound = true
+						break
+					}
+				}
+			}
+			if existingVolFound {
+				continue
+			}
+
+			// Validate clone source: check that source volume exists and target >= source size
+			if vol.Actions != nil && vol.Actions.ManageReplication != nil && vol.Actions.ManageReplication.Local != nil {
+				srcDevID := vol.Actions.ManageReplication.Local.Volume.ID
+				srcVol, srcExists := Data.VolumeIDToVolume[srcDevID]
+				if !srcExists || srcVol == nil {
+					log.Printf("CreateVolume: clone source volume %s does not exist", srcDevID)
+					failedResult := createVolumeFailedResult(vol.RequestID,
+						"0x020e0114",
+						fmt.Sprintf("Source Volumewith identifier [%s] does not exist", identifier))
+					createResults = append(createResults, failedResult)
+					continue
+				}
+				if capCyl > 0 && srcVol.CapacityCYL > 0 && capCyl < srcVol.CapacityCYL {
+					log.Printf("CreateVolume: clone target size %d CYL < source size %d CYL", capCyl, srcVol.CapacityCYL)
+					failedResult := createVolumeFailedResult(vol.RequestID,
+						"0x020e0105",
+						fmt.Sprintf("Target volume size [%d]Cyls cannot be smaller than source volume size [%d]Cyls", capCyl, srcVol.CapacityCYL))
+					createResults = append(createResults, failedResult)
+					continue
+				}
+			}
+
+			// Validate snapshot source: check that snapshot exists and target >= source volume size
+			if vol.CreateNew != nil && vol.CreateNew.CreateNewFromSnapshot != nil {
+				reqSnapID := vol.CreateNew.CreateNewFromSnapshot.Snapshot.ID
+				snapFound := false
+				var srcVolID string
+				for key, sid := range Data.SnapNameToSnapID {
+					if fmt.Sprintf("%d", sid) == reqSnapID {
+						snapFound = true
+						parts := splitSnapKey(key)
+						if len(parts) == 2 {
+							srcVolID = parts[0]
+						}
+						break
+					}
+				}
+				if !snapFound {
+					log.Printf("CreateVolume: snapshot with id %s not found", reqSnapID)
+					failedResult := createVolumeFailedResult(vol.RequestID,
+						"0x020e0117",
+						fmt.Sprintf("No Snapshot found with id [%s]", reqSnapID))
+					createResults = append(createResults, failedResult)
+					continue
+				}
+				if srcVolID != "" {
+					if srcVol, ok := Data.VolumeIDToVolume[srcVolID]; ok && srcVol != nil {
+						if capCyl > 0 && srcVol.CapacityCYL > 0 && capCyl < srcVol.CapacityCYL {
+							log.Printf("CreateVolume: snapshot restore target size %d CYL < source size %d CYL", capCyl, srcVol.CapacityCYL)
+							failedResult := createVolumeFailedResult(vol.RequestID,
+								"0x020e0105",
+								fmt.Sprintf("Target volume size [%d]Cyls cannot be smaller than source volume size [%d]Cyls", capCyl, srcVol.CapacityCYL))
+							createResults = append(createResults, failedResult)
+							continue
+						}
+					}
+				}
+			}
+
+			if capCyl == 0 {
+				capCyl = 1 // default 1 CYL
+			}
+
+			// Add volume to mock data legacy maps
+			Data.VolumeIDToIdentifier[volumeID] = identifier
+			Data.VolumeIDToSize[volumeID] = capCyl
+			Data.VolumeIDIteratorList = append(Data.VolumeIDIteratorList, volumeID)
+
+			sgList := []string{}
+			if storageGroupID != "" {
+				sgList = []string{storageGroupID}
+				Data.VolumeIDToSGList[volumeID] = sgList
+				// Add volume to storage group
+				if sg, exists := Data.StorageGroupIDToStorageGroup[storageGroupID]; exists {
+					sg.NumOfVolumes++
+				}
+				currentVolumes := Data.StorageGroupIDToVolumes[storageGroupID]
+				Data.StorageGroupIDToVolumes[storageGroupID] = append(currentVolumes, volumeID)
+			}
+
+			// Populate VolumeIDToVolume so snapshot/generation handlers can find this volume
+			newVolume(volumeID, identifier, capCyl, sgList)
+
+			// Build response item
+			result := types.CreateVolumeResponseItem{
+				Volume: &types.VolumeRefResponse{
+					ID:         volumeID,
+					Identifier: identifier,
+					CapCyl:     float64(capCyl),
+				},
+				Status:     "success",
+				RequestID:  vol.RequestID,
+				ResourceID: "Volume",
+			}
+
+			if storageGroupID != "" {
+				result.Volume.StorageGroups = []types.StorageGroupID{
+					{
+						StorageGroupID: storageGroupID,
+					},
+				}
+				result.StorageGroup = &types.StorageGroupRefResponse{
+					ID: storageGroupID,
+				}
+				if sg, exists := Data.StorageGroupIDToStorageGroup[storageGroupID]; exists {
+					result.StorageGroup.NumOfVolumes = sg.NumOfVolumes
+				}
+			}
+
+			createResults = append(createResults, result)
+		}
+
+		// Count successes and failures for the summary
+		failedCount := 0
+		for _, r := range createResults {
+			if r.Status == "failed" {
+				failedCount++
+			}
+		}
+		succeededCount := len(createResults) - failedCount
+		httpStatus := http.StatusOK
+		if failedCount > 0 {
+			httpStatus = http.StatusInternalServerError
+		}
+		response := &types.CreateVolumesResponse{
+			HTTPStatusCode: httpStatus,
+			Summary: types.ResponseSummary{
+				Total:              len(createResults),
+				Succeeded:          succeededCount,
+				Failed:             failedCount,
+				Rejected:           0,
+				PartiallySucceeded: 0,
+			},
+			Results: types.CreateVolumesResults{
+				Result: createResults,
+			},
+		}
+		writeJSON(w, response)
+
+	default:
+		writeError(w, "Invalid Method", http.StatusBadRequest)
+	}
+}
+
+// createVolumeFailedResult builds a failed CreateVolumeResponseItem matching the
+// real PowerMax REST API error response format, so that gopowermax's CreateVolume
+// method can extract code+message via createVolumesErrorMessage.
+func createVolumeFailedResult(requestID, code, message string) types.CreateVolumeResponseItem {
+	return types.CreateVolumeResponseItem{
+		Status:     "failed",
+		RequestID:  requestID,
+		ResourceID: "Volume",
+		Messages: &types.ResponseMessages{
+			Message: []types.ResponseMessage{
+				{
+					Code:     code,
+					Severity: "Error",
+					Message:  message,
+				},
+			},
+		},
+	}
+}
+
+// splitSnapKey splits a "volID:snapName" key used in Data.SnapNameToSnapID.
+func splitSnapKey(key string) []string {
+	idx := -1
+	for i, ch := range key {
+		if ch == ':' {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 {
+		return []string{key}
+	}
+	return []string{key[:idx], key[idx+1:]}
+}
+
 func newStorageGroup(storageGroupID string, maskingViewID string, storageResourcePoolID string,
 	serviceLevel string, numOfVolumes int,
 ) {
@@ -2629,11 +3033,15 @@ func newVolume(volumeID, volumeIdentifier string, size int, sgList []string) {
 		NumberOfFrontEndPaths: 0,
 		StorageGroupIDList:    sgList,
 	}
-	if _, ok := Data.StorageGroupIDToRDFStorageGroup[sgList[0]]; ok {
-		volume.Type = "RDF1+TDEV"
-		volume.RDFGroupIDList = []types.RDFGroupID{
-			{RDFGroupNumber: Data.AsyncRDFGroup.RdfgNumber},
+	if len(sgList) > 0 {
+		if _, ok := Data.StorageGroupIDToRDFStorageGroup[sgList[0]]; ok {
+			volume.Type = "RDF1+TDEV"
+			volume.RDFGroupIDList = []types.RDFGroupID{
+				{RDFGroupNumber: Data.AsyncRDFGroup.RdfgNumber},
+			}
 		}
+	} else {
+		volume.NumberOfStorageGroups = 0
 	}
 	Data.VolumeIDToVolume[volumeID] = volume
 }
@@ -3481,6 +3889,7 @@ func addPort(id, identifier, portType string) {
 	port := &types.SymmetrixPortType{
 		Type:       portType,
 		Identifier: identifier,
+		PortStatus: "ON",
 	}
 	Data.PortIDToSymmetrixPortType[id] = port
 }
@@ -4101,6 +4510,12 @@ func addNewSnapshot(source, SnapID string) {
 	snapIDtoSnap[SnapID] = snapshot
 	Data.VolIDToSnapshots[source] = snapIDtoSnap
 	Data.VolumeIDToVolume[source].SnapSource = true
+	// Assign a unique numeric snap_id for this snapshot
+	key := source + ":" + SnapID
+	if _, exists := Data.SnapNameToSnapID[key]; !exists {
+		Data.SnapNameToSnapID[key] = Data.NextSnapID
+		Data.NextSnapID++
+	}
 	fmt.Printf("*****added** %v***", Data.VolIDToSnapshots[source][SnapID])
 	fmt.Printf("****Total Snaps on %s are: %d****", source, len(Data.VolIDToSnapshots[source]))
 }
@@ -4442,6 +4857,7 @@ func handleVolSnaps(w http.ResponseWriter, r *http.Request) {
 				volumeSnapshot.VolumeSnapshotSource = append(volumeSnapshot.VolumeSnapshotSource, types.VolumeSnapshotSource{
 					SnapshotName: snapSrc.SnapshotName,
 					Generation:   snapSrc.Generation,
+					SnapID:       snapSrc.SnapID,
 					TimeStamp:    snapSrc.TimeStamp,
 					State:        snapSrc.State,
 				})
@@ -4459,6 +4875,7 @@ func returnSnapshotObjectList(volID string) ([]types.VolumeSnapshotSource, []int
 	for _, snap := range Data.VolIDToSnapshots[volID] {
 		snapshotSrc := types.VolumeSnapshotSource{
 			SnapshotName:  snap.Name,
+			SnapID:        Data.SnapNameToSnapID[volID+":"+snap.Name],
 			Generation:    snap.Generation,
 			TimeStamp:     snap.Timestamp,
 			State:         snap.State,
@@ -4568,14 +4985,14 @@ func HandleCapabilities(w http.ResponseWriter, _ *http.Request) {
 func handleCapabilities(w http.ResponseWriter, _ *http.Request) {
 	var jsonBytes []byte
 	if InducedErrors.SnapshotNotLicensed {
-		jsonBytes = []byte("{\"symmetrixCapability\":[{\"symmetrixId\":\"000197900046\",\"snapVxCapable\":false,\"rdfCapable\":true,\"virtualWitnessCapable\":false}]}")
+		jsonBytes = []byte("{\"symmetrixCapability\":[{\"symmetrixId\":\"000197900046\",\"snapVxCapable\":false,\"rdfCapable\":true,\"virtualWitnessCapable\":false},{\"symmetrixId\":\"000197900049\",\"snapVxCapable\":false,\"rdfCapable\":true,\"virtualWitnessCapable\":false}]}")
 	} else if InducedErrors.InvalidResponse {
 		writeError(w, "something went wrong: induced error", http.StatusBadRequest)
 		return
 	} else if InducedErrors.UnisphereMismatchError {
 		jsonBytes = []byte("{\"symmetrixCapability\":[{\"symmetrixId\":\"000000000000\",\"snapVxCapable\":true,\"rdfCapable\":true,\"virtualWitnessCapable\":false}]}")
 	} else {
-		jsonBytes = []byte("{\"symmetrixCapability\":[{\"symmetrixId\":\"000197900046\",\"snapVxCapable\":true,\"rdfCapable\":true,\"virtualWitnessCapable\":false}]}")
+		jsonBytes = []byte("{\"symmetrixCapability\":[{\"symmetrixId\":\"000197900046\",\"snapVxCapable\":true,\"rdfCapable\":true,\"virtualWitnessCapable\":false},{\"symmetrixId\":\"000197900049\",\"snapVxCapable\":true,\"rdfCapable\":true,\"virtualWitnessCapable\":false}]},")
 	}
 	_, err := w.Write(jsonBytes)
 	if err != nil {

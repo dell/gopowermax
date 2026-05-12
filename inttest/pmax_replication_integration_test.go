@@ -286,6 +286,9 @@ func TestCreateSnapshot(t *testing.T) {
 		return
 	}
 	fmt.Printf("Snapshot(%s) created successfully\n", volumeSnapshot.SnapshotName)
+	for _, src := range volumeSnapshot.VolumeSnapshotSource {
+		fmt.Printf("VolumeSnapshotSource: SnapshotName=%s, SnapID=%d\n", src.SnapshotName, src.SnapID)
+	}
 }
 
 func TestGetVolumeSnapInfo(t *testing.T) {
@@ -309,6 +312,9 @@ func TestGetVolumeSnapInfo(t *testing.T) {
 		return
 	}
 	fmt.Printf("Snapshots on volume (%s): %v\n", volume.VolumeIdentifier, snapshotVolumeGeneration)
+	for _, src := range snapshotVolumeGeneration.VolumeSnapshotSource {
+		fmt.Printf("VolumeSnapshotSource: SnapshotName=%s, SnapID=%d\n", src.SnapshotName, src.SnapID)
+	}
 	if snapshotName != "" {
 		err := client.DeleteSnapshot(context.TODO(), symmetrixID, snapshotName, sourceVolumeList, int64(0))
 		if err != nil {
@@ -341,6 +347,9 @@ func TestGetSnapshotInfo(t *testing.T) {
 		return
 	}
 	fmt.Printf("Snapshot(%s): %v\n", snapshotName, volumeSnapshot)
+	for _, src := range volumeSnapshot.VolumeSnapshotSource {
+		fmt.Printf("VolumeSnapshotSource: SnapshotName=%s, SnapID=%d\n", src.SnapshotName, src.SnapID)
+	}
 }
 
 func TestGetSnapshotGenerations(t *testing.T) {
@@ -396,6 +405,9 @@ func TestGetSnapshotGenerationInfo(t *testing.T) {
 	} else {
 		t.Errorf("Returned generation is not same as the expected one.")
 	}
+	fmt.Printf("VolumeSnapshotSource: SnapshotName=%s, SnapID=%d\n",
+		volumeSnapshotGeneration.VolumeSnapshotSource.SnapshotName,
+		volumeSnapshotGeneration.VolumeSnapshotSource.SnapID)
 }
 
 func TestSnapshotLinkage(t *testing.T) {
@@ -843,9 +855,25 @@ func afterRun(tests []testing.InternalTest) {
 		})
 	}
 	cleanup = append(cleanup, tests...)
-	testing.Main(func(_, _ string) (bool, error) {
+	for _, test := range cleanup {
+		runCleanupTest(test)
+	}
+}
+
+// runCleanupTest runs a testing.InternalTest outside of the test framework
+// by passing a real *testing.T obtained through testing.RunTests.
+func runCleanupTest(test testing.InternalTest) {
+	fmt.Printf("=== RUN   %s\n", test.Name)
+	start := time.Now()
+	passed := testing.RunTests(func(_, _ string) (bool, error) {
 		return true, nil
-	}, cleanup, nil, nil)
+	}, []testing.InternalTest{test})
+	duration := time.Since(start).Round(time.Millisecond)
+	if passed {
+		fmt.Printf("--- PASS: %s (%s)\n", test.Name, duration)
+	} else {
+		fmt.Printf("--- FAIL: %s (%s)\n", test.Name, duration)
+	}
 }
 
 func volumeCleanup(volumeID string, volumeName string, storageGroup string) func(*testing.T) {

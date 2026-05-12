@@ -2259,3 +2259,88 @@ func (c *Client) GetStorageGroupVolumeCounts(ctx context.Context, symID string, 
 	}
 	return sgVolCounts, nil
 }
+
+// PublishMaskingViews publishes masking views with optional storage group, host, and port group configurations
+// This API creates or updates masking views and their associated components in a single operation
+// POST /univmax/rest/private/v1/systems/{systemId}/masking-views
+func (c *Client) PublishMaskingViews(ctx context.Context, symID string, param *types.PublishMaskingViewsParam) (*types.PublishMaskingViewResponse, error) {
+	defer c.TimeSpent("PublishMaskingViews", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	URL := RESTPrivateV1 + "systems/" + symID + "/masking-views"
+	ifDebugLogPayload(param)
+	result := &types.PublishMaskingViewResponse{}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	err := c.api.Post(ctx, URL, c.getDefaultHeaders(), param, result)
+	if err != nil {
+		log.Error("PublishMaskingViews failed: " + err.Error())
+		return nil, err
+	}
+	if result.Summary.Succeeded == 0 {
+		log.Errorf("PublishMaskingViews failed: http_status_code=%d, failed=%d", result.HTTPStatusCode, result.Summary.Failed)
+		return result, fmt.Errorf("PublishMaskingViews: none succeeded (total=%d, failed=%d)", result.Summary.Total, result.Summary.Failed)
+	}
+	log.Info(fmt.Sprintf("Successfully published %d masking view(s)", len(param.MaskingViews)))
+	return result, nil
+}
+
+func (c *Client) CreateVolume(ctx context.Context, systemID string, req types.CreateVolumesRequest, opts ...http.Header) (*types.CreateVolumesResponse, error) {
+	defer c.TimeSpent("CreateVolume", time.Now())
+	if _, err := c.IsAllowedArray(systemID); err != nil {
+		return nil, err
+	}
+
+	if len(req.Volumes) == 0 {
+		return nil, fmt.Errorf("create volumes request cannot be empty")
+	}
+
+	URL := RESTPrivateV1 + "systems/" + systemID + "/volumes"
+	ifDebugLogPayload(req)
+	log.Info(fmt.Sprintf("CreateVolume API URL: POST %s", URL))
+	result := &types.CreateVolumesResponse{}
+	ctx, cancel := c.GetTimeoutContext(ctx)
+	defer cancel()
+	headers := c.getDefaultHeaders()
+	// Merge optional authorization metadata headers if provided.
+	if len(opts) > 0 {
+		for k, vals := range opts[0] {
+			if len(vals) > 0 {
+				headers[k] = vals[0]
+			}
+		}
+	}
+	err := c.api.Post(ctx, URL, headers, req, result)
+	if err != nil {
+		log.Error("CreateVolume failed: " + err.Error())
+		return nil, err
+	}
+	if result.Summary.Failed > 0 || result.Summary.Rejected > 0 {
+		errMsg := createVolumesErrorMessage(result)
+		log.Errorf("CreateVolume failed: http_status_code=%d, failed=%d, rejected=%d", result.HTTPStatusCode, result.Summary.Failed, result.Summary.Rejected)
+		return result, fmt.Errorf("create volumes failed: %s", errMsg)
+	}
+	if result.Summary.Succeeded == 0 {
+		log.Errorf("CreateVolume failed: http_status_code=%d, no volumes succeeded (total=%d)", result.HTTPStatusCode, result.Summary.Total)
+		return result, fmt.Errorf("create volumes failed: none succeeded (total=%d)", result.Summary.Total)
+	}
+	log.Info(fmt.Sprintf("Successfully created %d volume(s)", result.Summary.Succeeded))
+	return result, nil
+}
+
+func createVolumesErrorMessage(resp *types.CreateVolumesResponse) string {
+	if resp == nil {
+		return "create volumes failed"
+	}
+	for _, r := range resp.Results.Result {
+		if r.Messages != nil && len(r.Messages.Message) > 0 {
+			m := r.Messages.Message[0]
+			if m.Code == "" {
+				return m.Message
+			}
+			return m.Code + ": " + m.Message
+		}
+	}
+	return "create volumes failed"
+}

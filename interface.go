@@ -31,19 +31,21 @@ type ConfigConnect struct {
 	Endpoint string
 	Version  string
 	Username string
-	Password string
+	Password string `json:"-"`
 }
 
 // ISCSITarget is a structure representing a target IQN and associated IP addresses
 type ISCSITarget struct {
-	IQN       string
-	PortalIPs []string
+	IQN        string
+	PortalIPs  []string
+	PortStatus string
 }
 
 // NVMeTCPTarget is a structure representing a target NQN and associated IP addresses
 type NVMeTCPTarget struct {
-	NQN       string
-	PortalIPs []string
+	NQN        string
+	PortalIPs  []string
+	PortStatus string
 }
 
 const (
@@ -52,6 +54,11 @@ const (
 	DefaultAPIVersion = "100"
 	// APIVersion91 is the API version corresponding to 91
 	APIVersion91 = "91"
+
+	// PortStatusOn indicates the port is online
+	PortStatusOn = "ON"
+	// PortStatusOff indicates the port is offline
+	PortStatusOff = "OFF"
 )
 
 // Pmax interface has all the externally available functions provided by the pmax client library for the Powermax accessed through Unisphere.
@@ -60,6 +67,15 @@ type Pmax interface {
 
 	// Authenticate causes authentication and tests the connection
 	Authenticate(ctx context.Context, configConnect *ConfigConnect) error
+
+	// SetToken sets the Auth token for the HTTP client
+	SetToken(token string)
+
+	// SetCustomHTTPHeaders sets custom HTTP headers that will be sent with every request
+	SetCustomHTTPHeaders(headers http.Header)
+
+	// GetCustomHTTPHeaders returns the current custom HTTP headers
+	GetCustomHTTPHeaders() http.Header
 
 	// WithSymmetrixID set a default symmetrix ID for the admin client,
 	// for it to be added to the request header.
@@ -148,6 +164,10 @@ type Pmax interface {
 	// This is done synchronously and no jobs are created. HTTP header argument is optional
 	CreateVolumeInProtectedStorageGroupS(ctx context.Context, symID, remoteSymID, storageGroupID string, remoteStorageGroupID string, volumeName string, volumeSize interface{}, volOpts map[string]interface{}, opts ...http.Header) (*types.Volume, error)
 
+	// CreateVolume creates volumes using the enhanced Create Volume API with flexible volume creation options.
+	// HTTP header argument is optional and can be used to pass authorization metadata.
+	CreateVolume(ctx context.Context, systemID string, req types.CreateVolumesRequest, opts ...http.Header) (*types.CreateVolumesResponse, error)
+
 	// GetStorageGroupSnapshots Gets All Storage Group Snapshots
 	GetStorageGroupSnapshots(ctx context.Context, symID string, storageGroupID string, excludeManualSnaps bool, excludeSlSnaps bool) (*types.StorageGroupSnapshot, error)
 
@@ -215,6 +235,10 @@ type Pmax interface {
 	// host id and the port id and returns the masking view object
 	CreateMaskingView(ctx context.Context, symID string, maskingViewID string, storageGroupID string, hostOrhostGroupID string, isHost bool, portGroupID string) (*types.MaskingView, error)
 
+	// PublishMaskingViews publishes masking views with optional storage group, host, and port group configurations
+	// This API creates or updates masking views and their associated components in a single operation
+	PublishMaskingViews(ctx context.Context, symID string, param *types.PublishMaskingViewsParam) (*types.PublishMaskingViewResponse, error)
+
 	// CreatePortGroup creates a port group given the Port Group id and a list of dir/port ids
 	CreatePortGroup(ctx context.Context, symID string, portGroupID string, dirPorts []types.PortKey, protocol string) (*types.PortGroup, error)
 
@@ -278,6 +302,8 @@ type Pmax interface {
 	GetNVMeTCPTargets(ctx context.Context, symID string) ([]NVMeTCPTarget, error)
 	// GetISCSITargets returns a list of ISCSI Targets for a given sym id
 	GetISCSITargets(ctx context.Context, symID string) ([]ISCSITarget, error)
+	// GetISCSIEndpoints returns a list of ISCSI Targets for a given sym id
+	GetISCSIEndpoints(ctx context.Context, symID string) ([]ISCSITarget, error)
 	// CreateHostGroup creates a hostGroup from a list of hostIDs (and optional HostFlags) and  returns a types.HostGroup.
 	CreateHostGroup(ctx context.Context, symID string, hostGroupID string, hostIDs []string, hostFlags *types.HostFlags) (*types.HostGroup, error)
 	// GetHostGroupList returns a list of all the HostGroup ids.

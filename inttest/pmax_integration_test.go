@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -34,7 +35,8 @@ const (
 )
 
 var (
-	client pmax.Pmax
+	client    pmax.Pmax
+	client104 pmax.Pmax
 	// Following values will be read from env variables set in user.env
 	endpoint = "https://0.0.0.0:8443"
 	// username should match an existing user in Unisphere
@@ -88,44 +90,45 @@ var (
 	defaultFCDirectorID          = "OR-1C"
 	defaultFCPortID              = "0"
 	localVol, remoteVol          *types.Volume
+	rdfSetupDone                 bool
 )
 
 func setDefaultVariables() {
-	endpoint = setenvVariable("Endpoint", endpoint)
-	username = setenvVariable("Username", username)
-	password = setenvVariable("Password", password)
-	apiVersion = strings.TrimSpace(setenvVariable("APIVersion", ""))
-	symmetrixID = setenvVariable("SymmetrixID", symmetrixID)
-	remoteSymmetrixID = setenvVariable("RemoteSymmetrixID", remoteSymmetrixID)
-	defaultRepMode = setenvVariable("DefaultRepMode", defaultRepMode)
-	localRDFGrpNo = setenvVariable("LocalRDFGrpNo", localRDFGrpNo)
-	remoteRDFGrpNo = setenvVariable("RemoteRDFGrpInfo", remoteRDFGrpNo)
-	defaultFCPortGroup = setenvVariable("DefaultFCPortGroup", defaultFCPortGroup)
-	defaultiSCSIPortGroup = setenvVariable("DefaultiSCSIPortGroup", defaultiSCSIPortGroup)
-	defaultFCInitiator = setenvVariable("DefaultFCInitiator", defaultFCInitiator)
+	endpoint = getEnvVariable("Endpoint", endpoint)
+	username = getEnvVariable("Username", username)
+	password = getEnvVariable("Password", password)
+	apiVersion = strings.TrimSpace(getEnvVariable("APIVersion", apiVersion))
+	symmetrixID = getEnvVariable("SymmetrixID", symmetrixID)
+	remoteSymmetrixID = getEnvVariable("RemoteSymmetrixID", remoteSymmetrixID)
+	defaultRepMode = getEnvVariable("DefaultRepMode", defaultRepMode)
+	localRDFGrpNo = getEnvVariable("LocalRDFGrpNo", localRDFGrpNo)
+	remoteRDFGrpNo = getEnvVariable("RemoteRDFGrpNo", remoteRDFGrpNo)
+	defaultFCPortGroup = getEnvVariable("DefaultFCPortGroup", defaultFCPortGroup)
+	defaultiSCSIPortGroup = getEnvVariable("DefaultiSCSIPortGroup", defaultiSCSIPortGroup)
+	defaultFCInitiator = getEnvVariable("DefaultFCInitiator", defaultFCInitiator)
 	defaultFCInitiatorID = strings.Split(defaultFCInitiator, ":")[2]
-	fcInitiator1 = setenvVariable("FCInitiator1", fcInitiator1)
-	fcInitiator2 = setenvVariable("FCInitiator2", fcInitiator2)
-	defaultiSCSIInitiator = setenvVariable("DefaultiSCSIInitiator", defaultiSCSIInitiator)
+	fcInitiator1 = getEnvVariable("FCInitiator1", fcInitiator1)
+	fcInitiator2 = getEnvVariable("FCInitiator2", fcInitiator2)
+	defaultiSCSIInitiator = getEnvVariable("DefaultiSCSIInitiator", defaultiSCSIInitiator)
 	defaultiSCSIInitiatorID = strings.Join(strings.Split(defaultiSCSIInitiator, ":")[2:], ":")
-	iscsiInitiator1 = setenvVariable("ISCSIInitiator1", iscsiInitiator1)
-	iscsiInitiator2 = setenvVariable("ISCSIInitiator2", iscsiInitiator2)
-	defaultNVMeTCPInitiator = setenvVariable("DefaultNVMeInitiator", defaultNVMeTCPInitiator)
+	iscsiInitiator1 = getEnvVariable("ISCSIInitiator1", iscsiInitiator1)
+	iscsiInitiator2 = getEnvVariable("ISCSIInitiator2", iscsiInitiator2)
+	defaultNVMeTCPInitiator = getEnvVariable("DefaultNVMeTCPInitiator", defaultNVMeTCPInitiator)
 	defaultNVMeTCPInitiatorID = strings.Join(strings.Split(defaultNVMeTCPInitiator, ":")[2:], ":")
-	defaultNVMePortGroup = setenvVariable("DefaultNVMeTCPPortGroup", defaultNVMePortGroup)
-	nvmetcpInitiator1 = setenvVariable("NVMeInitiator1", nvmetcpInitiator1)
-	nvmetcpInitiator2 = setenvVariable("NVMeInitiator2", nvmetcpInitiator2)
-	volumePrefix = setenvVariable("VolumePrefix", volumePrefix)
-	defaultSRP = setenvVariable("DefaultStoragePool", defaultSRP)
-	defaultServiceLevel = setenvVariable("DefaultServiceLevel", defaultServiceLevel)
-	sgPrefix = setenvVariable("SGPrefix", sgPrefix)
-	snapshotPrefix = setenvVariable("SnapPrefix", snapshotPrefix)
-	defaultFCdirname = setenvVariable("DefaultFCDirName", defaultFCdirname)
-	defaultFCportName = setenvVariable("DefaultFCPortName", defaultFCportName)
-	defaultiscsidirName = setenvVariable("DefaultISCSIDirName", defaultiscsidirName)
-	defaultiscsiportName = setenvVariable("DefaultISCSIPortName", defaultiscsiportName)
-	defaultFCDirectorID = setenvVariable("DefaultFCDirectorID", defaultFCDirectorID)
-	defaultFCPortID = setenvVariable("DefaultFCPortID", defaultFCPortID)
+	defaultNVMePortGroup = getEnvVariable("DefaultNVMeTCPPortGroup", defaultNVMePortGroup)
+	nvmetcpInitiator1 = getEnvVariable("NVMeInitiator1", nvmetcpInitiator1)
+	nvmetcpInitiator2 = getEnvVariable("NVMeInitiator2", nvmetcpInitiator2)
+	volumePrefix = getEnvVariable("VolumePrefix", volumePrefix)
+	defaultSRP = getEnvVariable("DefaultStoragePool", defaultSRP)
+	defaultServiceLevel = getEnvVariable("DefaultServiceLevel", defaultServiceLevel)
+	sgPrefix = getEnvVariable("SGPrefix", sgPrefix)
+	snapshotPrefix = getEnvVariable("SnapPrefix", snapshotPrefix)
+	defaultFCdirname = getEnvVariable("DefaultFCDirName", defaultFCdirname)
+	defaultFCportName = getEnvVariable("DefaultFCPortName", defaultFCportName)
+	defaultiscsidirName = getEnvVariable("DefaultISCSIDirName", defaultiscsidirName)
+	defaultiscsiportName = getEnvVariable("DefaultISCSIPortName", defaultiscsiportName)
+	defaultFCDirectorID = getEnvVariable("DefaultFCDirectorID", defaultFCDirectorID)
+	defaultFCPortID = getEnvVariable("DefaultFCPortID", defaultFCPortID)
 	defaultProtectedStorageGroup = defaultProtectedStorageGroup + "-" + localRDFGrpNo + "-" + defaultRepMode
 }
 
@@ -140,16 +143,24 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	err = createRDFSetup() // Creates RDF setup for the test
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+	doRDFSetup := getEnvVariable("DoRDFSetup", "true")
+	if doRDFSetup == "true" {
+		if remoteSymmetrixID == "" || remoteSymmetrixID == "000000000001" {
+			fmt.Println("Skipping RDF setup (RemoteSymmetrixID is not configured)")
+		} else {
+			err = createRDFSetup() // Creates RDF setup for the test
+			if err != nil {
+				fmt.Println(err.Error())
+				os.Exit(1)
+			}
+			rdfSetupDone = true
+		}
 	}
 	if st := m.Run(); st > status {
 		status = st
 	}
 	fmt.Printf("status %d\n", status)
-	doCleanUp := setenvVariable("Cleanup", "true")
+	doCleanUp := getEnvVariable("Cleanup", "true")
 	var cleanupTests []testing.InternalTest
 	if doCleanUp != "false" {
 		fmt.Println("========= CLEANUP ==========")
@@ -158,15 +169,18 @@ func TestMain(m *testing.M) {
 			F:    cleanupDefaultSGAndHOST,
 		})
 	}
-	// Always clean up the resources used in replication
-	cleanupTests = append(cleanupTests, testing.InternalTest{
-		Name: "cleanupRDFSetup",
-		F:    cleanupRDFSetup,
-	})
+	if rdfSetupDone {
+		// Always clean up the resources used in replication
+		cleanupTests = append(cleanupTests, testing.InternalTest{
+			Name: "cleanupRDFSetup",
+			F:    cleanupRDFSetup,
+		})
+	}
 	afterRun(cleanupTests) // Cleans up the volumes and snapshots created for replication testing purposes.
+	os.Exit(status)
 }
 
-func setenvVariable(key, defaultValue string) string {
+func getEnvVariable(key, defaultValue string) string {
 	value := os.Getenv(key)
 	if value == "" {
 		if key != "Username" && key != "Password" {
@@ -197,9 +211,14 @@ func createDefaultSGAndHost() error {
 	// Create default SG with snapshot policy
 	optionalPayload := make(map[string]interface{})
 	optionalPayload["snapshotPolicies"] = []string{defaultSnapshotPolicy}
-	_, err = client.CreateStorageGroup(context.TODO(), symmetrixID, defaultSGWithSnapshotPolicy, defaultSRP, defaultServiceLevel, false, optionalPayload)
-	if err != nil {
-		return fmt.Errorf("failed to create SG with snapshot policy: (%s)", err.Error())
+	if sg, getErr := client.GetStorageGroup(context.TODO(), symmetrixID, defaultSGWithSnapshotPolicy); getErr != nil || sg == nil {
+		_, err = client.CreateStorageGroup(context.TODO(), symmetrixID, defaultSGWithSnapshotPolicy, defaultSRP, defaultServiceLevel, false, optionalPayload)
+		if err != nil {
+			if !strings.Contains(err.Error(), "already exists") {
+				return fmt.Errorf("failed to create SG with snapshot policy: (%s)", err.Error())
+			}
+			err = nil
+		}
 	}
 
 	// Create default FC Host
@@ -296,6 +315,11 @@ func cleanupDefaultSGAndHOST(t *testing.T) {
 func cleanupRDFSetup(t *testing.T) {
 	fmt.Println("Cleaning up RDF Setup...")
 
+	if localVol == nil || remoteVol == nil {
+		fmt.Println("Skipping RDF cleanup: localVol or remoteVol is nil")
+		return
+	}
+
 	// Terminating the Pair and removing the volumes from local SG and remote SG
 
 	_, err := client.RemoveVolumesFromProtectedStorageGroup(context.TODO(), symmetrixID, defaultProtectedStorageGroup, remoteSymmetrixID, defaultProtectedStorageGroup, true, localVol.VolumeID)
@@ -350,6 +374,26 @@ func getClient() error {
 		Endpoint: endpoint,
 		Username: username,
 		Password: password,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// This will give client with 10.4 API version.
+func get104Client() error {
+	var err error
+	client104, err = pmax.NewClientWithArgs(endpoint, "CSI Driver for Dell EMC PowerMax v1.0",
+		true, false, "")
+	if err != nil {
+		return err
+	}
+	err = client104.Authenticate(context.TODO(), &pmax.ConfigConnect{
+		Endpoint: endpoint,
+		Username: username,
+		Password: password,
+		Version:  apiVersion, // we need to pass 104 API version in the config
 	})
 	if err != nil {
 		return err
@@ -1019,6 +1063,228 @@ func TestCreateVolumeInStorageGroup2withUnit(t *testing.T) {
 	}
 	fmt.Printf("volume:\n%#v\n", vol)
 	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
+}
+
+func TestCreateVolume(t *testing.T) {
+	if client104 == nil {
+		err := get104Client()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax 10.4 client: (%s)", err.Error())
+			return
+		}
+	}
+
+	if apiVersion != "104" {
+		t.Skip("Skipping private 10.4 CreateVolume integration test (requires APIVersion=104)")
+	}
+
+	now := time.Now()
+	volumeName := fmt.Sprintf("csi%s-104-Int%d", volumePrefix, now.Nanosecond())
+	fmt.Printf("volumeName: %s\n", volumeName)
+
+	skipDuplicateCheck := true
+	req := types.CreateVolumesRequest{
+		Volumes: []types.VolumeRequestParam{
+			{
+				CreateNew: &types.CreateVolumeParam{
+					CreateNewFromAttributes: &types.CreateNewFromAttributes{
+						CapacityUnit: "GB",
+						VolumeSize:   1,
+					},
+				},
+				Actions: &types.VolumeRequestParamActions{
+					ManageIdentifier: &types.ManageIdentifierAction{
+						Action:             "Set",
+						Identifier:         volumeName,
+						SkipDuplicateCheck: &skipDuplicateCheck,
+					},
+					ManageVolumeStorageGroup: &types.ManageVolumeStorageGroupAction{
+						Action:       "Add",
+						StorageGroup: types.VolumeStorageGroupParam{ID: defaultStorageGroup},
+					},
+				},
+			},
+		},
+		ExecutionOption: "SYNCHRONOUS",
+	}
+
+	resp, err := client104.CreateVolume(context.TODO(), symmetrixID, req)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if resp == nil || resp.Summary.Succeeded == 0 || len(resp.Results.Result) == 0 || resp.Results.Result[0].Volume == nil {
+		t.Errorf("unexpected CreateVolume response: %#v", resp)
+		return
+	}
+
+	volumeID := resp.Results.Result[0].Volume.ID
+	if volumeID == "" {
+		t.Errorf("CreateVolume returned empty volume ID: %#v", resp)
+		return
+	}
+
+	cleanupVolume(volumeID, volumeName, defaultStorageGroup, t)
+}
+
+func TestCreateVolumeFromSnapshot104(t *testing.T) {
+	if client104 == nil {
+		err := get104Client()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax 10.4 client: (%s)", err.Error())
+			return
+		}
+	}
+
+	if apiVersion != "104" {
+		t.Skip("Skipping private 10.4 CreateVolume-from-snapshot integration test (requires APIVersion=104)")
+	}
+
+	now := time.Now()
+	snapshotSGName := fmt.Sprintf("csi%s-104-SnapSG-%d", sgPrefix, now.Nanosecond())
+	sourceVolName := fmt.Sprintf("csi%s-104-Src-%d", volumePrefix, now.Nanosecond())
+	newVolName := fmt.Sprintf("csi%s-104-FromSnap-%d", volumePrefix, now.Nanosecond())
+	snapshotName := fmt.Sprintf("csi%s-104-%d", snapshotPrefix, now.Nanosecond())
+
+	_, err := createStorageGroup(symmetrixID, snapshotSGName, defaultSRP, defaultServiceLevel, false, nil)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Cleanup(func() {
+		if delErr := deleteStorageGroup(symmetrixID, snapshotSGName); delErr != nil {
+			t.Errorf("failed to delete temp SG (%s): %s", snapshotSGName, delErr.Error())
+		}
+	})
+
+	skipDuplicateCheck := true
+	sourceReq := types.CreateVolumesRequest{
+		Volumes: []types.VolumeRequestParam{
+			{
+				CreateNew: &types.CreateVolumeParam{
+					CreateNewFromAttributes: &types.CreateNewFromAttributes{
+						CapacityUnit: "GB",
+						VolumeSize:   1,
+					},
+				},
+				Actions: &types.VolumeRequestParamActions{
+					ManageIdentifier: &types.ManageIdentifierAction{
+						Action:             "Set",
+						Identifier:         sourceVolName,
+						SkipDuplicateCheck: &skipDuplicateCheck,
+					},
+					ManageVolumeStorageGroup: &types.ManageVolumeStorageGroupAction{
+						Action:       "Add",
+						StorageGroup: types.VolumeStorageGroupParam{ID: snapshotSGName},
+					},
+				},
+			},
+		},
+		ExecutionOption: "SYNCHRONOUS",
+	}
+
+	sourceResp, err := client104.CreateVolume(context.TODO(), symmetrixID, sourceReq)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if sourceResp == nil || sourceResp.Summary.Succeeded == 0 || len(sourceResp.Results.Result) == 0 || sourceResp.Results.Result[0].Volume == nil {
+		t.Errorf("unexpected CreateVolume(source) response: %#v", sourceResp)
+		return
+	}
+
+	sourceVolumeID := sourceResp.Results.Result[0].Volume.ID
+	if sourceVolumeID == "" {
+		t.Errorf("CreateVolume(source) returned empty volume ID: %#v", sourceResp)
+		return
+	}
+	t.Cleanup(func() {
+		cleanupVolume(sourceVolumeID, sourceVolName, snapshotSGName, t)
+	})
+
+	createSnapPayload := &types.CreateStorageGroupSnapshot{
+		SnapshotName:    snapshotName,
+		ExecutionOption: types.ExecutionOptionSynchronous,
+	}
+
+	_, err = client.CreateStorageGroupSnapshot(context.TODO(), symmetrixID, snapshotSGName, createSnapPayload)
+	if err != nil {
+		t.Errorf("Error creating storage group snapshot: %s", err.Error())
+		return
+	}
+
+	sgSnapIDs, err := client.GetStorageGroupSnapshotSnapIDs(context.TODO(), symmetrixID, snapshotSGName, snapshotName)
+	if err != nil {
+		t.Errorf("Error getting snapshot snapid details: %s", err.Error())
+		return
+	}
+	if sgSnapIDs == nil || len(sgSnapIDs.SnapIDs) == 0 {
+		t.Errorf("unexpected snapshot snapid response: %#v", sgSnapIDs)
+		return
+	}
+
+	snapID := strconv.FormatInt(sgSnapIDs.SnapIDs[0], 10)
+	t.Cleanup(func() {
+		if delErr := client.DeleteStorageGroupSnapshot(context.TODO(), symmetrixID, snapshotSGName, snapshotName, snapID); delErr != nil {
+			t.Errorf("failed to delete storage group snapshot (%s/%s/%s): %s", snapshotSGName, snapshotName, snapID, delErr.Error())
+		}
+	})
+
+	fromSnapReq := types.CreateVolumesRequest{
+		Volumes: []types.VolumeRequestParam{
+			{
+				Volume: &types.ExistingVolumeRequestParam{Identifier: newVolName},
+				CreateNew: &types.CreateVolumeParam{
+					CreateNewFromSnapshot: &types.CreateNewFromSnapshot{
+						Snapshot: types.SnapshotRequestParam{ID: snapID},
+						NewVolumeAttributes: &types.CreateNewFromAttributes{
+							CapacityUnit: "GB",
+							VolumeSize:   1,
+						},
+					},
+					PrecheckSrpCapacity: &types.ValidationSrpAction{
+						SRP: types.VolumeSrpParam{ID: defaultSRP},
+					},
+				},
+				Actions: &types.VolumeRequestParamActions{
+					ManageVolumeStorageGroup: &types.ManageVolumeStorageGroupAction{
+						Action:       "Add",
+						StorageGroup: types.VolumeStorageGroupParam{ID: snapshotSGName},
+					},
+				},
+				ResponseSelect: "id,identifier,cap_cyl,storage_groups",
+			},
+		},
+	}
+
+	fromSnapResp, err := client104.CreateVolume(context.TODO(), symmetrixID, fromSnapReq)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if fromSnapResp == nil || fromSnapResp.Summary.Succeeded == 0 || len(fromSnapResp.Results.Result) == 0 || fromSnapResp.Results.Result[0].Volume == nil {
+		t.Errorf("unexpected CreateVolume(from snapshot) response: %#v", fromSnapResp)
+		return
+	}
+
+	newVolumeID := fromSnapResp.Results.Result[0].Volume.ID
+	if newVolumeID == "" {
+		t.Errorf("CreateVolume(from snapshot) returned empty volume ID: %#v", fromSnapResp)
+		return
+	}
+	t.Cleanup(func() {
+		cleanupVolume(newVolumeID, newVolName, snapshotSGName, t)
+	})
+
+	vol, err := client.GetVolumeByID(context.TODO(), symmetrixID, newVolumeID)
+	if err != nil {
+		t.Errorf("failed to fetch created volume (%s): %s", newVolumeID, err.Error())
+		return
+	}
+	if vol == nil {
+		t.Errorf("GetVolumeByID returned nil volume for ID %s", newVolumeID)
+		return
+	}
 }
 
 func TestAddVolumesInStorageGroup(t *testing.T) {
@@ -2650,4 +2916,245 @@ func TestCloneVolumeFromVolume(t *testing.T) {
 	cleanupVolume(targetvol.VolumeID, targetVolumeName, defaultStorageGroup, t)
 
 	fmt.Printf("SG after removing volume: %#v\n", sg)
+}
+
+func TestCloneVolume(t *testing.T) {
+	if client104 == nil {
+		err := get104Client()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax 10.4 client: (%s)", err.Error())
+			return
+		}
+	}
+
+	if apiVersion != "104" {
+		t.Skip("Skipping private 10.4 CloneVolume integration test (requires APIVersion=104)")
+	}
+
+	createVol104 := func(volumeName string) (string, error) {
+		skipDuplicateCheck := true
+		req := types.CreateVolumesRequest{
+			Volumes: []types.VolumeRequestParam{
+				{
+					CreateNew: &types.CreateVolumeParam{
+						CreateNewFromAttributes: &types.CreateNewFromAttributes{
+							CapacityUnit: "GB",
+							VolumeSize:   1,
+						},
+					},
+					Actions: &types.VolumeRequestParamActions{
+						ManageIdentifier: &types.ManageIdentifierAction{
+							Action:             "Set",
+							Identifier:         volumeName,
+							SkipDuplicateCheck: &skipDuplicateCheck,
+						},
+						ManageVolumeStorageGroup: &types.ManageVolumeStorageGroupAction{
+							Action:       "Add",
+							StorageGroup: types.VolumeStorageGroupParam{ID: defaultStorageGroup},
+						},
+					},
+				},
+			},
+			ExecutionOption: "SYNCHRONOUS",
+		}
+
+		resp, err := client104.CreateVolume(context.TODO(), symmetrixID, req)
+		if err != nil {
+			return "", err
+		}
+		if resp == nil || resp.Summary.Succeeded == 0 || len(resp.Results.Result) == 0 || resp.Results.Result[0].Volume == nil {
+			return "", fmt.Errorf("unexpected CreateVolume response: %#v", resp)
+		}
+		volumeID := resp.Results.Result[0].Volume.ID
+		if volumeID == "" {
+			return "", fmt.Errorf("CreateVolume returned empty volume ID: %#v", resp)
+		}
+		return volumeID, nil
+	}
+
+	now := time.Now()
+	sourceVolumeName := fmt.Sprintf("csi%s-104-Int%d", sourceVolumePrefix, now.Nanosecond())
+	// Add small delay to ensure different timestamp for target volume
+	time.Sleep(1 * time.Millisecond)
+	targetNow := time.Now()
+	targetVolumeName := fmt.Sprintf("csi%s-104-Int%d", targetVolumePrefix, targetNow.Nanosecond())
+	fmt.Printf("Source volumeName: %s\n", sourceVolumeName)
+	fmt.Printf("Target volumeName: %s\n", targetVolumeName)
+
+	sourceVolID, err := createVol104(sourceVolumeName)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer cleanupVolume(sourceVolID, sourceVolumeName, defaultStorageGroup, t)
+
+	estTerminate := true
+	cloneReq := types.CreateVolumesRequest{
+		Volumes: []types.VolumeRequestParam{
+			{
+				Volume: &types.ExistingVolumeRequestParam{Identifier: targetVolumeName},
+				CreateNew: &types.CreateVolumeParam{
+					CreateNewFromAttributes: &types.CreateNewFromAttributes{
+						CapacityUnit: "GB",
+						VolumeSize:   1,
+					},
+					PrecheckSrpCapacity: &types.ValidationSrpAction{
+						SRP: types.VolumeSrpParam{ID: defaultSRP},
+					},
+				},
+				Actions: &types.VolumeRequestParamActions{
+					ManageVolumeStorageGroup: &types.ManageVolumeStorageGroupAction{
+						Action:       "Add",
+						StorageGroup: types.VolumeStorageGroupParam{ID: defaultStorageGroup},
+					},
+					ManageReplication: &types.ManageReplicationAction{
+						Local: &types.LocalReplicationAction{
+							Action:             "CopyFrom",
+							Volume:             types.ExistingVolumeRequestParam{ID: sourceVolID},
+							EstablishTerminate: &estTerminate,
+						},
+					},
+				},
+				ResponseSelect: "id,identifier,cap_cyl,storage_groups",
+			},
+		},
+	}
+
+	cloneResp, err := client104.CreateVolume(context.TODO(), symmetrixID, cloneReq)
+	if err != nil {
+		t.Errorf("error in cloning the volumes: %v", err)
+		return
+	}
+	if cloneResp == nil || cloneResp.Summary.Succeeded == 0 || len(cloneResp.Results.Result) == 0 || cloneResp.Results.Result[0].Volume == nil {
+		t.Errorf("unexpected CreateVolume(clone) response: %#v", cloneResp)
+		return
+	}
+
+	clonedVolumeID := cloneResp.Results.Result[0].Volume.ID
+	if clonedVolumeID == "" {
+		t.Errorf("CreateVolume(clone) returned empty volume ID: %#v", cloneResp)
+		return
+	}
+	defer cleanupVolume(clonedVolumeID, targetVolumeName, defaultStorageGroup, t)
+
+	fmt.Printf("---------- Sleeping for 5 seconds ----------\n")
+	time.Sleep(5 * time.Second)
+}
+
+func TestPublishMaskingViews(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping this test in short mode")
+	}
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+
+	hostID := "IntTestPublishMV-Host"
+	maskingViewID := "IntTestPublishMV"
+	portGroupID := defaultFCPortGroup
+
+	// Clean up any previous test artifacts
+	client.DeleteMaskingView(context.TODO(), symmetrixID, maskingViewID)
+	client.DeleteHost(context.TODO(), symmetrixID, hostID)
+
+	// Create a Host with some initiators
+	initiatorKeys := make([]string, 0)
+	initiatorKeys = append(initiatorKeys, fcInitiator1)
+	fmt.Println("Setting up a host before publish masking views")
+	host, err := createHost(symmetrixID, hostID, initiatorKeys, nil)
+	if err != nil || host == nil {
+		t.Error("Expected to create host but didn't: " + err.Error())
+		return
+	}
+	fmt.Printf("Host created: %#v\n", host)
+
+	// Create a volume in the storage group so it is not empty
+	now := time.Now()
+	volumeName := fmt.Sprintf("csi%s-Int%d", volumePrefix, now.Nanosecond())
+	volOpts := make(map[string]interface{})
+	vol, err := client.CreateVolumeInStorageGroup(context.TODO(), symmetrixID, defaultStorageGroup, volumeName, 1, volOpts)
+	if err != nil {
+		t.Error("Failed to create volume for publish test: " + err.Error())
+		// Cleanup in correct order: masking view -> volume -> host
+		client.DeleteMaskingView(context.TODO(), symmetrixID, maskingViewID)
+		cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
+		cleanupHost(symmetrixID, hostID, t)
+		return
+	}
+	fmt.Printf("Volume created: %s\n", vol.VolumeID)
+
+	// Create the publish masking views request
+	param := &types.PublishMaskingViewsParam{
+		MaskingViews: []types.MaskingViewPublishParam{
+			{
+				ID: maskingViewID,
+				StorageGroup: &types.StorageGroupPublishParam{
+					ID:  defaultStorageGroup,
+					SRP: defaultSRP,
+				},
+				Host: &types.HostPublishParam{
+					ID: hostID,
+				},
+				PortGroup: &types.PortGroupPublishParam{
+					ID:       portGroupID,
+					Protocol: "SCSI_FC",
+				},
+			},
+		},
+	}
+	if client104 == nil {
+		err := get104Client()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+	fmt.Println("Calling PublishMaskingViews...")
+	result, err := client104.PublishMaskingViews(context.TODO(), symmetrixID, param)
+	if err != nil {
+		t.Errorf("PublishMaskingViews failed: %s", err.Error())
+		cleanupHost(symmetrixID, hostID, t)
+		return
+	}
+
+	fmt.Printf("PublishMaskingViews result: %#v\n", result)
+
+	// Verify results
+	if result == nil || result.Summary.Succeeded == 0 {
+		t.Error("Expected publish result with masking views but got none")
+		cleanupHost(symmetrixID, hostID, t)
+		return
+	}
+
+	for _, r := range result.Results.Result {
+		fmt.Printf("RequestID=%s Status=%s Resource=%s\n",
+			r.RequestID, r.Status, r.ResourceID)
+	}
+
+	// Verify the masking view was created
+	fmt.Println("Verifying masking view was created...")
+	maskingView, err := client.GetMaskingViewByID(context.TODO(), symmetrixID, maskingViewID)
+	if err != nil {
+		fmt.Printf("Note: GetMaskingViewByID returned error (may be expected for new API): %s\n", err.Error())
+	} else if maskingView != nil {
+		fmt.Printf("Masking view verified: %#v\n", maskingView)
+	}
+
+	// Cleanup in correct order: masking view -> volume -> host
+	fmt.Println("Cleaning up masking view...")
+	err = client.DeleteMaskingView(context.TODO(), symmetrixID, maskingViewID)
+	if err != nil {
+		fmt.Printf("Note: DeleteMaskingView returned error: %s\n", err.Error())
+	}
+
+	fmt.Println("Sleeping for 10 seconds...")
+	time.Sleep(10 * time.Second)
+
+	cleanupVolume(vol.VolumeID, volumeName, defaultStorageGroup, t)
+	cleanupHost(symmetrixID, hostID, t)
+	fmt.Println("TestPublishMaskingViews completed")
 }
