@@ -17,14 +17,17 @@ package pmax
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/dell/gopowermax/v2/api"
+	v100 "github.com/dell/gopowermax/v2/types/v100"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -68,7 +71,12 @@ func (c *Client) Authenticate(ctx context.Context, configConnect *ConfigConnect)
 		log.SetLevel(log.DebugLevel)
 	}
 
+	// Store explicit version before assignment to track if user requested specific version
+	explicitVersion := configConnect.Version
 	c.configConnect = configConnect
+	if configConnect.Version != "" {
+		c.version = configConnect.Version
+	}
 	c.api.SetToken("")
 	basicAuthString := basicAuth(configConnect.Username, configConnect.Password)
 
@@ -89,6 +97,28 @@ func (c *Client) Authenticate(ctx context.Context, configConnect *ConfigConnect)
 		return errNilReponse
 	case !(resp.StatusCode >= 200 && resp.StatusCode <= 299):
 		return c.api.ParseJSONError(resp)
+	}
+
+	// Parse version response to extract API version
+	versionDetails := &v100.VersionDetails{}
+	decoder := json.NewDecoder(resp.Body)
+	if err = decoder.Decode(versionDetails); err != nil && err != io.EOF {
+		return err
+	}
+	if versionDetails.APIVersion != "" {
+		// If explicit version was provided in ConfigConnect (e.g., "104"), keep it
+		// Otherwise, use DefaultAPIVersion for general operations
+		if explicitVersion == "" {
+			c.version = DefaultAPIVersion
+			c.configConnect.Version = DefaultAPIVersion
+			doLog(log.Debug, fmt.Sprintf("Detected array version: %s, using API version: %s", versionDetails.APIVersion, DefaultAPIVersion))
+		} else {
+			// Keep the explicit version that was already set
+			doLog(log.Debug, fmt.Sprintf("Detected array version: %s, using explicit API version: %s", versionDetails.APIVersion, c.version))
+		}
+		acceptHeader := fmt.Sprintf("%s;version=%s", api.HeaderValContentTypeJSON, c.version)
+		c.headers.accept = acceptHeader
+		c.headers.contentType = acceptHeader
 	}
 	doLog(log.Infoln, "authentication successful")
 	err = resp.Body.Close()
@@ -242,4 +272,19 @@ func (c *Client) getDefaultHeaders() map[string]string {
 // GetHTTPClient will return an underlying http client
 func (c *Client) GetHTTPClient() *http.Client {
 	return c.api.GetHTTPClient()
+}
+
+// SetToken sets the Auth token for the HTTP client
+func (c *Client) SetToken(token string) {
+	c.api.SetToken(token)
+}
+
+// SetCustomHTTPHeaders sets custom HTTP headers that will be sent with every request
+func (c *Client) SetCustomHTTPHeaders(headers http.Header) {
+	c.api.SetCustomHTTPHeaders(headers)
+}
+
+// GetCustomHTTPHeaders returns the current custom HTTP headers
+func (c *Client) GetCustomHTTPHeaders() http.Header {
+	return c.api.GetCustomHTTPHeaders()
 }

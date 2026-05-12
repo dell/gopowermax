@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/dell/gopowermax/v2/mock"
 	types "github.com/dell/gopowermax/v2/types/v100"
 	"github.com/stretchr/testify/assert"
 )
@@ -423,6 +424,1210 @@ func TestStorageGroupVolumeCounts(t *testing.T) {
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetStorageGroupVolumeCounts() got = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestCreateVolume(t *testing.T) {
+	allowedArray := "testSymID"
+	systemID := "testSymID"
+
+	tests := []struct {
+		name         string
+		systemID     string
+		req          types.CreateVolumesRequest
+		httpStatus   int
+		httpBody     string
+		expectedErr  string
+		expectedResp *types.CreateVolumesResponse
+		wantErr      bool
+	}{
+		{
+			name:     "Successful volume creation",
+			systemID: systemID,
+			req: types.CreateVolumesRequest{
+				Volumes: []types.VolumeRequestParam{
+					{
+						CreateNew: &types.CreateVolumeParam{
+							CreateNewFromAttributes: &types.CreateNewFromAttributes{
+								VolumeSize:   1024,
+								CapacityUnit: "GB",
+							},
+						},
+						Actions: &types.VolumeRequestParamActions{
+							ManageIdentifier: &types.ManageIdentifierAction{
+								Identifier: "test-vol-001",
+							},
+						},
+					},
+				},
+			},
+			httpStatus: http.StatusOK,
+			httpBody: `{
+				"summary": {
+					"total": 1,
+					"succeeded": 1,
+					"failed": 0,
+					"rejected": 0,
+					"partially_succeeded": 0
+				},
+				"results": {
+					"result": []
+				}
+			}`,
+			expectedResp: &types.CreateVolumesResponse{
+				Summary: types.ResponseSummary{
+					Total:              1,
+					Succeeded:          1,
+					Failed:             0,
+					Rejected:           0,
+					PartiallySucceeded: 0,
+				},
+				Results: types.CreateVolumesResults{
+					Result: []types.CreateVolumeResponseItem{},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:     "Empty volumes request",
+			systemID: systemID,
+			req: types.CreateVolumesRequest{
+				Volumes: []types.VolumeRequestParam{},
+			},
+			expectedErr: "create volumes request cannot be empty",
+			wantErr:     true,
+		},
+		{
+			name:     "Invalid array",
+			systemID: "invalidArray",
+			req: types.CreateVolumesRequest{
+				Volumes: []types.VolumeRequestParam{
+					{
+						CreateNew: &types.CreateVolumeParam{
+							CreateNewFromAttributes: &types.CreateNewFromAttributes{
+								VolumeSize:   1024,
+								CapacityUnit: "GB",
+							},
+						},
+						Actions: &types.VolumeRequestParamActions{
+							ManageIdentifier: &types.ManageIdentifierAction{
+								Identifier: "test-vol-001",
+							},
+						},
+					},
+				},
+			},
+			expectedErr: "is ignored as it is not managed",
+			wantErr:     true,
+		},
+		{
+			name:     "HTTP error response",
+			systemID: systemID,
+			req: types.CreateVolumesRequest{
+				Volumes: []types.VolumeRequestParam{
+					{
+						CreateNew: &types.CreateVolumeParam{
+							CreateNewFromAttributes: &types.CreateNewFromAttributes{
+								VolumeSize:   1024,
+								CapacityUnit: "GB",
+							},
+						},
+						Actions: &types.VolumeRequestParamActions{
+							ManageIdentifier: &types.ManageIdentifierAction{
+								Identifier: "test-vol-001",
+							},
+						},
+					},
+				},
+			},
+			httpStatus:  http.StatusInternalServerError,
+			httpBody:    `{"summary": {"total": 0, "succeeded": 0, "failed": 0, "rejected": 0}, "results": {"result": []}}`,
+			expectedErr: "500",
+			wantErr:     true,
+		},
+		{
+			name:     "Partial failure in response",
+			systemID: systemID,
+			req: types.CreateVolumesRequest{
+				Volumes: []types.VolumeRequestParam{
+					{
+						CreateNew: &types.CreateVolumeParam{
+							CreateNewFromAttributes: &types.CreateNewFromAttributes{
+								VolumeSize:   1024,
+								CapacityUnit: "GB",
+							},
+						},
+						Actions: &types.VolumeRequestParamActions{
+							ManageIdentifier: &types.ManageIdentifierAction{
+								Identifier: "test-vol-001",
+							},
+						},
+					},
+					{
+						CreateNew: &types.CreateVolumeParam{
+							CreateNewFromAttributes: &types.CreateNewFromAttributes{
+								VolumeSize:   2048,
+								CapacityUnit: "GB",
+							},
+						},
+						Actions: &types.VolumeRequestParamActions{
+							ManageIdentifier: &types.ManageIdentifierAction{
+								Identifier: "test-vol-002",
+							},
+						},
+					},
+				},
+			},
+			httpStatus: http.StatusOK,
+			httpBody: `{
+				"summary": {
+					"total": 2,
+					"succeeded": 1,
+					"failed": 1,
+					"rejected": 0,
+					"partially_succeeded": 0
+				},
+				"results": {
+					"result": []
+				}
+			}`,
+			expectedErr: "create volumes failed",
+			wantErr:     true,
+		},
+		{
+			name:     "No volumes succeeded",
+			systemID: systemID,
+			req: types.CreateVolumesRequest{
+				Volumes: []types.VolumeRequestParam{
+					{
+						CreateNew: &types.CreateVolumeParam{
+							CreateNewFromAttributes: &types.CreateNewFromAttributes{
+								VolumeSize:   1024,
+								CapacityUnit: "GB",
+							},
+						},
+						Actions: &types.VolumeRequestParamActions{
+							ManageIdentifier: &types.ManageIdentifierAction{
+								Identifier: "test-vol-001",
+							},
+						},
+					},
+				},
+			},
+			httpStatus: http.StatusOK,
+			httpBody: `{
+				"summary": {
+					"total": 1,
+					"succeeded": 0,
+					"failed": 0,
+					"rejected": 0,
+					"partially_succeeded": 0
+				},
+				"results": {
+					"result": []
+				}
+			}`,
+			expectedErr: "none succeeded",
+			wantErr:     true,
+		},
+		{
+			name:     "Response with error messages",
+			systemID: systemID,
+			req: types.CreateVolumesRequest{
+				Volumes: []types.VolumeRequestParam{
+					{
+						CreateNew: &types.CreateVolumeParam{
+							CreateNewFromAttributes: &types.CreateNewFromAttributes{
+								VolumeSize:   1024,
+								CapacityUnit: "GB",
+							},
+						},
+						Actions: &types.VolumeRequestParamActions{
+							ManageIdentifier: &types.ManageIdentifierAction{
+								Identifier: "test-vol-001",
+							},
+						},
+					},
+				},
+			},
+			httpStatus: http.StatusOK,
+			httpBody: `{
+				"summary": {
+					"total": 1,
+					"succeeded": 0,
+					"failed": 1,
+					"rejected": 0,
+					"partially_succeeded": 0
+				},
+				"results": {
+					"result": [
+						{
+							"messages": {
+								"message": [
+									{
+										"code": "ERR001",
+										"message": "Volume already exists"
+									}
+								]
+							}
+						}
+					]
+				}
+			}`,
+			expectedErr: "ERR001: Volume already exists",
+			wantErr:     true,
+		},
+		{
+			name:     "Clone volume using create_new_from_attributes with CopyFrom",
+			systemID: systemID,
+			req: types.CreateVolumesRequest{
+				Volumes: []types.VolumeRequestParam{
+					{
+						Volume: &types.ExistingVolumeRequestParam{Identifier: "cloned-vol-001"},
+						CreateNew: &types.CreateVolumeParam{
+							CreateNewFromAttributes: &types.CreateNewFromAttributes{
+								CapacityUnit: "CYL",
+								VolumeSize:   547,
+							},
+							PrecheckSrpCapacity: &types.ValidationSrpAction{
+								SRP: types.VolumeSrpParam{ID: "SRP_1"},
+							},
+						},
+						Actions: &types.VolumeRequestParamActions{
+							ManageVolumeStorageGroup: &types.ManageVolumeStorageGroupAction{
+								Action:       "Add",
+								StorageGroup: types.VolumeStorageGroupParam{ID: "test-SG"},
+							},
+							ManageReplication: &types.ManageReplicationAction{
+								Local: &types.LocalReplicationAction{
+									Action:             "CopyFrom",
+									Volume:             types.ExistingVolumeRequestParam{ID: "0046A"},
+									EstablishTerminate: func() *bool { v := true; return &v }(),
+								},
+							},
+						},
+					},
+				},
+			},
+			httpStatus: http.StatusOK,
+			httpBody: `{
+				"summary": {
+					"total": 1,
+					"succeeded": 1,
+					"failed": 0,
+					"rejected": 0,
+					"partially_succeeded": 0
+				},
+				"results": {
+					"result": []
+				}
+			}`,
+			expectedResp: &types.CreateVolumesResponse{
+				Summary: types.ResponseSummary{
+					Total:              1,
+					Succeeded:          1,
+					Failed:             0,
+					Rejected:           0,
+					PartiallySucceeded: 0,
+				},
+				Results: types.CreateVolumesResults{
+					Result: []types.CreateVolumeResponseItem{},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:     "Create volume from snapshot with new_volume_attributes",
+			systemID: systemID,
+			req: types.CreateVolumesRequest{
+				Volumes: []types.VolumeRequestParam{
+					{
+						Volume: &types.ExistingVolumeRequestParam{Identifier: "snapshot-vol-001"},
+						CreateNew: &types.CreateVolumeParam{
+							CreateNewFromSnapshot: &types.CreateNewFromSnapshot{
+								Snapshot: types.SnapshotRequestParam{
+									ID: "95935652609",
+								},
+								NewVolumeAttributes: &types.CreateNewFromAttributes{
+									CapacityUnit: "CYL",
+									VolumeSize:   547,
+								},
+							},
+							PrecheckSrpCapacity: &types.ValidationSrpAction{
+								SRP: types.VolumeSrpParam{ID: "SRP_1"},
+							},
+						},
+						Actions: &types.VolumeRequestParamActions{
+							ManageVolumeStorageGroup: &types.ManageVolumeStorageGroupAction{
+								Action:       "Add",
+								StorageGroup: types.VolumeStorageGroupParam{ID: "test-SG"},
+							},
+						},
+					},
+				},
+			},
+			httpStatus: http.StatusOK,
+			httpBody: `{
+				"summary": {
+					"total": 1,
+					"succeeded": 1,
+					"failed": 0,
+					"rejected": 0,
+					"partially_succeeded": 0
+				},
+				"results": {
+					"result": []
+				}
+			}`,
+			expectedResp: &types.CreateVolumesResponse{
+				Summary: types.ResponseSummary{
+					Total:              1,
+					Succeeded:          1,
+					Failed:             0,
+					Rejected:           0,
+					PartiallySucceeded: 0,
+				},
+				Results: types.CreateVolumesResults{
+					Result: []types.CreateVolumeResponseItem{},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:     "Create volume with SRP capacity precheck",
+			systemID: systemID,
+			req: types.CreateVolumesRequest{
+				Volumes: []types.VolumeRequestParam{
+					{
+						CreateNew: &types.CreateVolumeParam{
+							CreateNewFromAttributes: &types.CreateNewFromAttributes{
+								VolumeSize:   2048,
+								CapacityUnit: "GB",
+							},
+							PrecheckSrpCapacity: &types.ValidationSrpAction{
+								SRP: types.VolumeSrpParam{
+									ID: "SRP_1",
+								},
+							},
+						},
+						Actions: &types.VolumeRequestParamActions{
+							ManageIdentifier: &types.ManageIdentifierAction{
+								Identifier: "precheck-vol-001",
+							},
+						},
+					},
+				},
+			},
+			httpStatus: http.StatusOK,
+			httpBody: `{
+				"summary": {
+					"total": 1,
+					"succeeded": 1,
+					"failed": 0,
+					"rejected": 0,
+					"partially_succeeded": 0
+				},
+				"results": {
+					"result": []
+				}
+			}`,
+			expectedResp: &types.CreateVolumesResponse{
+				Summary: types.ResponseSummary{
+					Total:              1,
+					Succeeded:          1,
+					Failed:             0,
+					Rejected:           0,
+					PartiallySucceeded: 0,
+				},
+				Results: types.CreateVolumesResults{
+					Result: []types.CreateVolumeResponseItem{},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:     "Complete real-world scenario with all actions",
+			systemID: systemID,
+			req: types.CreateVolumesRequest{
+				Volumes: []types.VolumeRequestParam{
+					{
+						CreateNew: &types.CreateVolumeParam{
+							CreateNewFromAttributes: &types.CreateNewFromAttributes{
+								VolumeSize:   1,
+								CapacityUnit: "GB",
+							},
+							PrecheckSrpCapacity: &types.ValidationSrpAction{
+								SRP: types.VolumeSrpParam{
+									ID: "SRP_1",
+								},
+							},
+						},
+						ResponseSelect: "id,identifier,storage_groups",
+						RequestID:      "csi-test-1",
+						Actions: &types.VolumeRequestParamActions{
+							ManageIdentifier: &types.ManageIdentifierAction{
+								Identifier: "csi-test-vol-1",
+							},
+							ManageVolumeStorageGroup: &types.ManageVolumeStorageGroupAction{
+								Action: "Add",
+								StorageGroup: types.VolumeStorageGroupParam{
+									ID: "csi-CSM-Silver-SRP_1-SG",
+								},
+							},
+						},
+					},
+				},
+			},
+			httpStatus: http.StatusOK,
+			httpBody: `{
+				"http_status_code": 200,
+				"summary": {
+					"total": 1,
+					"partially_succeeded": 0,
+					"succeeded": 1,
+					"failed": 0,
+					"not_run": 0,
+					"rejected": 0
+				},
+				"results": {
+					"result": [
+						{
+							"volume": {
+								"id": "00187",
+								"identifier": "csi-test-vol-1",
+								"storage_groups": [
+									{
+										"id": "csi-CSM-Silver-SRP_1-SG"
+									}
+								]
+							},
+							"storage_group": {
+								"id": "csi-CSM-Silver-SRP_1-SG",
+								"num_of_volumes": 27
+							},
+							"status": "success",
+							"steps": [
+								{
+									"status": "success",
+									"description": "Create [1] volume, add volume to storage group [csi-CSM-Silver-SRP_1-SG], and set identifier to [csi-test-vol-1]",
+									"result": "The following volume was created [00187], added to storage group [csi-CSM-Silver-SRP_1-SG], and Identifier set to [csi-test-vol-1]"
+								}
+							],
+							"request_id": "csi-test-1",
+							"resource_id": "Volume"
+						}
+					]
+				}
+			}`,
+			expectedResp: &types.CreateVolumesResponse{
+				Summary: types.ResponseSummary{
+					Total:              1,
+					Succeeded:          1,
+					Failed:             0,
+					Rejected:           0,
+					PartiallySucceeded: 0,
+				},
+				Results: types.CreateVolumesResults{
+					Result: []types.CreateVolumeResponseItem{
+						{
+							Status:     "success",
+							RequestID:  "csi-test-1",
+							ResourceID: "Volume",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:     "Rejected volumes in response",
+			systemID: systemID,
+			req: types.CreateVolumesRequest{
+				Volumes: []types.VolumeRequestParam{
+					{
+						CreateNew: &types.CreateVolumeParam{
+							CreateNewFromAttributes: &types.CreateNewFromAttributes{
+								VolumeSize:   1024,
+								CapacityUnit: "GB",
+							},
+						},
+						Actions: &types.VolumeRequestParamActions{
+							ManageIdentifier: &types.ManageIdentifierAction{
+								Identifier: "rejected-vol-001",
+							},
+						},
+					},
+				},
+			},
+			httpStatus: http.StatusOK,
+			httpBody: `{
+				"summary": {
+					"total": 1,
+					"succeeded": 0,
+					"failed": 0,
+					"rejected": 1,
+					"partially_succeeded": 0
+				},
+				"results": {
+					"result": []
+				}
+			}`,
+			expectedErr: "create volumes failed",
+			wantErr:     true,
+		},
+		{
+			name:     "Create volume with ManageReplication action",
+			systemID: systemID,
+			req: types.CreateVolumesRequest{
+				Volumes: []types.VolumeRequestParam{
+					{
+						CreateNew: &types.CreateVolumeParam{
+							CreateNewFromAttributes: &types.CreateNewFromAttributes{
+								VolumeSize:   1024,
+								CapacityUnit: "GB",
+							},
+						},
+						Actions: &types.VolumeRequestParamActions{
+							ManageIdentifier: &types.ManageIdentifierAction{
+								Identifier: "repl-vol-001",
+							},
+							ManageReplication: &types.ManageReplicationAction{
+								Local: &types.LocalReplicationAction{
+									Action: "CopyFrom",
+									Volume: types.ExistingVolumeRequestParam{
+										ID: "0046A",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			httpStatus: http.StatusOK,
+			httpBody: `{
+				"summary": {
+					"total": 1,
+					"succeeded": 1,
+					"failed": 0,
+					"rejected": 0,
+					"partially_succeeded": 0
+				},
+				"results": {
+					"result": []
+				}
+			}`,
+			expectedResp: &types.CreateVolumesResponse{
+				Summary: types.ResponseSummary{
+					Total:     1,
+					Succeeded: 1,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:     "Error message without code",
+			systemID: systemID,
+			req: types.CreateVolumesRequest{
+				Volumes: []types.VolumeRequestParam{
+					{
+						CreateNew: &types.CreateVolumeParam{
+							CreateNewFromAttributes: &types.CreateNewFromAttributes{
+								VolumeSize:   1024,
+								CapacityUnit: "GB",
+							},
+						},
+					},
+				},
+			},
+			httpStatus: http.StatusOK,
+			httpBody: `{
+				"summary": {
+					"total": 1,
+					"succeeded": 0,
+					"failed": 1,
+					"rejected": 0,
+					"partially_succeeded": 0
+				},
+				"results": {
+					"result": [
+						{
+							"messages": {
+								"message": [
+									{
+										"code": "",
+										"message": "Insufficient capacity on SRP"
+									}
+								]
+							}
+						}
+					]
+				}
+			}`,
+			expectedErr: "Insufficient capacity on SRP",
+			wantErr:     true,
+		},
+		{
+			name:     "Response with cap_cyl in VolumeRefResponse",
+			systemID: systemID,
+			req: types.CreateVolumesRequest{
+				ResponseSelect: "id,identifier,cap_cyl",
+				Volumes: []types.VolumeRequestParam{
+					{
+						CreateNew: &types.CreateVolumeParam{
+							CreateNewFromAttributes: &types.CreateNewFromAttributes{
+								VolumeSize:   547,
+								CapacityUnit: "CYL",
+							},
+						},
+						ResponseSelect: "id,identifier,cap_cyl",
+						Actions: &types.VolumeRequestParamActions{
+							ManageIdentifier: &types.ManageIdentifierAction{
+								Identifier: "capcyl-vol-001",
+							},
+						},
+					},
+				},
+			},
+			httpStatus: http.StatusOK,
+			httpBody: `{
+				"summary": {
+					"total": 1,
+					"succeeded": 1,
+					"failed": 0,
+					"rejected": 0,
+					"partially_succeeded": 0
+				},
+				"results": {
+					"result": [
+						{
+							"volume": {
+								"id": "00200",
+								"identifier": "capcyl-vol-001",
+								"cap_cyl": 547
+							},
+							"status": "success",
+							"request_id": "capcyl-req-1",
+							"resource_id": "Volume"
+						}
+					]
+				}
+			}`,
+			expectedResp: &types.CreateVolumesResponse{
+				Summary: types.ResponseSummary{
+					Total:     1,
+					Succeeded: 1,
+				},
+				Results: types.CreateVolumesResults{
+					Result: []types.CreateVolumeResponseItem{
+						{
+							Volume: &types.VolumeRefResponse{
+								ID:         "00200",
+								Identifier: "capcyl-vol-001",
+								CapCyl:     547,
+							},
+							Status:    "success",
+							RequestID: "capcyl-req-1",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPost, r.Method, "Expected POST method")
+				assert.Contains(t, r.URL.Path, "/systems/"+tc.systemID+"/volumes", "Expected URL path")
+				w.WriteHeader(tc.httpStatus)
+				w.Write([]byte(tc.httpBody))
+			}))
+			defer server.Close()
+
+			c, err := NewClientWithArgs(server.URL, "", true, true, "")
+			assert.NoError(t, err)
+			c.SetAllowedArrays([]string{allowedArray})
+
+			resp, err := c.CreateVolume(context.Background(), tc.systemID, tc.req)
+
+			if tc.wantErr {
+				assert.Error(t, err)
+				if tc.expectedErr != "" {
+					assert.ErrorContains(t, err, tc.expectedErr)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				if tc.expectedResp != nil {
+					assert.Equal(t, tc.expectedResp.Summary.Total, resp.Summary.Total)
+					assert.Equal(t, tc.expectedResp.Summary.Succeeded, resp.Summary.Succeeded)
+					assert.Equal(t, tc.expectedResp.Summary.Failed, resp.Summary.Failed)
+					if len(tc.expectedResp.Results.Result) > 0 {
+						assert.Equal(t, len(tc.expectedResp.Results.Result), len(resp.Results.Result))
+						for i, expItem := range tc.expectedResp.Results.Result {
+							if i >= len(resp.Results.Result) {
+								break
+							}
+							gotItem := resp.Results.Result[i]
+							assert.Equal(t, expItem.Status, gotItem.Status)
+							assert.Equal(t, expItem.RequestID, gotItem.RequestID)
+							if expItem.Volume != nil && gotItem.Volume != nil {
+								assert.Equal(t, expItem.Volume.ID, gotItem.Volume.ID)
+								assert.Equal(t, expItem.Volume.Identifier, gotItem.Volume.Identifier)
+								assert.Equal(t, expItem.Volume.CapCyl, gotItem.Volume.CapCyl)
+							}
+						}
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestCreateVolumeIdempotency(t *testing.T) {
+	mock.Reset()
+	server := httptest.NewServer(mock.GetHandler())
+	defer server.Close()
+
+	systemID := mock.DefaultSymmetrixID
+	sgID := mock.DefaultStorageGroup
+
+	c, err := NewClientWithArgs(server.URL, "", true, true, "")
+	assert.NoError(t, err)
+	c.SetAllowedArrays([]string{systemID})
+
+	req := types.CreateVolumesRequest{
+		Volumes: []types.VolumeRequestParam{
+			{
+				Volume:    &types.ExistingVolumeRequestParam{Identifier: "idempotent-vol-001"},
+				RequestID: "idempotent-vol-001",
+				CreateNew: &types.CreateVolumeParam{
+					CreateNewFromAttributes: &types.CreateNewFromAttributes{
+						CapacityUnit: "CYL",
+						VolumeSize:   547,
+					},
+				},
+				Actions: &types.VolumeRequestParamActions{
+					ManageVolumeStorageGroup: &types.ManageVolumeStorageGroupAction{
+						Action:       "Add",
+						StorageGroup: types.VolumeStorageGroupParam{ID: sgID},
+					},
+				},
+				ResponseSelect: "id,identifier,cap_cyl,storage_groups",
+			},
+		},
+	}
+
+	resp1, err := c.CreateVolume(context.Background(), systemID, req)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp1)
+	assert.Equal(t, 1, resp1.Summary.Succeeded)
+	assert.Equal(t, 0, resp1.Summary.Failed)
+	require1 := resp1.Results.Result[0]
+	assert.Equal(t, "success", require1.Status)
+	assert.Equal(t, "Volume", require1.ResourceID)
+	assert.NotNil(t, require1.Volume)
+	assert.NotEmpty(t, require1.Volume.ID)
+	assert.Equal(t, "idempotent-vol-001", require1.Volume.Identifier)
+	assert.Equal(t, float64(547), require1.Volume.CapCyl)
+
+	resp2, err := c.CreateVolume(context.Background(), systemID, req)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp2)
+	assert.Equal(t, 1, resp2.Summary.Succeeded)
+	assert.Equal(t, 0, resp2.Summary.Failed)
+	require2 := resp2.Results.Result[0]
+	assert.Equal(t, "success", require2.Status)
+	assert.Equal(t, "Volume", require2.ResourceID)
+	assert.NotNil(t, require2.Volume, "idempotent response must include volume object")
+	assert.Equal(t, require1.Volume.ID, require2.Volume.ID, "idempotent response must return same volume ID")
+	assert.Equal(t, "idempotent-vol-001", require2.Volume.Identifier)
+	assert.Equal(t, float64(547), require2.Volume.CapCyl, "idempotent response must include cap_cyl")
+}
+
+func TestCreateVolumeWithAuthHeaders(t *testing.T) {
+	allowedArray := "testSymID"
+	systemID := "testSymID"
+
+	successBody := `{
+		"summary": {"total": 1, "succeeded": 1, "failed": 0, "rejected": 0, "partially_succeeded": 0},
+		"results": {"result": []}
+	}`
+
+	t.Run("Headers are sent on the HTTP request", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Verify the auth metadata headers are present and have correct values
+			assert.Equal(t, "my-test-pvc", r.Header.Get("x-csi-pv-claimname"), "PVC claim name header")
+			assert.Equal(t, "my-test-pv", r.Header.Get("x-csi-pv-name"), "PV name header")
+			assert.Equal(t, "my-namespace", r.Header.Get("x-csi-pv-namespace"), "PVC namespace header")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(successBody))
+		}))
+		defer server.Close()
+
+		c, err := NewClientWithArgs(server.URL, "", true, true, "")
+		assert.NoError(t, err)
+		c.SetAllowedArrays([]string{allowedArray})
+
+		authHeader := http.Header{
+			"x-csi-pv-claimname": []string{"my-test-pvc"},
+			"x-csi-pv-name":      []string{"my-test-pv"},
+			"x-csi-pv-namespace": []string{"my-namespace"},
+		}
+
+		req := types.CreateVolumesRequest{
+			Volumes: []types.VolumeRequestParam{
+				{
+					CreateNew: &types.CreateVolumeParam{
+						CreateNewFromAttributes: &types.CreateNewFromAttributes{
+							VolumeSize:   1024,
+							CapacityUnit: "GB",
+						},
+					},
+				},
+			},
+		}
+
+		_, err = c.CreateVolume(context.Background(), systemID, req, authHeader)
+		assert.NoError(t, err)
+	})
+
+	t.Run("No headers when opts is empty", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Verify auth headers are NOT present
+			assert.Empty(t, r.Header.Get("x-csi-pv-claimname"), "Should not have PVC claim name header")
+			assert.Empty(t, r.Header.Get("x-csi-pv-name"), "Should not have PV name header")
+			assert.Empty(t, r.Header.Get("x-csi-pv-namespace"), "Should not have PVC namespace header")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(successBody))
+		}))
+		defer server.Close()
+
+		c, err := NewClientWithArgs(server.URL, "", true, true, "")
+		assert.NoError(t, err)
+		c.SetAllowedArrays([]string{allowedArray})
+
+		req := types.CreateVolumesRequest{
+			Volumes: []types.VolumeRequestParam{
+				{
+					CreateNew: &types.CreateVolumeParam{
+						CreateNewFromAttributes: &types.CreateNewFromAttributes{
+							VolumeSize:   1024,
+							CapacityUnit: "GB",
+						},
+					},
+				},
+			},
+		}
+
+		// Call without opts
+		_, err = c.CreateVolume(context.Background(), systemID, req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Empty header map does not cause errors", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(successBody))
+		}))
+		defer server.Close()
+
+		c, err := NewClientWithArgs(server.URL, "", true, true, "")
+		assert.NoError(t, err)
+		c.SetAllowedArrays([]string{allowedArray})
+
+		req := types.CreateVolumesRequest{
+			Volumes: []types.VolumeRequestParam{
+				{
+					CreateNew: &types.CreateVolumeParam{
+						CreateNewFromAttributes: &types.CreateNewFromAttributes{
+							VolumeSize:   1024,
+							CapacityUnit: "GB",
+						},
+					},
+				},
+			},
+		}
+
+		// Pass empty header
+		_, err = c.CreateVolume(context.Background(), systemID, req, http.Header{})
+		assert.NoError(t, err)
+	})
+}
+
+func TestPublishMaskingViews(t *testing.T) {
+	allowedArray := "testSymID"
+	systemID := "testSymID"
+
+	tests := []struct {
+		name        string
+		systemID    string
+		param       *types.PublishMaskingViewsParam
+		httpStatus  int
+		httpBody    string
+		expectedErr string
+		wantErr     bool
+	}{
+		{
+			name:     "Successful publish",
+			systemID: systemID,
+			param: &types.PublishMaskingViewsParam{
+				MaskingViews: []types.MaskingViewPublishParam{
+					{
+						ID: "CSI-Test-MV",
+						StorageGroup: &types.StorageGroupPublishParam{
+							ID: "CSI-Test-SG",
+						},
+					},
+				},
+			},
+			httpStatus: http.StatusOK,
+			httpBody: `{
+				"http_status_code": 200,
+				"summary": {
+					"total": 1,
+					"succeeded": 1,
+					"failed": 0,
+					"rejected": 0,
+					"partially_succeeded": 0
+				},
+				"results": {
+					"result": [
+						{
+							"status": "success",
+							"request_id": "CSI-Test-MV",
+							"resource_id": "MaskingView"
+						}
+					]
+				}
+			}`,
+			wantErr: false,
+		},
+		{
+			name:     "None succeeded",
+			systemID: systemID,
+			param: &types.PublishMaskingViewsParam{
+				MaskingViews: []types.MaskingViewPublishParam{
+					{ID: "CSI-Test-MV"},
+				},
+			},
+			httpStatus: http.StatusOK,
+			httpBody: `{
+				"summary": {
+					"total": 1,
+					"succeeded": 0,
+					"failed": 1,
+					"rejected": 0,
+					"partially_succeeded": 0
+				},
+				"results": {
+					"result": []
+				}
+			}`,
+			expectedErr: "none succeeded",
+			wantErr:     true,
+		},
+		{
+			name:     "HTTP error response",
+			systemID: systemID,
+			param: &types.PublishMaskingViewsParam{
+				MaskingViews: []types.MaskingViewPublishParam{
+					{ID: "CSI-Test-MV"},
+				},
+			},
+			httpStatus:  http.StatusInternalServerError,
+			httpBody:    `{}`,
+			expectedErr: "500",
+			wantErr:     true,
+		},
+		{
+			name:     "Invalid array",
+			systemID: "ignoredArray",
+			param: &types.PublishMaskingViewsParam{
+				MaskingViews: []types.MaskingViewPublishParam{
+					{ID: "CSI-Test-MV"},
+				},
+			},
+			expectedErr: "is ignored as it is not managed",
+			wantErr:     true,
+		},
+		{
+			name:     "Publish with host and port group",
+			systemID: systemID,
+			param: &types.PublishMaskingViewsParam{
+				MaskingViews: []types.MaskingViewPublishParam{
+					{
+						ID: "CSI-Test-MV-Full",
+						StorageGroup: &types.StorageGroupPublishParam{
+							ID:  "CSI-Test-SG",
+							SRP: "SRP_1",
+						},
+						Host: &types.HostPublishParam{
+							ID: "CSI-Test-Host",
+							Actions: &types.HostPublishActions{
+								AddInitiatorsToHostAction: &types.AddInitiatorsToHostAction{
+									Initiators: []types.InitiatorPublishParam{
+										{ID: "iqn.1993-08.org.debian:01:test"},
+									},
+								},
+							},
+						},
+						PortGroup: &types.PortGroupPublishParam{
+							ID:       "CSI-Test-PG",
+							Protocol: "SCSI_FC",
+							Actions: &types.PortGroupPublishActions{
+								AddPortsToPortGroupAction: &types.AddPortsToPortGroupAction{
+									Ports: []types.PortPublishParam{
+										{ID: "FA-1D:4"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			httpStatus: http.StatusOK,
+			httpBody: `{
+				"http_status_code": 200,
+				"summary": {
+					"total": 1,
+					"succeeded": 1,
+					"failed": 0,
+					"rejected": 0,
+					"partially_succeeded": 0
+				},
+				"results": {
+					"result": [
+						{
+							"status": "success",
+							"request_id": "CSI-Test-MV-Full",
+							"resource_id": "MaskingView"
+						}
+					]
+				}
+			}`,
+			wantErr: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPost, r.Method, "Expected POST method")
+				assert.Contains(t, r.URL.Path, "/systems/"+tc.systemID+"/masking-views", "Expected URL path")
+				w.WriteHeader(tc.httpStatus)
+				w.Write([]byte(tc.httpBody))
+			}))
+			defer server.Close()
+
+			c, err := NewClientWithArgs(server.URL, "", true, true, "")
+			assert.NoError(t, err)
+			c.SetAllowedArrays([]string{allowedArray})
+
+			resp, err := c.PublishMaskingViews(context.Background(), tc.systemID, tc.param)
+
+			if tc.wantErr {
+				assert.Error(t, err)
+				if tc.expectedErr != "" {
+					assert.ErrorContains(t, err, tc.expectedErr)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				assert.Greater(t, resp.Summary.Succeeded, 0)
+			}
+		})
+	}
+}
+
+func TestCreateVolumesErrorMessage(t *testing.T) {
+	tests := []struct {
+		name     string
+		resp     *types.CreateVolumesResponse
+		expected string
+	}{
+		{
+			name:     "nil response",
+			resp:     nil,
+			expected: "create volumes failed",
+		},
+		{
+			name: "no results",
+			resp: &types.CreateVolumesResponse{
+				Results: types.CreateVolumesResults{
+					Result: []types.CreateVolumeResponseItem{},
+				},
+			},
+			expected: "create volumes failed",
+		},
+		{
+			name: "result with no messages",
+			resp: &types.CreateVolumesResponse{
+				Results: types.CreateVolumesResults{
+					Result: []types.CreateVolumeResponseItem{
+						{Status: "failed"},
+					},
+				},
+			},
+			expected: "create volumes failed",
+		},
+		{
+			name: "result with code and message",
+			resp: &types.CreateVolumesResponse{
+				Results: types.CreateVolumesResults{
+					Result: []types.CreateVolumeResponseItem{
+						{
+							Messages: &types.ResponseMessages{
+								Message: []types.ResponseMessage{
+									{Code: "ERR001", Message: "Volume creation failed"},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: "ERR001: Volume creation failed",
+		},
+		{
+			name: "result with message only (no code)",
+			resp: &types.CreateVolumesResponse{
+				Results: types.CreateVolumesResults{
+					Result: []types.CreateVolumeResponseItem{
+						{
+							Messages: &types.ResponseMessages{
+								Message: []types.ResponseMessage{
+									{Code: "", Message: "Insufficient SRP capacity"},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: "Insufficient SRP capacity",
+		},
+		{
+			name: "result with empty messages slice",
+			resp: &types.CreateVolumesResponse{
+				Results: types.CreateVolumesResults{
+					Result: []types.CreateVolumeResponseItem{
+						{
+							Messages: &types.ResponseMessages{
+								Message: []types.ResponseMessage{},
+							},
+						},
+					},
+				},
+			},
+			expected: "create volumes failed",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := createVolumesErrorMessage(tc.resp)
+			assert.Equal(t, tc.expected, got)
 		})
 	}
 }

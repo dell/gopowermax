@@ -96,6 +96,7 @@ type unitContext struct {
 	maskingViewList            *types.MaskingViewList
 	maskingView                *types.MaskingView
 	uMaskingView               *uMV
+	publishMaskingViewsResult  *types.PublishMaskingViewResponse
 	addressList                []string
 	portv1                     *types.PortV1
 	targetList                 []ISCSITarget
@@ -229,6 +230,7 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.MaskingViewAlreadyExists = false
 	mock.InducedErrors.DeleteMaskingViewError = false
 	mock.InducedErrors.CreateMaskingViewError = false
+	mock.InducedErrors.PublishMaskingViewsError = false
 	mock.InducedErrors.UpdateMaskingViewError = false
 	mock.InducedErrors.PortGroupNotFoundError = false
 	mock.InducedErrors.InitiatorGroupNotFoundError = false
@@ -347,6 +349,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.MaskingViewAlreadyExists = true
 	case "DeleteMaskingViewError":
 		mock.InducedErrors.DeleteMaskingViewError = true
+	case "PublishMaskingViewsError":
+		mock.InducedErrors.PublishMaskingViewsError = true
 	case "PortGroupNotFoundError":
 		mock.InducedErrors.PortGroupNotFoundError = true
 	case "InitiatorGroupNotFoundError":
@@ -553,6 +557,7 @@ func (c *unitContext) iCallAuthenticateWithEndpointCredentials(endpoint, credent
 		Endpoint: endpoint,
 		Username: defaultUsername,
 		Password: password,
+		Version:  apiVersion,
 	})
 	if err == nil {
 		if apiVersion == APIVersion91 {
@@ -646,6 +651,13 @@ func (c *unitContext) iCallGetVolumesByIdentifier(identifier string) error {
 func (c *unitContext) iGetAValidVolumeObjectIfNoError(id string) error {
 	if c.err != nil {
 		return nil
+	}
+	// GetVolumesByIdentifier sets c.Volumev1 instead of c.vol
+	if c.vol == nil {
+		if c.Volumev1 != nil {
+			return nil
+		}
+		return fmt.Errorf("No volume object available")
 	}
 	if c.vol.VolumeID != id {
 		return fmt.Errorf("Expected volume %s but got %s", id, c.vol.VolumeID)
@@ -1452,6 +1464,100 @@ func (c *unitContext) iCallCreateMaskingViewWithHostGroup(mvID string) error {
 	return nil
 }
 
+func (c *unitContext) iCallPublishMaskingViews(mvID string) error {
+	param := &types.PublishMaskingViewsParam{
+		MaskingViews: []types.MaskingViewPublishParam{
+			{
+				ID: mvID,
+				StorageGroup: &types.StorageGroupPublishParam{
+					ID:  c.sgID,
+					SRP: "SRP_1",
+					HostIOLimitInfo: &types.HostIOLimitInfo{
+						HostIOLimitMBSec:    1000,
+						HostIOLimitIOSec:    5000,
+						DynamicDistribution: "NEVER",
+					},
+				},
+				Host: &types.HostPublishParam{
+					ID: c.hostID,
+				},
+				PortGroup: &types.PortGroupPublishParam{
+					ID:       testPortGroup,
+					Protocol: "SCSI_FC",
+				},
+			},
+		},
+	}
+	c.publishMaskingViewsResult, c.err = c.client.PublishMaskingViews(context.TODO(), symID, param)
+	return nil
+}
+
+func (c *unitContext) iCallPublishMaskingViewsWithVolumes(mvID string) error {
+	param := &types.PublishMaskingViewsParam{
+		MaskingViews: []types.MaskingViewPublishParam{
+			{
+				ID: mvID,
+				StorageGroup: &types.StorageGroupPublishParam{
+					ID:  c.sgID,
+					SRP: "SRP_1",
+					Actions: &types.StorageGroupPublishActions{
+						AddVolumesToStorageGroupAction: &types.AddVolumesToStorageGroupAction{
+							Volumes: []types.VolumePublishParam{
+								{
+									ExistingVolumes: []types.ExistingVolumeParam{
+										{ID: "00001"},
+									},
+								},
+							},
+						},
+					},
+				},
+				Host: &types.HostPublishParam{
+					ID: c.hostID,
+					Actions: &types.HostPublishActions{
+						AddInitiatorsToHostAction: &types.AddInitiatorsToHostAction{
+							Initiators: []types.InitiatorPublishParam{
+								{ID: testInitiatorIQN},
+							},
+						},
+					},
+				},
+				PortGroup: &types.PortGroupPublishParam{
+					ID:       testPortGroup,
+					Protocol: "SCSI_FC",
+					Actions: &types.PortGroupPublishActions{
+						AddPortsToPortGroupAction: &types.AddPortsToPortGroupAction{
+							Ports: []types.PortPublishParam{
+								{ID: "FA-1D:4"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	c.publishMaskingViewsResult, c.err = c.client.PublishMaskingViews(context.TODO(), symID, param)
+	return nil
+}
+
+func (c *unitContext) iGetAValidPublishMaskingViewsResultIfNoError() error {
+	if c.err != nil {
+		return nil
+	}
+	if c.publishMaskingViewsResult == nil {
+		return fmt.Errorf("publishMaskingViewsResult is nil")
+	}
+	if len(c.publishMaskingViewsResult.Results.Result) == 0 {
+		return fmt.Errorf("no masking views in result")
+	}
+	for _, r := range c.publishMaskingViewsResult.Results.Result {
+		if r.Status != "success" {
+			return fmt.Errorf("masking view %s publish failed with status: %s", r.RequestID, r.Status)
+		}
+	}
+	return nil
+}
+
 func (c *unitContext) iHaveAHostGroup(hostGroupID string) error {
 	// Create a host instead of host group
 	c.hostGroupID = hostGroupID
@@ -1651,6 +1757,11 @@ func (c *unitContext) iShouldGetAListOfSnapshotsIfNoError() error {
 	if c.volSnapList == nil {
 		return fmt.Errorf("There is no Snapshot for provided source volume")
 	}
+	for _, src := range c.volSnapList.VolumeSnapshotSource {
+		if src.SnapID == 0 {
+			return fmt.Errorf("SnapID is not set in VolumeSnapshotSource for snapshot %s", src.SnapshotName)
+		}
+	}
 	return nil
 }
 
@@ -1685,6 +1796,11 @@ func (c *unitContext) iShouldGetTheSnapshotDetailsIfNoError() error {
 	if c.volumeSnapshot == nil {
 		return fmt.Errorf("The Snapshot does not exist")
 	}
+	for _, src := range c.volumeSnapshot.VolumeSnapshotSource {
+		if src.SnapID == 0 {
+			return fmt.Errorf("SnapID is not set in VolumeSnapshotSource for snapshot %s", src.SnapshotName)
+		}
+	}
 	return nil
 }
 
@@ -1700,6 +1816,11 @@ func (c *unitContext) iShouldGetTheGenerationListIfNoError() error {
 	if c.volSnapGenerationList == nil {
 		return fmt.Errorf("The Generation List for the snaphshot does not exist")
 	}
+	for _, src := range c.volSnapGenerationList.VolumeSnapshotSource {
+		if src.SnapID == 0 {
+			return fmt.Errorf("SnapID is not set in VolumeSnapshotSource for snapshot %s", src.SnapshotName)
+		}
+	}
 	return nil
 }
 
@@ -1714,6 +1835,10 @@ func (c *unitContext) iShouldGetAGenerationInfoIfNoError() error {
 	}
 	if c.volSnapGenerationInfo == nil {
 		return fmt.Errorf("The Generation for the snaphshot does not exist")
+	}
+	if c.volSnapGenerationInfo.VolumeSnapshotSource.SnapshotName != "" &&
+		c.volSnapGenerationInfo.VolumeSnapshotSource.SnapID == 0 {
+		return fmt.Errorf("SnapID is not set in VolumeSnapshotSource for snapshot %s", c.volSnapGenerationInfo.VolumeSnapshotSource.SnapshotName)
 	}
 	return nil
 }
@@ -2890,6 +3015,9 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^I call CreateMaskingViewWithHost "([^"]*)"$`, c.iCallCreateMaskingViewWithHost)
 	s.Step(`^I call CreateMaskingViewWithHostGroup "([^"]*)"$`, c.iCallCreateMaskingViewWithHostGroup)
 	s.Step(`^I call DeleteMaskingView$`, c.iCallDeleteMaskingView)
+	s.Step(`^I call PublishMaskingViews "([^"]*)"$`, c.iCallPublishMaskingViews)
+	s.Step(`^I call PublishMaskingViewsWithVolumes "([^"]*)"$`, c.iCallPublishMaskingViewsWithVolumes)
+	s.Step(`^I get a valid PublishMaskingViewsResult if no error$`, c.iGetAValidPublishMaskingViewsResultIfNoError)
 	// Port Group
 	s.Step(`^I have a PortGroup$`, c.iHaveAPortGroup)
 	s.Step(`^I call GetPortGroupList$`, c.iCallGetPortGroupList)

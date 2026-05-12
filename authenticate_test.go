@@ -1,6 +1,9 @@
 package pmax
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -93,6 +96,83 @@ func TestNewClient(t *testing.T) {
 			os.Unsetenv("CSI_APPLICATION_NAME")
 			os.Unsetenv("CSI_POWERMAX_INSECURE")
 			os.Unsetenv("CSI_POWERMAX_USECERTS")
+		})
+	}
+}
+
+func TestAuthenticate(t *testing.T) {
+	tests := []struct {
+		name            string
+		serverBody      string
+		serverStatus    int
+		explicitVersion string
+		wantErr         bool
+		expectedVersion string
+	}{
+		{
+			name:            "No explicit version - DefaultAPIVersion used",
+			serverBody:      `{"version":"V10.4","api_version":"104"}`,
+			serverStatus:    http.StatusOK,
+			explicitVersion: "",
+			wantErr:         false,
+			expectedVersion: DefaultAPIVersion,
+		},
+		{
+			name:            "Explicit version preserved",
+			serverBody:      `{"version":"V10.4","api_version":"104"}`,
+			serverStatus:    http.StatusOK,
+			explicitVersion: "104",
+			wantErr:         false,
+			expectedVersion: "104",
+		},
+		{
+			name:            "No APIVersion in response - version unchanged",
+			serverBody:      `{"version":"V9.1"}`,
+			serverStatus:    http.StatusOK,
+			explicitVersion: "",
+			wantErr:         false,
+			expectedVersion: DefaultAPIVersion,
+		},
+		{
+			name:         "HTTP error from server",
+			serverBody:   `{"message":"Internal Server Error"}`,
+			serverStatus: http.StatusInternalServerError,
+			wantErr:      true,
+		},
+		{
+			name:         "Invalid JSON response causes decode error",
+			serverBody:   `not-json{{{`,
+			serverStatus: http.StatusOK,
+			wantErr:      true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tc.serverStatus)
+				w.Write([]byte(tc.serverBody))
+			}))
+			defer srv.Close()
+
+			c, err := NewClientWithArgs(srv.URL, "", true, false, "")
+			assert.NoError(t, err)
+
+			client := c.(*Client)
+			err = client.Authenticate(context.Background(), &ConfigConnect{
+				Endpoint: srv.URL,
+				Username: "testuser",
+				Password: "testpass",
+				Version:  tc.explicitVersion,
+			})
+
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedVersion, client.version)
+			}
 		})
 	}
 }

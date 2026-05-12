@@ -31,6 +31,7 @@ import (
 const (
 	RESTPrefix          = "univmax/restapi/"
 	RESTPrefixV1        = "univmax/rest/v1"
+	RESTPrivateV1       = "univmax/rest/private/v1/"
 	StorageResourcePool = "srp"
 )
 
@@ -392,6 +393,55 @@ func (c *Client) GetISCSITargets(ctx context.Context, symID string) ([]ISCSITarg
 	return targets, nil
 }
 
+// GetISCSIEndpoints returns list of iSCSI endpoint addresses
+func (c *Client) GetISCSIEndpoints(ctx context.Context, symID string) ([]ISCSITarget, error) {
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	targets := make([]ISCSITarget, 0)
+	// Get list of all directors
+	directors, err := c.GetDirectorIDList(ctx, symID)
+	if err != nil {
+		return []ISCSITarget{}, err
+	}
+
+	for _, d := range directors.DirectorIDs {
+		// Direct query for iSCSI endpoints on this director
+		virtualPorts, err := c.GetPortList(ctx, symID, d, "iscsi_endpoint=true")
+		if err != nil {
+			// Ignore the error and continue
+			log.Errorf("Failed to get iSCSI endpoint ports for director: %s. Error: %s",
+				d, err.Error())
+			continue
+		}
+
+		// If we found iSCSI endpoint ports, get their details
+		if len(virtualPorts.SymmetrixPortKey) > 0 {
+			// we have a list of virtual director ports which have ISCSI endpoints
+			// and portal IPs associated with it
+			for _, vp := range virtualPorts.SymmetrixPortKey {
+				port, err := c.GetPort(ctx, symID, vp.DirectorID, vp.PortID)
+				if err != nil {
+					// Ignore the error and continue
+					log.Errorf("Failed to fetch port details for %s:%s. Error: %s",
+						vp.DirectorID, vp.PortID, err.Error())
+					continue
+				}
+				// Only add targets that have portal IPs
+				if port.SymmetrixPort.Identifier != "" && len(port.SymmetrixPort.IPAddresses) > 0 {
+					tgt := ISCSITarget{
+						IQN:        port.SymmetrixPort.Identifier,
+						PortalIPs:  port.SymmetrixPort.IPAddresses,
+						PortStatus: port.SymmetrixPort.PortStatus,
+					}
+					targets = append(targets, tgt)
+				}
+			}
+		}
+	}
+	return targets, nil
+}
+
 // GetNVMeTCPTargets returns list of target addresses
 func (c *Client) GetNVMeTCPTargets(ctx context.Context, symID string) ([]NVMeTCPTarget, error) {
 	if _, err := c.IsAllowedArray(symID); err != nil {
@@ -434,8 +484,9 @@ func (c *Client) GetNVMeTCPTargets(ctx context.Context, symID string) ([]NVMeTCP
 				// this should always be set
 				if port.SymmetrixPort.Identifier != "" {
 					tgt := NVMeTCPTarget{
-						NQN:       port.SymmetrixPort.Identifier,
-						PortalIPs: port.SymmetrixPort.IPAddresses,
+						NQN:        port.SymmetrixPort.Identifier,
+						PortalIPs:  port.SymmetrixPort.IPAddresses,
+						PortStatus: port.SymmetrixPort.PortStatus,
 					}
 					targets = append(targets, tgt)
 				}

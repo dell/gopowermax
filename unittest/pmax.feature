@@ -20,6 +20,9 @@ Feature: PMAX Client library
     | "badurl"    | "good"         |     "91"       | "none"          | "connect"                   | 
     | "nilurl"    | "good"         |     "91"       | "none"          | "Endpoint must be supplied" |
     | "mockurl"   | "good"         |     "91"       | "httpStatus500" | "Internal Error"            |
+    | "mockurl"   | "good"         |     "100"      | "none"          | "none"                      |
+    | "mockurl"   | "good"         |     "104"      | "none"          | "none"                      |
+    | "mockurl"   | "good"         |     ""         | "none"          | "none"                      |
   
   Scenario Outline: TestCases for GetSymmetrixIDList
     Given a valid connection
@@ -1278,7 +1281,7 @@ Scenario Outline: Test GetHostList
 
     Examples:
       | errorType       | errormsg               | version    | apiversion |
-      | "none"          | "none"                 | "V9.1.0.2" | ""         |
+      | "none"          | "none"                 | "V9.1.0.2" | "91"       |
       | "InvalidJSON"   | "invalid character"    | "none"     | "none"     |
       | "httpStatus500" | "Internal Error"       | "none"     | "none"     |
 
@@ -1293,10 +1296,9 @@ Scenario Outline: Test GetHostList
 
     Examples:
     | id              | induced               | errormsg                      | arrays    |
-    | "00001"         | "none"                | "Not Found"                   | ""        |
-    | "00003"         | "none"                | "Not Found"                   | ""        |
-    | "00010"         | "none"                | "Not Found"                   | ""        |
-    | "00001"         | "GetVolumeError"      | "Not Found"                   | ""        |
+    | "00001"         | "none"                | "none"                        | ""        |
+    | "00003"         | "none"                | "none"                        | ""        |
+    | "00010"         | "none"                | "none"                        | ""        |
     | "00001"         | "httpStatus500"       | "Internal Error"              | ""        |
     | "00001"         | "InvalidJSON"         | "invalid character"           | ""        |
     | "00001"         | "none"                | "ignored as it is not managed"| "ignored" |
@@ -1375,3 +1377,34 @@ Scenario Outline: Test cases for GetStorageGroupVolumeCounts
     | ""        | "InvalidJSON"    | "TestSG1"   | ""         | 1         | 0         |    ""  | "invalid character"       | 0       | 0           |
     | ""        | "GetStorageGroupError" | "TestSG1"   | ""   | 1         | 0         |    ""  | "induced error"       | 0       | 0           |
     | "ignored" | "none"           | ""          | ""         | 0         | 0         |    ""  |  "ignored as it is not managed"       | 0       | 0           |
+
+  Scenario Outline: Test PublishMaskingViews
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I have a MaskingView <mvname>
+    And I induce error <induced>
+    When I call PublishMaskingViews <mvname>
+    Then the error message contains <errormsg>
+    And I get a valid PublishMaskingViewsResult if no error
+
+    Examples:
+      | mvname         | induced                     | errormsg                      | arrays    |
+      | "CSI-Test-MV"  | "none"                      | "none"                        | ""        |
+      | "CSI-Test-MV"  | "PublishMaskingViewsError"  | "induced error"               | ""        |
+      | "CSI-Test-MV"  | "none"                      | "ignored as it is not managed"| "ignored" |
+
+  Scenario Outline: Test PublishMaskingViewsWithVolumes
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I have a MaskingView <mvname>
+    And I have 2 volumes
+    And I induce error <induced>
+    When I call PublishMaskingViewsWithVolumes <mvname>
+    Then the error message contains <errormsg>
+    And I get a valid PublishMaskingViewsResult if no error
+
+    Examples:
+      | mvname         | induced                     | errormsg                      | arrays    |
+      | "CSI-Test-MV"  | "none"                      | "none"                        | ""        |
+      | "CSI-Test-MV"  | "PublishMaskingViewsError"  | "induced error"               | ""        |
+      | "CSI-Test-MV"  | "none"                      | "ignored as it is not managed"| "ignored" |
