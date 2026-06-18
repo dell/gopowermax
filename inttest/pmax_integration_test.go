@@ -3158,3 +3158,59 @@ func TestPublishMaskingViews(t *testing.T) {
 	cleanupHost(symmetrixID, hostID, t)
 	fmt.Println("TestPublishMaskingViews completed")
 }
+
+func TestGetStorageGroupMetricsBulk(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+
+	metrics, err := client.GetStorageGroupMetricsBulk(context.TODO(), symmetrixID)
+	if err != nil {
+		t.Errorf("Failed to get storage group metrics bulk: (%s)", err.Error())
+		return
+	}
+
+	if metrics == nil {
+		t.Error("Expected metrics result but got nil")
+		return
+	}
+
+	fmt.Printf("Storage Group Metrics Bulk Result - ID: %s, ResourceType: %s, System: %s\n",
+		metrics.ID, metrics.ResourceType, metrics.System)
+	fmt.Printf("Number of metric instances: %d\n", len(metrics.MetricInstances))
+
+	if len(metrics.MetricInstances) == 0 {
+		fmt.Println("Warning: No metric instances returned (may be expected if no storage groups exist)")
+	}
+}
+
+func TestGetVolumesCapacityBulk(t *testing.T) {
+	if client == nil {
+		err := getClient()
+		if err != nil {
+			t.Errorf("Unable to get/create pmax client: (%s)", err.Error())
+			return
+		}
+	}
+
+	volumes, err := client.GetVolumesCapacityBulk(context.TODO(), symmetrixID)
+	if err != nil {
+		t.Errorf("Failed to get volumes capacity bulk: (%s)", err.Error())
+		return
+	}
+
+	if volumes == nil {
+		t.Error("Expected volumes result but got nil")
+		return
+	}
+
+	fmt.Printf("Number of volumes returned: %d\n", len(volumes.Volumes))
+
+	if len(volumes.Volumes) == 0 {
+		fmt.Println("Warning: No volumes returned (may be expected if array is empty)")
+	}
+}

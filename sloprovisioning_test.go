@@ -311,6 +311,127 @@ func TestGetVolumesByIdentifierMatchPagination(t *testing.T) {
 	assert.Equal(t, "0003", volumes.Volumes[2].ID)
 }
 
+func TestGetVolumesCapacityBulk(t *testing.T) {
+	allowedArray := "testSymID"
+	tests := []struct {
+		name            string
+		symID           string
+		expectedVolumes *types.Volumev1
+		expectedStatus  int
+		expectedErr     string
+		responseBody    string
+	}{
+		{
+			name:  "Valid symID with volumes",
+			symID: "testSymID",
+			expectedVolumes: &types.Volumev1{
+				Volumes: []types.VolumeEnhanced{
+					{
+						ID:                      "0001",
+						CapGB:                   100,
+						EffectiveUsedCapacityGB: 25,
+						StorageGroups: []types.StorageGroupID{
+							{StorageGroupID: "SG1"},
+						},
+						SRP: types.Srp{ID: "SRP_1"},
+					},
+				},
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:            "Valid symID with no volumes returns empty slice",
+			symID:           "testSymID",
+			expectedVolumes: &types.Volumev1{Volumes: []types.VolumeEnhanced{}},
+			expectedStatus:  http.StatusOK,
+		},
+		{
+			name:        "Error from IsAllowedArray",
+			symID:       "",
+			expectedErr: "the requested array () is ignored as it is not managed",
+		},
+		{
+			name:           "HTTP error from API",
+			symID:          "testSymID",
+			expectedStatus: http.StatusInternalServerError,
+			expectedErr:    "Internal Server Error",
+		},
+		{
+			name:           "Invalid JSON response",
+			symID:          "testSymID",
+			expectedStatus: http.StatusOK,
+			responseBody:   "not-valid-json",
+			expectedErr:    "invalid character",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "/univmax/rest/v1/systems/"+tc.symID+"/volumes", r.URL.Path, "Expected URL path")
+				assert.Contains(t, r.URL.RawQuery, "select=id,cap_gb,effective_used_capacity_gb", "Expected capacity select fields")
+				assert.Contains(t, r.URL.RawQuery, "limit=1000", "Expected limit param")
+				assert.Contains(t, r.URL.RawQuery, "expiration_delay_secs=30", "Expected expiration_delay_secs param")
+				w.WriteHeader(tc.expectedStatus)
+				if tc.responseBody != "" {
+					w.Write([]byte(tc.responseBody))
+				} else if tc.expectedStatus == http.StatusOK {
+					json.NewEncoder(w).Encode(tc.expectedVolumes)
+				}
+			}))
+			defer server.Close()
+
+			c, err := NewClientWithArgs(server.URL, "", true, true, "")
+			assert.NoError(t, err)
+			c.SetAllowedArrays([]string{allowedArray})
+
+			volumes, err := c.GetVolumesCapacityBulk(context.Background(), tc.symID)
+			if tc.expectedErr != "" {
+				assert.ErrorContains(t, err, tc.expectedErr)
+				assert.Nil(t, volumes)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedVolumes, volumes)
+			}
+		})
+	}
+}
+
+func TestGetVolumesCapacityBulkPagination(t *testing.T) {
+	allowedArray := "testSymID"
+	requestCount := 0
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		w.WriteHeader(http.StatusOK)
+		switch requestCount {
+		case 1:
+			assert.NotContains(t, r.URL.RawQuery, "resume_token", "First request should not have resume_token")
+			json.NewEncoder(w).Encode(types.Volumev1{
+				Volumes:      []types.VolumeEnhanced{{ID: "0001", CapGB: 10}},
+				VolumePaging: types.VolumePaging{ResumeToken: "token-page-2", RemainingInstances: 1},
+			})
+		case 2:
+			assert.Contains(t, r.URL.RawQuery, "resume_token=token-page-2", "Second request should have resume_token")
+			json.NewEncoder(w).Encode(types.Volumev1{
+				Volumes: []types.VolumeEnhanced{{ID: "0002", CapGB: 20}},
+			})
+		}
+	}))
+	defer server.Close()
+
+	c, err := NewClientWithArgs(server.URL, "", true, true, "")
+	assert.NoError(t, err)
+	c.SetAllowedArrays([]string{allowedArray})
+
+	volumes, err := c.GetVolumesCapacityBulk(context.Background(), "testSymID")
+	assert.NoError(t, err)
+	assert.Equal(t, 2, requestCount, "Expected 2 paginated requests")
+	assert.Equal(t, 2, len(volumes.Volumes), "Expected 2 volumes across all pages")
+	assert.Equal(t, "0001", volumes.Volumes[0].ID)
+	assert.Equal(t, "0002", volumes.Volumes[1].ID)
+}
+
 func TestStorageGroupVolumeCounts(t *testing.T) {
 	allowedArray := "testSymID"
 	tests := []struct {

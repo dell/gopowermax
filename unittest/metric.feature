@@ -14,6 +14,34 @@ Feature: PMAX metrics test
   | "000197900046"   | "GetStorageGroupMetricsError"  | "induced error"                   |
   | "000197900046"   | "none"                         | "none"                            |
 
+  Scenario Outline: Test GetStorageGroupMetricsBulk
+  Given a valid connection
+  And I have an allowed list of <arrays>
+  And I induce error <induced>
+  When I call GetStorageGroupMetricsBulk
+  Then the error message contains <errormsg>
+  And I get StorageGroupMetricsBulk
+
+  Examples:
+  | arrays           | induced                              | errormsg                          |
+  | "000000000000"   | "none"                               | "ignored as it is not managed"    |
+  | "000197900046"   | "GetStorageGroupMetricsBulkError"    | "induced error"                   |
+  | "000197900046"   | "none"                               | "none"                            |
+
+  Scenario Outline: Test GetVolumesCapacityBulk
+  Given a valid connection
+  And I have an allowed list of <arrays>
+  And I induce error <induced>
+  When I call GetVolumesCapacityBulk
+  Then the error message contains <errormsg>
+  And I get VolumesCapacityBulk
+
+  Examples:
+  | arrays           | induced                              | errormsg                          |
+  | "000000000000"   | "none"                               | "ignored as it is not managed"    |
+  | "000197900046"   | "GetVolumesCapacityBulkError"        | "induced error"                   |
+  | "000197900046"   | "none"                               | "none"                            |
+
   Scenario Outline: Test GetVolumesMetrics
   Given a valid connection
   And I have an allowed list of <arrays>

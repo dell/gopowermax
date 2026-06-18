@@ -238,6 +238,8 @@ type inducedErrors struct {
 	UpdateHostGroupError                   bool
 	GetHostGroupListError                  bool
 	GetStorageGroupMetricsError            bool
+	GetStorageGroupMetricsBulkError        bool
+	GetVolumesCapacityBulkError            bool
 	GetVolumesMetricsError                 bool
 	GetFileSysMetricsError                 bool
 	GetStorageGroupPerfKeyError            bool
@@ -302,7 +304,7 @@ func SafeSetInducedError(inducedErrsPtr interface{}, errName string, value inter
 	v := reflect.ValueOf(inducedErrsPtr)
 
 	// Check if it is a pointer
-	if v.Kind() != reflect.Ptr {
+	if v.Kind() != reflect.Ptr { //nolint:govet
 		return errors.New("expected a pointer to struct")
 	}
 
@@ -337,7 +339,7 @@ func SafeGetInducedError(inducedErrsPtr interface{}, errName string) (errValue i
 	defer mockCacheMutex.Unlock()
 
 	v := reflect.ValueOf(inducedErrsPtr)
-	if v.Kind() != reflect.Ptr {
+	if v.Kind() != reflect.Ptr { //nolint:govet
 		return nil, errors.New("expected a pointer to struct")
 	}
 
@@ -450,6 +452,8 @@ func Reset() {
 	InducedErrors.UpdateHostGroupError = false
 	InducedErrors.GetHostGroupListError = false
 	InducedErrors.GetStorageGroupMetricsError = false
+	InducedErrors.GetStorageGroupMetricsBulkError = false
+	InducedErrors.GetVolumesCapacityBulkError = false
 	InducedErrors.GetVolumesMetricsError = false
 	InducedErrors.GetFileSysMetricsError = false
 	InducedErrors.GetStorageGroupPerfKeyError = false
@@ -772,6 +776,7 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIX+"/replication/symmetrix/{symID}/rdf_director/{dir}/port/{port}/remote_port", HandleRDFRemotePort)
 
 	// Performance Metrics
+	router.HandleFunc(PREFIXV1+"/systems/{symid}/performance-categories/StorageGroup", HandleStorageGroupMetricsBulk)
 	router.HandleFunc(PREFIXNOVERSION+"/performance/StorageGroup/metrics", HandleStorageGroupMetrics)
 	router.HandleFunc(PREFIXNOVERSION+"/performance/Volume/metrics", HandleVolumeMetrics)
 	router.HandleFunc(PREFIXNOVERSION+"/performance/file/filesystem/metrics", HandleFileSysMetrics)
@@ -1614,8 +1619,16 @@ func handleVolumes(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(volID)
 	switch r.Method {
 	case http.MethodGet:
-		// Parse the identifier filter from query parameters
+		// Parse the query parameters
 		queryParams := r.URL.Query()
+		selectParam := queryParams.Get("select")
+
+		// Check if this is a capacity bulk query
+		if strings.Contains(selectParam, "cap_gb") {
+			handleVolumesCapacityBulk(w, r)
+			return
+		}
+
 		filter := queryParams.Get("filter")
 		identifier := ""
 		if strings.Contains(filter, "identifier EQ ") {
@@ -1651,6 +1664,27 @@ func handleVolumes(w http.ResponseWriter, r *http.Request) {
 	default:
 		writeError(w, "Method["+r.Method+"] not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func handleVolumesCapacityBulk(w http.ResponseWriter, _ *http.Request) {
+	if InducedErrors.GetVolumesCapacityBulkError {
+		writeError(w, "Error getting volumes capacity bulk: induced error", http.StatusRequestTimeout)
+		return
+	}
+	result := &types.Volumev1{
+		Volumes: []types.VolumeEnhanced{
+			{
+				ID:                      "00001",
+				CapGB:                   100.0,
+				EffectiveUsedCapacityGB: 25.0,
+				StorageGroups: []types.StorageGroupID{
+					{StorageGroupID: DefaultStorageGroup},
+				},
+				SRP: types.Srp{ID: "SRP_1"},
+			},
+		},
+	}
+	writeJSON(w, result)
 }
 
 func handleVolume(w http.ResponseWriter, r *http.Request) {
@@ -4112,6 +4146,42 @@ func returnPortGroup(w http.ResponseWriter, portGroupID string) {
 		}
 		writeJSON(w, portGroupList)
 	}
+}
+
+// /univmax/rest/v1/systems/{symid}/performance-categories/StorageGroup
+func HandleStorageGroupMetricsBulk(w http.ResponseWriter, r *http.Request) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	handleStorageGroupMetricsBulk(w, r)
+}
+
+func handleStorageGroupMetricsBulk(w http.ResponseWriter, _ *http.Request) {
+	if InducedErrors.GetStorageGroupMetricsBulkError {
+		writeError(w, "Error getting bulk storage group metrics: induced error", http.StatusRequestTimeout)
+		return
+	}
+	sgMetric := types.StorageGroupMetric{
+		HostReads:         0.0,
+		HostWrites:        0.0,
+		HostMBReads:       0.0,
+		HostMBWritten:     0.0,
+		ReadResponseTime:  0.0,
+		WriteResponseTime: 0.0,
+		AllocatedCapacity: 0.0,
+		AvgIOSize:         0.0,
+		Timestamp:         1671091500000,
+	}
+	instance := types.StorageGroupMetricInstance{
+		ID:      DefaultStorageGroup,
+		Metrics: []types.StorageGroupMetric{sgMetric},
+	}
+	result := &types.StorageGroupPerfCategoryResult{
+		ID:              "StorageGroup",
+		ResourceType:    "performance-categories",
+		System:          DefaultSymmetrixID,
+		MetricInstances: []types.StorageGroupMetricInstance{instance},
+	}
+	writeJSON(w, result)
 }
 
 // /univmax/restapi/performance/StorageGroup/metrics

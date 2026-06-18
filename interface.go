@@ -122,6 +122,9 @@ type Pmax interface {
 	// GetVolumesByIdentifierMatch returns a Volume structure given the symmetrix ID and volume identifier that matches the regex.
 	GetVolumesByIdentifierMatch(ctx context.Context, symID string, identifierMatcher string) (*types.Volumev1, error)
 
+	// GetVolumesCapacityBulk returns capacity information for all volumes on the array in a single bulk operation.
+	GetVolumesCapacityBulk(ctx context.Context, symID string) (*types.Volumev1, error)
+
 	// GetStorageGroupIDList returns a list of all the StorageGroup ids.
 	GetStorageGroupIDList(ctx context.Context, symID, storageGroupIDMatch string, like bool) (*types.StorageGroupIDList, error)
 
@@ -409,6 +412,8 @@ type Pmax interface {
 
 	// GetStorageGroupMetrics returns the list of required metrics
 	GetStorageGroupMetrics(ctx context.Context, symID string, storageGroupID string, metricsQuery []string, firstAvailableDate int64, lastAvailableTime int64) (*types.StorageGroupMetricsIterator, error)
+	// GetStorageGroupMetricsBulk returns all Storage Group performance metrics in a single GET call
+	GetStorageGroupMetricsBulk(ctx context.Context, symID string) (*types.StorageGroupPerfCategoryResult, error)
 	// GetVolumesMetrics returns the list of volume metrics for specific storage groups
 	GetVolumesMetrics(ctx context.Context, symID string, storageGroups string, metricsQuery []string, firstAvailableDate int64, lastAvailableTime int64) (*types.VolumeMetricsIterator, error)
 	// GetStorageGroupPerfKeys returns the performance keys of storage group
