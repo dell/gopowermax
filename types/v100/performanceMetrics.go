@@ -129,6 +129,22 @@ type ArrayInfo struct {
 	LastAvailableDate  int64  `json:"lastAvailableDate"`
 }
 
+// StorageGroupPerfCategoryResult represents the response from the
+// GET /performance-categories/StorageGroup bulk endpoint.
+type StorageGroupPerfCategoryResult struct {
+	ID              string                       `json:"id"`
+	ResourceType    string                       `json:"resource_type"`
+	System          string                       `json:"system"`
+	MetricInstances []StorageGroupMetricInstance `json:"metric_instances"`
+}
+
+// StorageGroupMetricInstance represents a single storage group's metrics
+// returned by the bulk performance-categories endpoint.
+type StorageGroupMetricInstance struct {
+	ID      string               `json:"id"`
+	Metrics []StorageGroupMetric `json:"metrics"`
+}
+
 // FileSystemMetricsParam contains req param for filesystem metric
 type FileSystemMetricsParam struct {
 	SystemID     string   `json:"systemId"`

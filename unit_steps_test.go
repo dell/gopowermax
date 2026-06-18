@@ -109,17 +109,19 @@ type unitContext struct {
 	PortList                   *types.PortList
 	Volumev1                   *types.Volumev1
 
-	symRepCapabilities    *types.SymReplicationCapabilities
-	sourceVolumeList      []types.VolumeList
-	symVolumeList         *types.SymVolumeList
-	volSnapList           *types.SnapshotVolumeGeneration
-	volumeSnapshot        *types.VolumeSnapshot
-	volSnapGenerationList *types.VolumeSnapshotGenerations
-	volSnapGenerationInfo *types.VolumeSnapshotGeneration
-	volResultPrivate      *types.VolumeResultPrivate
-	storageGroupMetrics   *types.StorageGroupMetricsIterator
-	volumesMetrics        *types.VolumeMetricsIterator
-	fileSystemMetrics     *types.FileSystemMetricsIterator
+	symRepCapabilities      *types.SymReplicationCapabilities
+	sourceVolumeList        []types.VolumeList
+	symVolumeList           *types.SymVolumeList
+	volSnapList             *types.SnapshotVolumeGeneration
+	volumeSnapshot          *types.VolumeSnapshot
+	volSnapGenerationList   *types.VolumeSnapshotGenerations
+	volSnapGenerationInfo   *types.VolumeSnapshotGeneration
+	volResultPrivate        *types.VolumeResultPrivate
+	storageGroupMetrics     *types.StorageGroupMetricsIterator
+	storageGroupMetricsBulk *types.StorageGroupPerfCategoryResult
+	volumesCapacityBulk     *types.Volumev1
+	volumesMetrics          *types.VolumeMetricsIterator
+	fileSystemMetrics       *types.FileSystemMetricsIterator
 
 	sgSnapshot              *types.StorageGroupSnapshot
 	storageGroupSnapSetting *types.CreateStorageGroupSnapshot
@@ -421,6 +423,10 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.GetHostGroupListError = true
 	case "GetStorageGroupMetricsError":
 		mock.InducedErrors.GetStorageGroupMetricsError = true
+	case "GetStorageGroupMetricsBulkError":
+		mock.InducedErrors.GetStorageGroupMetricsBulkError = true
+	case "GetVolumesCapacityBulkError":
+		mock.InducedErrors.GetVolumesCapacityBulkError = true
 	case "GetVolumesMetricsError":
 		mock.InducedErrors.GetVolumesMetricsError = true
 	case "GetFileSysMetricsError":
@@ -2454,6 +2460,44 @@ func (c *unitContext) iGetStorageGroupMetrics() error {
 	return nil
 }
 
+func (c *unitContext) iCallGetStorageGroupMetricsBulk() error {
+	var metrics *types.StorageGroupPerfCategoryResult
+	metrics, c.err = c.client.GetStorageGroupMetricsBulk(context.TODO(), symID)
+	c.storageGroupMetricsBulk = metrics
+	return nil
+}
+
+func (c *unitContext) iGetStorageGroupMetricsBulk() error {
+	if c.err == nil {
+		if c.storageGroupMetricsBulk == nil {
+			return fmt.Errorf("StorageGroupMetricsBulk nil")
+		}
+		if len(c.storageGroupMetricsBulk.MetricInstances) == 0 {
+			return fmt.Errorf("no metric instances in StorageGroupMetricsBulk")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iCallGetVolumesCapacityBulk() error {
+	var volumes *types.Volumev1
+	volumes, c.err = c.client.GetVolumesCapacityBulk(context.TODO(), symID)
+	c.volumesCapacityBulk = volumes
+	return nil
+}
+
+func (c *unitContext) iGetVolumesCapacityBulk() error {
+	if c.err == nil {
+		if c.volumesCapacityBulk == nil {
+			return fmt.Errorf("VolumesCapacityBulk nil")
+		}
+		if len(c.volumesCapacityBulk.Volumes) == 0 {
+			return fmt.Errorf("no volumes in VolumesCapacityBulk")
+		}
+	}
+	return nil
+}
+
 func (c *unitContext) iCallGetVolumesMetrics() error {
 	var metrics *types.VolumeMetricsIterator
 	metrics, c.err = c.client.GetVolumesMetrics(context.TODO(), symID, mock.DefaultStorageGroup, []string{"MBReads"}, 0, 0)
@@ -3140,6 +3184,10 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	// Performance Metrics
 	s.Step(`^I call GetStorageGroupMetrics$`, c.iCallGetStorageGroupMetrics)
 	s.Step(`^I get StorageGroupMetrics$`, c.iGetStorageGroupMetrics)
+	s.Step(`^I call GetStorageGroupMetricsBulk$`, c.iCallGetStorageGroupMetricsBulk)
+	s.Step(`^I get StorageGroupMetricsBulk$`, c.iGetStorageGroupMetricsBulk)
+	s.Step(`^I call GetVolumesCapacityBulk$`, c.iCallGetVolumesCapacityBulk)
+	s.Step(`^I get VolumesCapacityBulk$`, c.iGetVolumesCapacityBulk)
 	s.Step(`^I call GetVolumesMetrics$`, c.iCallGetVolumesMetrics)
 	s.Step(`^I get VolumesMetrics$`, c.iGetVolumesMetrics)
 	s.Step(`^I call GetFileSystemMetricsByID for "([^"]*)"$`, c.iCallGetFileSystemMetricsByIDFor)

@@ -56,6 +56,10 @@ const (
 	SelectIdentifier           = "identifier,"
 	SelectStorageGroup         = "storage_groups,"
 	SelectCapCyl               = "cap_cyl,"
+	SelectCapGB                = "cap_gb,"
+	SelectEffectiveUsedCapGB   = "effective_used_capacity_gb,"
+	SelectStorageGroupID       = "storage_groups.id,"
+	SelectSRPID                = "srp.id,"
 	SelectMaskingViews         = "masking_views,"
 	SelectVolHostPaths         = "volume_host_paths,"
 	SelectSRP                  = "srp,"
@@ -413,6 +417,62 @@ func (c *Client) GetVolumesByIdentifierMatch(ctx context.Context, symID string, 
 		cancel()
 
 		log.Debugf("Page remaining %d, out of total %d", page.VolumePaging.RemainingInstances, page.VolumePaging.TotalInstances)
+		if page.Volumes != nil {
+			allVolumes = append(allVolumes, page.Volumes...)
+		}
+		if page.VolumePaging.RemainingInstances == 0 {
+			break
+		}
+		requestURL = baseURL + "&resume_token=" + page.VolumePaging.ResumeToken
+	}
+
+	return &types.Volumev1{Volumes: allVolumes}, nil
+}
+
+// GetVolumesCapacityBulk returns capacity information for all volumes on the array in a single
+// bulk operation using the v1 enhanced volumes endpoint. Only the capacity-related fields
+// (cap_gb, effective_used_capacity_gb), the storage group ids and the srp id are selected to
+// keep the payload small. Results are aggregated across all pages.
+//
+// This requires Unisphere 10.1 or above. Callers targeting older arrays should fall back to
+// per-volume GetVolumeByID calls.
+func (c *Client) GetVolumesCapacityBulk(ctx context.Context, symID string) (*types.Volumev1, error) {
+	defer c.TimeSpent("GetVolumesCapacityBulk", time.Now())
+	if _, err := c.IsAllowedArray(symID); err != nil {
+		return nil, err
+	}
+	baseURL := c.urlPrefixV1() + symID + XVolumeV1 + SelectQuery + SelectID + SelectCapGB +
+		SelectEffectiveUsedCapGB + SelectStorageGroupID + SelectSRPID +
+		"&limit=1000&expiration_delay_secs=30"
+
+	allVolumes := make([]types.VolumeEnhanced, 0)
+	requestURL := baseURL
+
+	for {
+		ctx, cancel := c.GetTimeoutContext(ctx)
+		resp, err := c.api.DoAndGetResponseBody(
+			ctx, http.MethodGet, requestURL, c.getDefaultHeaders(), nil)
+		if err != nil {
+			cancel()
+			log.Errorf("GetVolumesCapacityBulk failed: %s", err.Error())
+			return nil, err
+		}
+		if err = c.checkResponse(resp); err != nil {
+			cancel()
+			return nil, err
+		}
+		page := &types.Volumev1{}
+		decoder := json.NewDecoder(resp.Body)
+		if err = decoder.Decode(page); err != nil {
+			resp.Body.Close()
+			cancel()
+			return nil, err
+		}
+
+		resp.Body.Close()
+		cancel()
+
+		log.Debugf("GetVolumesCapacityBulk page remaining %d, out of total %d", page.VolumePaging.RemainingInstances, page.VolumePaging.TotalInstances)
 		if page.Volumes != nil {
 			allVolumes = append(allVolumes, page.Volumes...)
 		}
