@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
+	log "github.com/dell/csmlog"
 	"github.com/stretchr/testify/assert"
 )
 

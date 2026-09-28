@@ -21,7 +21,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -30,8 +29,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dell/csmlog"
 	types "github.com/dell/gopowermax/v2/types/v100"
-	log "github.com/sirupsen/logrus"
 )
 
 // constants
@@ -114,6 +113,9 @@ type Client interface {
 
 	// ParseJSONError parses the JSON in r into an error object
 	ParseJSONError(r *http.Response) error
+
+	// SetRequestObserver registers a callback for HTTP request observations
+	SetRequestObserver(observer RequestObserver)
 }
 
 // SafeHeader provides thread-safe access to HTTP headers.
@@ -151,6 +153,7 @@ type client struct {
 	showHTTP          bool
 	debug             bool
 	customHTTPHeaders *SafeHeader
+	requestObserver   RequestObserver
 }
 
 // ClientOptions are options for the API client.
@@ -170,6 +173,20 @@ type ClientOptions struct {
 
 	// CertFile is the path to the reverseproxy tls certificate file
 	CertFile string
+}
+
+// RequestObservation captures a single REST request outcome.
+type RequestObservation struct {
+	Method     string
+	Endpoint   string
+	StatusCode int
+	Duration   time.Duration
+	Err        error
+}
+
+// RequestObserver receives request observations without importing metrics code.
+type RequestObserver interface {
+	ObservePowerMaxRequest(RequestObservation)
 }
 
 // New returns a new API client.
@@ -210,11 +227,11 @@ func New(
 		if opts.CertFile != "" {
 			revProxyCert, err := os.ReadFile(opts.CertFile)
 			if err != nil {
-				c.doLog(log.WithError(err).Error, "Unable to read certificate file")
+				csmlog.Error("Unable to read certificate file: " + err.Error())
 				return nil, err
 			}
 			if ok := pool.AppendCertsFromPEM(revProxyCert); !ok {
-				c.doLog(log.Error, "Failed to append reverse proxy certificate to pool")
+				csmlog.Error("Failed to append reverse proxy certificate to pool")
 				return nil, errors.New("failed to append reverse proxy certificate to pool")
 			}
 		}
@@ -319,9 +336,7 @@ func (c *client) DoWithHeaders(
 		}
 		dec := json.NewDecoder(res.Body)
 		if err = dec.Decode(resp); err != nil && err != io.EOF {
-			c.doLog(log.WithError(err).Error,
-				fmt.Sprintf("Unable to decode response into %+v",
-					resp))
+			csmlog.Errorf("Unable to decode response into %+v: %v", resp, err)
 			return err
 		}
 	default:
@@ -346,6 +361,7 @@ func (c *client) DoAndGetResponseBody(
 		hostEndsWithSlash  = endsWithSlash(c.host)
 		uriBeginsWithSlash = beginsWithSlash(uri)
 	)
+	start := time.Now()
 
 	ubf.WriteString(c.host)
 
@@ -432,8 +448,11 @@ func (c *client) DoAndGetResponseBody(
 	// send the request
 	req = req.WithContext(ctx)
 	if res, err = c.http.Do(req); err != nil { // #nosec G704 -- URL is constructed from the configured host endpoint, not user input
+		c.observeRequest(method, u.Path, 0, err, time.Since(start))
 		return nil, err
 	}
+
+	c.observeRequest(method, u.Path, res.StatusCode, nil, time.Since(start))
 
 	if c.showHTTP {
 		logResponse(ctx, res, c.doLog)
@@ -460,6 +479,11 @@ func (c *client) GetCustomHTTPHeaders() http.Header {
 	return c.customHTTPHeaders.GetHeader()
 }
 
+// SetRequestObserver registers the callback for capturing HTTP request metadata.
+func (c *client) SetRequestObserver(observer RequestObserver) {
+	c.requestObserver = observer
+}
+
 func (c *client) ParseJSONError(r *http.Response) error {
 	jsonError := &types.Error{}
 	if err := json.NewDecoder(r.Body).Decode(jsonError); err != nil {
@@ -476,6 +500,30 @@ func (c *client) ParseJSONError(r *http.Response) error {
 	}
 
 	return jsonError
+}
+
+func (c *client) observeRequest(method, endpoint string, statusCode int, err error, duration time.Duration) {
+	if c.requestObserver == nil {
+		return
+	}
+	obs := RequestObservation{
+		Method:     method,
+		Endpoint:   endpoint,
+		StatusCode: statusCode,
+		Duration:   duration,
+		Err:        err,
+	}
+
+	// Add panic protection
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// Log observer panic but don't crash client
+				csmlog.Warnf("PowerMax observer panic: %v", r)
+			}
+		}()
+		c.requestObserver.ObservePowerMaxRequest(obs)
+	}()
 }
 
 func (c *client) doLog(

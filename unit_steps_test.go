@@ -122,6 +122,7 @@ type unitContext struct {
 	volumesCapacityBulk     *types.Volumev1
 	volumesMetrics          *types.VolumeMetricsIterator
 	fileSystemMetrics       *types.FileSystemMetricsIterator
+	rdfGroupMetrics         *types.RDFGroupMetricsIterator
 
 	sgSnapshot              *types.StorageGroupSnapshot
 	storageGroupSnapSetting *types.CreateStorageGroupSnapshot
@@ -199,6 +200,7 @@ func (c *unitContext) reset() {
 	c.fileInterface = nil
 	c.volumesMetrics = nil
 	c.fileSystemMetrics = nil
+	c.rdfGroupMetrics = nil
 	c.nfsServer = nil
 }
 
@@ -226,6 +228,7 @@ func (c *unitContext) iInduceError(errorType string) error {
 	mock.InducedErrors.DeleteStorageGroupError = false
 	mock.InducedErrors.GetStoragePoolListError = false
 	mock.InducedErrors.GetMaskingViewError = false
+	mock.InducedErrors.GetMaskingViewConnectionsError = false
 	mock.InducedErrors.GetPortGroupError = false
 	mock.InducedErrors.GetInitiatorError = false
 	mock.InducedErrors.GetHostError = false
@@ -337,6 +340,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.GetStoragePoolListError = true
 	case "GetMaskingViewError":
 		mock.InducedErrors.GetMaskingViewError = true
+	case "GetMaskingViewConnectionsError":
+		mock.InducedErrors.GetMaskingViewConnectionsError = true
 	case "GetPortGroupError":
 		mock.InducedErrors.GetPortGroupError = true
 	case "GetInitiatorError":
@@ -431,6 +436,8 @@ func (c *unitContext) iInduceError(errorType string) error {
 		mock.InducedErrors.GetVolumesMetricsError = true
 	case "GetFileSysMetricsError":
 		mock.InducedErrors.GetFileSysMetricsError = true
+	case "GetRDFGroupMetricsError":
+		mock.InducedErrors.GetRDFGroupMetricsError = true
 	case "GetStorageGroupPerfKeyError":
 		mock.InducedErrors.GetStorageGroupPerfKeyError = true
 	case "GetArrayPerfKeyError":
@@ -1111,6 +1118,11 @@ func (c *unitContext) iGetAValidMaskingViewListIfNoError() error {
 
 func (c *unitContext) iCallGetMaskingViewByID(mvID string) error {
 	c.maskingView, c.err = c.client.GetMaskingViewByID(context.TODO(), symID, mvID)
+	return nil
+}
+
+func (c *unitContext) iCallGetMaskingViewConnections(mvID string) error {
+	_, c.err = c.client.GetMaskingViewConnections(context.TODO(), symID, mvID, "")
 	return nil
 }
 
@@ -2241,6 +2253,15 @@ func (c *unitContext) iCallCreateRDFPair(mode string) error {
 	return nil
 }
 
+func (c *unitContext) iCallDeleteRDFPair(force string) error {
+	forceFlag := false
+	if force == "true" {
+		forceFlag = true
+	}
+	c.err = c.client.DeleteRDFPair(context.TODO(), symID, fmt.Sprintf("%d", mock.DefaultAsyncRDFGNo), c.volIDList[0], forceFlag)
+	return nil
+}
+
 func (c *unitContext) iCallExecuteAction(action string) error {
 	c.err = c.client.ExecuteReplicationActionOnSG(context.TODO(), symID, action, mock.DefaultASYNCProtectedSG, fmt.Sprintf("%d", mock.DefaultAsyncRDFGNo), false, false, true)
 	return nil
@@ -2519,6 +2540,25 @@ func (c *unitContext) iGetVolumesMetrics() error {
 		}
 		if len(c.volumesMetrics.ResultList.Result) == 0 {
 			return fmt.Errorf("no metric in volumesMetrics")
+		}
+	}
+	return nil
+}
+
+func (c *unitContext) iCallGetRDFGroupMetrics() error {
+	var metrics *types.RDFGroupMetricsIterator
+	metrics, c.err = c.client.GetRDFGroupMetrics(context.TODO(), symID, 1, []string{"AvgCycleTime", "WriteMBs", "ReadMBs"}, 0, 0)
+	c.rdfGroupMetrics = metrics
+	return nil
+}
+
+func (c *unitContext) iGetRDFGroupMetrics() error {
+	if c.err == nil {
+		if c.rdfGroupMetrics == nil {
+			return fmt.Errorf("RDFGroupMetrics nil")
+		}
+		if len(c.rdfGroupMetrics.ResultList.Result) == 0 {
+			return fmt.Errorf("no metric in RDFGroupMetrics")
 		}
 	}
 	return nil
@@ -3054,6 +3094,7 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^I call GetMaskingViewList$`, c.iCallGetMaskingViewList)
 	s.Step(`^I get a valid MaskingViewList if no error$`, c.iGetAValidMaskingViewListIfNoError)
 	s.Step(`^I call GetMaskingViewByID "([^"]*)"$`, c.iCallGetMaskingViewByID)
+	s.Step(`^I call GetMaskingViewConnections "([^"]*)"$`, c.iCallGetMaskingViewConnections)
 	s.Step(`^I get a valid MaskingView if no error$`, c.iGetAValidMaskingViewIfNoError)
 	s.Step(`^I call RenameMaskingView with "([^"]*)"$`, c.iCallRenameMaskingViewWith)
 	s.Step(`^I call CreateMaskingViewWithHost "([^"]*)"$`, c.iCallCreateMaskingViewWithHost)
@@ -3179,9 +3220,12 @@ func UnitTestContext(s *godog.ScenarioContext) {
 	s.Step(`^the volumes should "([^"]*)" be replicated$`, c.theVolumesShouldBeReplicated)
 	s.Step(`^I call RemoveVolumesFromProtectedStorageGroup$`, c.iCallRemoveVolumesFromProtectedStorageGroup)
 	s.Step(`^I call CreateRDFPair with "([^"]*)"$`, c.iCallCreateRDFPair)
+	s.Step(`^I call DeleteRDFPair with force "([^"]*)"$`, c.iCallDeleteRDFPair)
 	s.Step(`^I call ExecuteAction "([^"]*)"$`, c.iCallExecuteAction)
 
 	// Performance Metrics
+	s.Step(`^I call GetRDFGroupMetrics$`, c.iCallGetRDFGroupMetrics)
+	s.Step(`^I get RDFGroupMetrics$`, c.iGetRDFGroupMetrics)
 	s.Step(`^I call GetStorageGroupMetrics$`, c.iCallGetStorageGroupMetrics)
 	s.Step(`^I get StorageGroupMetrics$`, c.iGetStorageGroupMetrics)
 	s.Step(`^I call GetStorageGroupMetricsBulk$`, c.iCallGetStorageGroupMetricsBulk)

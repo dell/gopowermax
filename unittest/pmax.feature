@@ -622,6 +622,20 @@ Scenario Outline: Test cases for Synchronous CreateVolumeInStorageGroup with met
     | "Test-MV"             | "GetMaskingViewError"          | "induced error"                                       | ""        |
     | "Test-MV"             | "none"                         | "ignored as it is not managed"                        | "ignored" |
 
+  Scenario Outline: Test GetMaskingViewConnections
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I have a MaskingView <mvname>
+    And I induce error <induced>
+    When I call GetMaskingViewConnections <mvname>
+    Then the error message contains <errormsg>
+
+    Examples:
+    | mvname        | induced                              | errormsg                               | arrays    |
+    | "Test-MV"     | "none"                               | "none"                                 | ""        |
+    | "Test-MV"     | "GetMaskingViewConnectionsError"     | "induced error"                        | ""        |
+    | "Test-MV"     | "none"                               | "ignored as it is not managed"         | "ignored" |
+
   Scenario Outline: Test Rename Masking View
     Given a valid connection
     And I have an allowed list of <arrays>

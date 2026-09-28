@@ -229,7 +229,9 @@ type StoragePool struct {
 
 // FbaCap FBA storage pool capacity
 type FbaCap struct {
-	Provisioned *Provisioned `json:"provisioned"`
+	Provisioned *Provisioned       `json:"provisioned"`
+	Effective   *EffectiveCapacity `json:"effective"`
+	Snapshot    *SnapshotCapacity  `json:"snapshot"`
 }
 
 // CkdCap CKD storage pool capacity
@@ -238,9 +240,53 @@ type CkdCap struct {
 }
 
 type Provisioned struct {
-	UsableUsedInTB float64 `json:"used_tb"`
-	UsableTotInTB  float64 `json:"effective_capacity_tb"`
-	//	EffectiveUsedCapacityPercent float64 `json:"provisioned_percent"`
+	UsableUsedInTB     float64 `json:"used_tb"`
+	UsableTotInTB      float64 `json:"effective_capacity_tb"`
+	ProvisionedTB      float64 `json:"provisioned_tb"`
+	ProvisionedPercent float64 `json:"provisioned_percent"`
+}
+
+// EffectiveCapacity represents effective capacity information for FBA SRPs
+type EffectiveCapacity struct {
+	UsedTB                     float64                    `json:"used_tb"`
+	TotalTB                    float64                    `json:"total_tb"`
+	FreeTB                     float64                    `json:"free_tb"`
+	EffectiveUsedPercent       float64                    `json:"effective_used_percent"`
+	TargetTB                   float64                    `json:"target_tb"`
+	PhysicalCapacity           PhysicalCapacity           `json:"physical_capacity"`
+	EffectiveCapacityResources EffectiveCapacityResources `json:"effective_capacity_resources"`
+	EffectiveCapacityUsage     EffectiveCapacityUsage     `json:"effective_capacity_usage"`
+}
+
+// PhysicalCapacity represents physical capacity information
+type PhysicalCapacity struct {
+	UsedTB   float64 `json:"used_tb"`
+	TotalTB  float64 `json:"total_tb"`
+	FreeTB   float64 `json:"free_tb"`
+	TargetTB float64 `json:"target_tb"`
+}
+
+// EffectiveCapacityResources represents effective capacity resources
+type EffectiveCapacityResources struct {
+	UsedTB  float64 `json:"used_tb"`
+	TotalTB float64 `json:"total_tb"`
+	FreeTB  float64 `json:"free_tb"`
+}
+
+// EffectiveCapacityUsage represents effective capacity usage breakdown
+type EffectiveCapacityUsage struct {
+	SnapshotUsedTB float64 `json:"snapshot_used_tb"`
+	UserUsedTB     float64 `json:"user_used_tb"`
+	FreeTB         float64 `json:"free_tb"`
+}
+
+// SnapshotCapacity represents snapshot capacity information for FBA SRPs
+type SnapshotCapacity struct {
+	EffectiveUsedPercent float64 `json:"effective_used_percent"`
+	PhysicalUsedPercent  float64 `json:"physical_used_percent"`
+	ResourceUsedTB       float64 `json:"resource_used_tb"`
+	ModifiedCapacityTB   float64 `json:"modified_capacity_tb"`
+	TotalCapacityTB      float64 `json:"total_capacity_tb"`
 }
 
 // SrpCap : capacity of an SRP

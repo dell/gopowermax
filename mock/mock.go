@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -31,7 +32,6 @@ import (
 	types "github.com/dell/gopowermax/v2/types/v100"
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/copier"
-	log "github.com/sirupsen/logrus"
 )
 
 // constants
@@ -239,6 +239,7 @@ type inducedErrors struct {
 	GetHostGroupListError                  bool
 	GetStorageGroupMetricsError            bool
 	GetStorageGroupMetricsBulkError        bool
+	GetRDFGroupMetricsError                bool
 	GetVolumesCapacityBulkError            bool
 	GetVolumesMetricsError                 bool
 	GetFileSysMetricsError                 bool
@@ -453,6 +454,7 @@ func Reset() {
 	InducedErrors.GetHostGroupListError = false
 	InducedErrors.GetStorageGroupMetricsError = false
 	InducedErrors.GetStorageGroupMetricsBulkError = false
+	InducedErrors.GetRDFGroupMetricsError = false
 	InducedErrors.GetVolumesCapacityBulkError = false
 	InducedErrors.GetVolumesMetricsError = false
 	InducedErrors.GetFileSysMetricsError = false
@@ -780,6 +782,7 @@ func getRouter() http.Handler {
 	router.HandleFunc(PREFIXNOVERSION+"/performance/StorageGroup/metrics", HandleStorageGroupMetrics)
 	router.HandleFunc(PREFIXNOVERSION+"/performance/Volume/metrics", HandleVolumeMetrics)
 	router.HandleFunc(PREFIXNOVERSION+"/performance/file/filesystem/metrics", HandleFileSysMetrics)
+	router.HandleFunc(PREFIXNOVERSION+"/performance/SRDF/metrics", HandleRDFGroupMetrics)
 
 	// Performance Keys
 	router.HandleFunc(PREFIXNOVERSION+"/performance/StorageGroup/keys", HandleStorageGroupPerfKeys)
@@ -1178,6 +1181,8 @@ func handleRDFDevicePair(w http.ResponseWriter, r *http.Request) {
 		handleRDFDevicePairInfo(w, r)
 	case http.MethodPost:
 		handleRDFDevicePairCreation(w, r)
+	case http.MethodDelete:
+		handleRDFDevicePairDeletion(w, r)
 	default:
 		writeError(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -1198,6 +1203,23 @@ func handleRDFDevicePairCreation(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	writeJSON(w, rdfPairs)
+}
+
+// DELETE /univmax/restapi/APIVersion/replication/symmetrix/{symID}/rdf_group/{rdf_no}/volume/{volume_id}
+func handleRDFDevicePairDeletion(w http.ResponseWriter, _ *http.Request) {
+	if InducedErrors.InvalidJSON {
+		writeError(w, "invalid character", http.StatusBadRequest)
+		return
+	}
+	if InducedErrors.GetSRDFPairInfoError {
+		writeError(w, "Could not delete pair", http.StatusBadRequest)
+		return
+	}
+	if InducedErrors.BadHTTPStatus != 0 {
+		w.WriteHeader(InducedErrors.BadHTTPStatus)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // GET /univmax/restapi/APIVersion/replication/symmetrix/{symID}/rdf_group/{rdf_no}/volume/{volume_id}
@@ -3412,7 +3434,7 @@ func addPortGroupWithPortID(portGroupID string, portGroupType string, portIdenti
 		dirPortDetails := strings.Split(dirPortKey, ":")
 		if len(dirPortDetails) != 2 {
 			errormsg := fmt.Errorf("invalid dir port specified: %s", dirPortKey)
-			log.Error(errormsg)
+			log.Printf("Error: %v", errormsg)
 			return nil, errormsg
 		}
 		portKey := types.PortKey{
@@ -4182,6 +4204,38 @@ func handleStorageGroupMetricsBulk(w http.ResponseWriter, _ *http.Request) {
 		MetricInstances: []types.StorageGroupMetricInstance{instance},
 	}
 	writeJSON(w, result)
+}
+
+// /univmax/restapi/performance/SRDF/metrics
+func HandleRDFGroupMetrics(w http.ResponseWriter, r *http.Request) {
+	mockCacheMutex.Lock()
+	defer mockCacheMutex.Unlock()
+	handleRDFGroupMetrics(w, r)
+}
+
+func handleRDFGroupMetrics(w http.ResponseWriter, _ *http.Request) {
+	if InducedErrors.GetRDFGroupMetricsError {
+		writeError(w, "Error getting RDF group metrics: induced error", http.StatusRequestTimeout)
+		return
+	}
+	rdfMetric := types.RDFGroupMetric{
+		AvgCycleTime: 2500.0, // 2.5 seconds lag (ms)
+		WriteMBs:     10.5,   // 10.5 MB/s write bandwidth
+		ReadMBs:      2.3,    // 2.3 MB/s read bandwidth
+		Timestamp:    1671091500000,
+	}
+	metricsIterator := &types.RDFGroupMetricsIterator{
+		ResultList: types.RDFGroupMetricsResultList{
+			Result: []types.RDFGroupMetric{rdfMetric},
+			From:   1,
+			To:     1,
+		},
+		ID:             "mock-rdf-metrics-id",
+		Count:          1,
+		ExpirationTime: 1671091500000,
+		MaxPageSize:    1000,
+	}
+	writeJSON(w, metricsIterator)
 }
 
 // /univmax/restapi/performance/StorageGroup/metrics

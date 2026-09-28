@@ -25,6 +25,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -258,6 +259,7 @@ func TestDoWithHeaders(t *testing.T) {
 		token:             "mockToken",
 		showHTTP:          false,
 		customHTTPHeaders: NewSafeHeader(),
+		requestObserver:   nil,
 	}
 
 	tests := []struct {
@@ -406,6 +408,7 @@ func TestDoAndGetResponseBody(t *testing.T) {
 				token:             "mockToken",
 				showHTTP:          false,
 				customHTTPHeaders: NewSafeHeader(),
+				requestObserver:   nil,
 			},
 			mockError:     nil,
 			expectedError: "",
@@ -425,6 +428,7 @@ func TestDoAndGetResponseBody(t *testing.T) {
 				token:             "mockToken",
 				showHTTP:          false,
 				customHTTPHeaders: NewSafeHeader(),
+				requestObserver:   nil,
 			},
 			mockError:     errors.New("unsupported type error"),
 			expectedError: "json: unsupported type: chan int",
@@ -447,6 +451,7 @@ func TestDoAndGetResponseBody(t *testing.T) {
 				token:             "mockToken",
 				showHTTP:          false,
 				customHTTPHeaders: NewSafeHeader(),
+				requestObserver:   nil,
 			},
 			mockError:     nil,
 			expectedError: "",
@@ -469,6 +474,7 @@ func TestDoAndGetResponseBody(t *testing.T) {
 				token:             "mockToken",
 				showHTTP:          false,
 				customHTTPHeaders: NewSafeHeader(),
+				requestObserver:   nil,
 			},
 			mockError:     nil,
 			expectedError: "",
@@ -491,6 +497,7 @@ func TestDoAndGetResponseBody(t *testing.T) {
 				token:             "mockToken",
 				showHTTP:          false,
 				customHTTPHeaders: NewSafeHeader(),
+				requestObserver:   nil,
 			},
 			mockError:     nil,
 			expectedError: "",
@@ -513,6 +520,7 @@ func TestDoAndGetResponseBody(t *testing.T) {
 				token:             "mockToken",
 				showHTTP:          false,
 				customHTTPHeaders: NewSafeHeader(),
+				requestObserver:   nil,
 			},
 			mockError:     nil,
 			expectedError: "",
@@ -1039,4 +1047,114 @@ func TestDoMethod(t *testing.T) {
 			}
 		})
 	}
+}
+
+// recordingObserver is a mock observer that records RequestObservations for testing
+type recordingObserver struct {
+	mu           sync.Mutex
+	observations []RequestObservation
+}
+
+func (r *recordingObserver) ObservePowerMaxRequest(obs RequestObservation) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.observations = append(r.observations, obs)
+}
+
+func (r *recordingObserver) snapshot() []RequestObservation {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := make([]RequestObservation, len(r.observations))
+	copy(out, r.observations)
+	return out
+}
+
+// testClientWithObserver creates a test client with an observer attached
+func testClientWithObserver(t *testing.T, apiURL string, observer RequestObserver) *client {
+	t.Helper()
+	c, err := New(apiURL, ClientOptions{Timeout: 10 * time.Second}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.SetRequestObserver(observer)
+	return c.(*client)
+}
+
+func TestClient_Get_ObserverSuccess(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte(`{"message":"Success"}`))
+		if err != nil {
+			return
+		}
+	}))
+	defer ts.Close()
+
+	observer := &recordingObserver{}
+	c := testClientWithObserver(t, ts.URL, observer)
+	observer.mu.Lock()
+	observer.observations = nil
+	observer.mu.Unlock()
+
+	var resp map[string]interface{}
+	err := c.Get(context.Background(), "/test", map[string]string{"Content-Type": "application/json"}, &resp)
+	assert.NoError(t, err)
+	assert.Equal(t, "Success", resp["message"])
+
+	observations := observer.snapshot()
+	assert.Len(t, observations, 1)
+	assert.Equal(t, "GET", observations[0].Method)
+	assert.Equal(t, "/test", observations[0].Endpoint)
+	assert.Equal(t, 200, observations[0].StatusCode)
+	assert.Nil(t, observations[0].Err)
+	assert.Greater(t, observations[0].Duration.Nanoseconds(), int64(0))
+}
+
+func TestClient_Get_ObserverFailure(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := w.Write([]byte(`{"error":"bad request"}`))
+		if err != nil {
+			return
+		}
+	}))
+	defer ts.Close()
+
+	observer := &recordingObserver{}
+	c := testClientWithObserver(t, ts.URL, observer)
+	observer.mu.Lock()
+	observer.observations = nil
+	observer.mu.Unlock()
+
+	var resp map[string]interface{}
+	err := c.Get(context.Background(), "/test", map[string]string{"Content-Type": "application/json"}, &resp)
+	assert.Error(t, err)
+
+	observations := observer.snapshot()
+	assert.Len(t, observations, 1)
+	assert.Equal(t, "GET", observations[0].Method)
+	assert.Equal(t, "/test", observations[0].Endpoint)
+	assert.Equal(t, 400, observations[0].StatusCode)
+	assert.Nil(t, observations[0].Err)
+	assert.Greater(t, observations[0].Duration.Nanoseconds(), int64(0))
+}
+
+func TestClient_Get_ObserverTransportError(t *testing.T) {
+	observer := &recordingObserver{}
+	c := testClientWithObserver(t, "http://invalid-host-that-does-not-exist-12345.com", observer)
+	observer.mu.Lock()
+	observer.observations = nil
+	observer.mu.Unlock()
+
+	var resp map[string]interface{}
+	err := c.Get(context.Background(), "/test", map[string]string{"Content-Type": "application/json"}, &resp)
+	assert.Error(t, err)
+
+	observations := observer.snapshot()
+	assert.Len(t, observations, 1)
+	assert.Equal(t, "GET", observations[0].Method)
+	assert.Equal(t, "/test", observations[0].Endpoint)
+	assert.Equal(t, 0, observations[0].StatusCode)
+	assert.NotNil(t, observations[0].Err)
+	assert.Greater(t, observations[0].Duration.Nanoseconds(), int64(0))
 }

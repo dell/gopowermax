@@ -348,4 +348,19 @@ Feature: PMAX SRDF test
       | "CreateRDFGroupError" | "induced error"                | ""        |
       | "httpStatus500"       | "Internal Error"               | ""        |
       | "none"                | "ignored as it is not managed" | "ignored" |
-    
+
+  @srdf
+  Scenario Outline: Delete an SRDF Pair
+    Given a valid connection
+    And I have an allowed list of <arrays>
+    And I induce error <induced>
+    And I have 1 volumes
+    When I call DeleteRDFPair with force <force>
+    Then the error message contains <errormsg>
+
+    Examples:
+      | induced          | force | errormsg                       | arrays    |
+      | "none"           | "true" | "none"                         | ""        |
+      | "none"           | "false" | "none"                         | ""        |
+      | "httpStatus500"   | "true" | "Internal Error"               | ""        |
+      | "none"           | "true" | "ignored as it is not managed" | "ignored" |

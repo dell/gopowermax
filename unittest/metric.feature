@@ -98,6 +98,20 @@ Feature: PMAX metrics test
       | "000197900046"   | "GetVolumesMetricsError"         | "induced error"                   |
       | "000197900046"   | "none"                         | "none"                            |
 
+  Scenario Outline: Test GetRDFGroupMetrics
+  Given a valid connection
+  And I have an allowed list of <arrays>
+  And I induce error <induced>
+  When I call GetRDFGroupMetrics
+  Then the error message contains <errormsg>
+  And I get RDFGroupMetrics
+
+  Examples:
+  | arrays           | induced                        | errormsg                          |
+  | "000000000000"   | "none"                         | "ignored as it is not managed"    |
+  | "000197900046"   | "GetRDFGroupMetricsError"      | "induced error"                   |
+  | "000197900046"   | "none"                         | "none"                            |
+
   @this
   Scenario Outline: Test GetFileSystemMetricsByID
     Given a valid connection

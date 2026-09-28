@@ -26,9 +26,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/dell/csmlog"
 	"github.com/dell/gopowermax/v2/api"
 	v100 "github.com/dell/gopowermax/v2/types/v100"
-	log "github.com/sirupsen/logrus"
 )
 
 // Client is the callers handle to the pmax client library.
@@ -40,12 +40,7 @@ type Client struct {
 	version        string
 	symmetrixID    string
 	contextTimeout time.Duration
-	opts           clientOpts
 	headers        clientHeaders
-}
-
-type clientOpts struct {
-	logResponseTimes bool
 }
 
 type clientHeaders struct {
@@ -67,8 +62,7 @@ var (
 // Authenticate and get API version
 func (c *Client) Authenticate(ctx context.Context, configConnect *ConfigConnect) error {
 	if debug {
-		log.Printf("PowerMax debug: %v", debug)
-		log.SetLevel(log.DebugLevel)
+		csmlog.Debug(fmt.Sprintf("PowerMax debug: %v", debug))
 	}
 
 	// Store explicit version before assignment to track if user requested specific version
@@ -87,7 +81,7 @@ func (c *Client) Authenticate(ctx context.Context, configConnect *ConfigConnect)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, path, headers, nil)
 	if err != nil {
-		doLog(log.WithError(err).Error, "")
+		csmlog.Error("Failed to get response: " + err.Error())
 		return err
 	}
 
@@ -111,16 +105,16 @@ func (c *Client) Authenticate(ctx context.Context, configConnect *ConfigConnect)
 		if explicitVersion == "" {
 			c.version = DefaultAPIVersion
 			c.configConnect.Version = DefaultAPIVersion
-			doLog(log.Debug, fmt.Sprintf("Detected array version: %s, using API version: %s", versionDetails.APIVersion, DefaultAPIVersion))
+			csmlog.Debug(fmt.Sprintf("Detected array version: %s, using API version: %s", versionDetails.APIVersion, DefaultAPIVersion))
 		} else {
 			// Keep the explicit version that was already set
-			doLog(log.Debug, fmt.Sprintf("Detected array version: %s, using explicit API version: %s", versionDetails.APIVersion, c.version))
+			csmlog.Debug(fmt.Sprintf("Detected array version: %s, using explicit API version: %s", versionDetails.APIVersion, c.version))
 		}
 		acceptHeader := fmt.Sprintf("%s;version=%s", api.HeaderValContentTypeJSON, c.version)
 		c.headers.accept = acceptHeader
 		c.headers.contentType = acceptHeader
 	}
-	doLog(log.Infoln, "authentication successful")
+	csmlog.Info("authentication successful")
 	err = resp.Body.Close()
 	if err != nil {
 		return err
@@ -139,15 +133,6 @@ func (c *Client) GetTimeoutContext(ctx context.Context) (context.Context, contex
 func basicAuth(username, password string) string {
 	auth := username + ":" + password
 	return base64.StdEncoding.EncodeToString([]byte(auth))
-}
-
-func doLog(
-	l func(args ...interface{}),
-	msg string,
-) {
-	if debug {
-		l(msg)
-	}
 }
 
 // NewClient returns a new Client, which is of interface type Pmax.
@@ -177,31 +162,28 @@ func NewClientWithArgs(
 	useCerts bool,
 	certFile string,
 ) (client Pmax, err error) {
-	setLogResponseTimes, _ := strconv.ParseBool(os.Getenv("X_CSI_POWERMAX_RESPONSE_TIMES"))
-
 	contextTimeout := defaultPmaxTimeout
 	if timeoutStr := os.Getenv("X_CSI_UNISPHERE_TIMEOUT"); timeoutStr != "" {
 		if timeout, err := time.ParseDuration(timeoutStr); err != nil {
-			doLog(log.WithError(err).Error, "Unable to parse Unisphere timout")
+			csmlog.Error("Unable to parse Unisphere timeout: " + err.Error())
 		} else {
 			contextTimeout = timeout
 		}
 	}
 
 	fields := map[string]interface{}{
-		"endpoint":         endpoint,
-		"applicationName":  applicationName,
-		"insecure":         insecure,
-		"useCerts":         useCerts,
-		"version":          DefaultAPIVersion,
-		"debug":            debug,
-		"logResponseTimes": setLogResponseTimes,
+		"endpoint":        endpoint,
+		"applicationName": applicationName,
+		"insecure":        insecure,
+		"useCerts":        useCerts,
+		"version":         DefaultAPIVersion,
+		"debug":           debug,
 	}
 
-	doLog(log.WithFields(fields).Debug, "pmax client init")
+	csmlog.WithFields(fields).Debug("pmax client init")
 
 	if endpoint == "" {
-		doLog(log.WithFields(fields).Error, "endpoint is required")
+		csmlog.WithFields(fields).Error("endpoint is required")
 		return nil, fmt.Errorf("Endpoint must be supplied, e.g. https://1.2.3.4:8443")
 	}
 
@@ -214,7 +196,7 @@ func NewClientWithArgs(
 
 	ac, err := api.New(endpoint, opts, debug)
 	if err != nil {
-		doLog(log.WithError(err).Error, "Unable to create HTTP client")
+		csmlog.Error("Unable to create HTTP client: " + err.Error())
 		return nil, err
 	}
 
@@ -228,9 +210,6 @@ func NewClientWithArgs(
 		allowedArrays:  []string{},
 		version:        DefaultAPIVersion,
 		contextTimeout: contextTimeout,
-		opts: clientOpts{
-			logResponseTimes: setLogResponseTimes,
-		},
 		headers: clientHeaders{
 			accept:          acceptHeader,
 			contentType:     acceptHeader,
@@ -287,4 +266,9 @@ func (c *Client) SetCustomHTTPHeaders(headers http.Header) {
 // GetCustomHTTPHeaders returns the current custom HTTP headers
 func (c *Client) GetCustomHTTPHeaders() http.Header {
 	return c.api.GetCustomHTTPHeaders()
+}
+
+// SetRequestObserver registers the observer with the underlying API client.
+func (c *Client) SetRequestObserver(observer api.RequestObserver) {
+	c.api.SetRequestObserver(observer)
 }
