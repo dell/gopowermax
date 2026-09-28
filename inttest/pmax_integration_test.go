@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/dell/csmlog"
 	pmax "github.com/dell/gopowermax/v2"
 	types "github.com/dell/gopowermax/v2/types/v100"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -3170,7 +3170,7 @@ func TestGetStorageGroupMetricsBulk(t *testing.T) {
 
 	metrics, err := client.GetStorageGroupMetricsBulk(context.TODO(), symmetrixID)
 	if err != nil {
-		t.Errorf("Failed to get storage group metrics bulk: (%s)", err.Error())
+		t.Errorf("Failed to get storage group metrics bulk: %s", err.Error())
 		return
 	}
 
@@ -3199,7 +3199,7 @@ func TestGetVolumesCapacityBulk(t *testing.T) {
 
 	volumes, err := client.GetVolumesCapacityBulk(context.TODO(), symmetrixID)
 	if err != nil {
-		t.Errorf("Failed to get volumes capacity bulk: (%s)", err.Error())
+		t.Errorf("Failed to get volumes capacity bulk: %s", err.Error())
 		return
 	}
 

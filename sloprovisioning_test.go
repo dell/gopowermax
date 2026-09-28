@@ -1,6 +1,6 @@
 /*
  *
- * Copyright © 2021-2025 Dell Inc. or its subsidiaries. All Rights Reserved.
+ * Copyright © 2021-2026 Dell Inc. or its subsidiaries. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,18 @@ package pmax
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/dell/gopowermax/v2/mock"
 	types "github.com/dell/gopowermax/v2/types/v100"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetPortListByProtocol(t *testing.T) {
@@ -1751,4 +1755,612 @@ func TestCreateVolumesErrorMessage(t *testing.T) {
 			assert.Equal(t, tc.expected, got)
 		})
 	}
+}
+
+func TestGetVolumesIdentifiersInStorageGroup(t *testing.T) {
+	allowedArray := "testSymID"
+	tests := []struct {
+		name            string
+		symID           string
+		storageGroupID  string
+		expectedVolumes *types.Volumev1
+		expectedStatus  int
+		expectedErr     string
+		responseBody    string
+	}{
+		{
+			name:           "Valid symID and storage group",
+			symID:          "testSymID",
+			storageGroupID: "SG1",
+			expectedVolumes: &types.Volumev1{
+				Volumes: []types.VolumeEnhanced{
+					{ID: "00120", Identifier: "csi-ABC-tw-5373a1ebea-reptest"},
+				},
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:            "Valid symID with no volumes",
+			symID:           "testSymID",
+			storageGroupID:  "SG1",
+			expectedVolumes: &types.Volumev1{Volumes: []types.VolumeEnhanced{}},
+			expectedStatus:  http.StatusOK,
+		},
+		{
+			name:           "Error from IsAllowedArray",
+			symID:          "",
+			storageGroupID: "SG1",
+			expectedErr:    "the requested array () is ignored as it is not managed",
+		},
+		{
+			name:           "Empty storage group ID",
+			symID:          "testSymID",
+			storageGroupID: "",
+			expectedErr:    "storageGroupID is empty",
+		},
+		{
+			name:           "HTTP error from API",
+			symID:          "testSymID",
+			storageGroupID: "SG1",
+			expectedStatus: http.StatusInternalServerError,
+			expectedErr:    "Internal Server Error",
+		},
+		{
+			name:           "Invalid JSON response",
+			symID:          "testSymID",
+			storageGroupID: "SG1",
+			expectedStatus: http.StatusOK,
+			responseBody:   "not-valid-json",
+			expectedErr:    "invalid character",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "/univmax/rest/v1/systems/"+tc.symID+"/volumes", r.URL.Path, "Expected URL path")
+				if tc.storageGroupID != "" {
+					assert.Contains(t, r.URL.RawQuery, "filter=storage_groups.id%20EQ%20"+tc.storageGroupID, "Expected filter in query")
+				}
+				assert.Contains(t, r.URL.RawQuery, "limit=1000", "Expected limit param")
+				assert.Contains(t, r.URL.RawQuery, "expiration_delay_secs=30", "Expected expiration param")
+				w.WriteHeader(tc.expectedStatus)
+				if tc.responseBody != "" {
+					w.Write([]byte(tc.responseBody))
+				} else if tc.expectedStatus == http.StatusOK {
+					json.NewEncoder(w).Encode(tc.expectedVolumes)
+				}
+			}))
+			defer server.Close()
+
+			c, err := NewClientWithArgs(server.URL, "", true, true, "")
+			assert.NoError(t, err)
+			c.SetAllowedArrays([]string{allowedArray})
+
+			volumes, err := c.GetVolumesIdentifiersInStorageGroup(context.Background(), tc.symID, tc.storageGroupID)
+			if tc.expectedErr != "" {
+				assert.ErrorContains(t, err, tc.expectedErr)
+				assert.Nil(t, volumes)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedVolumes, volumes)
+			}
+		})
+	}
+}
+
+func TestGetVolumesIdentifiersInStorageGroupPagination(t *testing.T) {
+	allowedArray := "testSymID"
+	storageGroupID := "SG1"
+	requestCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		assert.Equal(t, "/univmax/rest/v1/systems/testSymID/volumes", r.URL.Path)
+		switch requestCount {
+		case 1:
+			assert.Equal(t, "", r.URL.Query().Get("resume_token"), "Expected no resume token on first request")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(&types.Volumev1{
+				Volumes:      []types.VolumeEnhanced{{ID: "001", Identifier: "vol-1"}},
+				VolumePaging: types.VolumePaging{RemainingInstances: 1, ResumeToken: "token1"},
+			})
+		case 2:
+			assert.Equal(t, "token1", r.URL.Query().Get("resume_token"), "Expected resume token on second request")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(&types.Volumev1{
+				Volumes:      []types.VolumeEnhanced{{ID: "002", Identifier: "vol-2"}},
+				VolumePaging: types.VolumePaging{RemainingInstances: 1, ResumeToken: "token2"},
+			})
+		case 3:
+			assert.Equal(t, "token2", r.URL.Query().Get("resume_token"), "Expected resume token on third request")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(&types.Volumev1{
+				Volumes: []types.VolumeEnhanced{{ID: "003", Identifier: "vol-3"}},
+			})
+		}
+	}))
+	defer server.Close()
+
+	c, err := NewClientWithArgs(server.URL, "", true, true, "")
+	assert.NoError(t, err)
+	c.SetAllowedArrays([]string{allowedArray})
+
+	volumes, err := c.GetVolumesIdentifiersInStorageGroup(context.Background(), allowedArray, storageGroupID)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, requestCount, "Expected 3 paginated requests")
+	assert.Equal(t, 3, len(volumes.Volumes), "Expected 3 volumes across all pages")
+}
+
+func TestGetHostByInitiator(t *testing.T) {
+	allowedArray := "testSymID"
+
+	tests := []struct {
+		name         string
+		symID        string
+		wwpn         string
+		setupHandler func(w http.ResponseWriter, r *http.Request)
+		expectHost   bool
+		expectErr    bool
+		expectErrMsg string
+	}{
+		{
+			name:  "Host found by single WWPN",
+			symID: allowedArray,
+			wwpn:  "5000000000000001",
+			setupHandler: func(w http.ResponseWriter, r *http.Request) {
+				// Mock GetInitiatorList for the WWPN
+				if strings.Contains(r.URL.Path, "/initiator") && strings.Contains(r.URL.RawQuery, "initiator_hba=5000000000000001") {
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(&types.InitiatorList{
+						InitiatorIDs: []string{"FA-1D:5000000000000001"},
+					})
+					return
+				}
+				if r.URL.Path == "/univmax/restapi/100/sloprovisioning/symmetrix/testSymID/initiator/FA-1D:5000000000000001" {
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(&types.Initiator{
+						InitiatorID: "FA-1D:5000000000000001",
+						Host:        "BFS_Host_Node01",
+						HostID:      "BFS_Host_Node01",
+					})
+					return
+				}
+				if r.URL.Path == "/univmax/restapi/100/sloprovisioning/symmetrix/testSymID/host/BFS_Host_Node01" {
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(&types.Host{
+						HostID:     "BFS_Host_Node01",
+						Initiators: []string{"5000000000000001"},
+					})
+					return
+				}
+				w.WriteHeader(http.StatusNotFound)
+			},
+			expectHost:   true,
+			expectErr:    false,
+			expectErrMsg: "",
+		},
+		{
+			name:  "No host found for WWPN — confirmed absent (nil, nil)",
+			symID: allowedArray,
+			wwpn:  "5000000000000099",
+			setupHandler: func(w http.ResponseWriter, r *http.Request) {
+				// Mock GetInitiatorList for the WWPN - returns empty list
+				if strings.Contains(r.URL.Path, "/initiator") && strings.Contains(r.URL.RawQuery, "initiator_hba=5000000000000099") {
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(&types.InitiatorList{
+						InitiatorIDs: []string{},
+					})
+					return
+				}
+				w.WriteHeader(http.StatusNotFound)
+			},
+			expectHost: false,
+			expectErr:  false,
+		},
+		{
+			name:  "API error during host lookup — returns (nil, error) (RACE-3)",
+			symID: allowedArray,
+			wwpn:  "5000000000000001",
+			setupHandler: func(w http.ResponseWriter, r *http.Request) {
+				// Mock GetInitiatorList failure
+				if strings.Contains(r.URL.Path, "/initiator") && strings.Contains(r.URL.RawQuery, "initiator_hba=5000000000000001") {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				w.WriteHeader(http.StatusNotFound)
+			},
+			expectHost:   false,
+			expectErr:    true,
+			expectErrMsg: "Internal Server Error",
+		},
+		{
+			name:         "Invalid symID — IsAllowedArray error",
+			symID:        "invalidArray",
+			wwpn:         "5000000000000001",
+			setupHandler: func(_ http.ResponseWriter, _ *http.Request) {},
+			expectHost:   false,
+			expectErr:    true,
+			expectErrMsg: "is not managed",
+		},
+		{
+			name:  "GetInitiatorList API error — returns error",
+			symID: allowedArray,
+			wwpn:  "5000000000000001",
+			setupHandler: func(w http.ResponseWriter, r *http.Request) {
+				// GetInitiatorList fails
+				if strings.Contains(r.URL.Path, "/initiator") && strings.Contains(r.URL.RawQuery, "initiator_hba=5000000000000001") {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				w.WriteHeader(http.StatusNotFound)
+			},
+			expectHost:   false,
+			expectErr:    true,
+			expectErrMsg: "Internal Server Error",
+		},
+		{
+			name:  "WWPN known but not part of any host — confirmed absent (nil, nil)",
+			symID: allowedArray,
+			wwpn:  "5000000000000003",
+			setupHandler: func(w http.ResponseWriter, r *http.Request) {
+				// Mock GetInitiatorList
+				if strings.Contains(r.URL.Path, "/initiator") && strings.Contains(r.URL.RawQuery, "initiator_hba=5000000000000003") {
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(&types.InitiatorList{
+						InitiatorIDs: []string{"FA-1D:5000000000000003"},
+					})
+					return
+				}
+				// Initiator exists but has no Host field
+				if r.URL.Path == "/univmax/restapi/100/sloprovisioning/symmetrix/testSymID/initiator/FA-1D:5000000000000003" {
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(&types.Initiator{
+						InitiatorID: "FA-1D:5000000000000003",
+						Host:        "",
+					})
+					return
+				}
+				w.WriteHeader(http.StatusNotFound)
+			},
+			expectHost: false,
+			expectErr:  false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(tc.setupHandler))
+			defer server.Close()
+
+			c, err := NewClientWithArgs(server.URL, "", true, true, "")
+			assert.NoError(t, err)
+			c.SetAllowedArrays([]string{allowedArray})
+
+			host, err := c.GetHostByInitiator(context.Background(), tc.symID, tc.wwpn)
+			if tc.expectErr {
+				assert.Error(t, err)
+				assert.Nil(t, host)
+				if tc.expectErrMsg != "" {
+					assert.ErrorContains(t, err, tc.expectErrMsg)
+				}
+			} else if tc.expectHost {
+				assert.NoError(t, err)
+				require.NotNil(t, host)
+				assert.Equal(t, "BFS_Host_Node01", host.HostID)
+			} else {
+				// (nil, nil) case - confirmed no host
+				assert.NoError(t, err)
+				assert.Nil(t, host)
+			}
+		})
+	}
+}
+
+func TestGetHostByInitiators(t *testing.T) {
+	allowedArray := "testSymID"
+
+	// helper: build a handler that maps initiator IDs to hosts
+	makeHandler := func(initiatorToHost map[string]string, hostObj *types.Host) func(w http.ResponseWriter, r *http.Request) {
+		return func(w http.ResponseWriter, r *http.Request) {
+			path := r.URL.Path
+			// Mock GetInitiatorList for any WWPN
+			if strings.Contains(path, "/initiator") && strings.Contains(r.URL.RawQuery, "initiator_hba=") {
+				wwpn := r.URL.Query().Get("initiator_hba")
+				// Find which initiator ID contains this WWPN
+				var foundID string
+				for initID := range initiatorToHost {
+					if strings.Contains(initID, wwpn) {
+						foundID = initID
+						break
+					}
+				}
+				if foundID != "" {
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(&types.InitiatorList{
+						InitiatorIDs: []string{foundID},
+					})
+				} else {
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(&types.InitiatorList{
+						InitiatorIDs: []string{},
+					})
+				}
+				return
+			}
+			// Match initiator requests
+			for initID, hostName := range initiatorToHost {
+				if path == "/univmax/restapi/100/sloprovisioning/symmetrix/testSymID/initiator/"+initID {
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(&types.Initiator{
+						InitiatorID: initID,
+						Host:        hostName,
+						HostID:      hostName,
+					})
+					return
+				}
+			}
+			// Match host request
+			if hostObj != nil && path == "/univmax/restapi/100/sloprovisioning/symmetrix/testSymID/host/"+hostObj.HostID {
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(hostObj)
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}
+
+	tests := []struct {
+		name         string
+		symID        string
+		wwpns        []string
+		setupHandler func(w http.ResponseWriter, r *http.Request)
+		expectHost   bool
+		expectErr    bool
+		expectErrMsg string
+	}{
+		{
+			name:  "All WWPNs resolve to same host",
+			symID: allowedArray,
+			wwpns: []string{"5000000000000001", "5000000000000002"},
+			setupHandler: makeHandler(
+				map[string]string{
+					"FA-1D:5000000000000001": "BFS_Host_Node01",
+					"FA-1D:5000000000000002": "BFS_Host_Node01",
+				},
+				&types.Host{
+					HostID:     "BFS_Host_Node01",
+					Initiators: []string{"FA-1D:5000000000000001", "FA-1D:5000000000000002"},
+				},
+			),
+			expectHost: true,
+			expectErr:  false,
+		},
+		{
+			name:  "WWPNs resolve to different hosts — conflict returns (nil, error)",
+			symID: allowedArray,
+			wwpns: []string{"5000000000000001", "5000000000000002"},
+			setupHandler: func(w http.ResponseWriter, r *http.Request) {
+				path := r.URL.Path
+				// Mock GetInitiatorList
+				if strings.Contains(path, "/initiator") && strings.Contains(r.URL.RawQuery, "initiator_hba=") {
+					wwpn := r.URL.Query().Get("initiator_hba")
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(&types.InitiatorList{
+						InitiatorIDs: []string{"FA-1D:" + wwpn},
+					})
+					return
+				}
+				switch path {
+				case "/univmax/restapi/100/sloprovisioning/symmetrix/testSymID/initiator/FA-1D:5000000000000001":
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(&types.Initiator{InitiatorID: "FA-1D:5000000000000001", Host: "BFS_Host_Node01", HostID: "BFS_Host_Node01"})
+				case "/univmax/restapi/100/sloprovisioning/symmetrix/testSymID/initiator/FA-1D:5000000000000002":
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(&types.Initiator{InitiatorID: "FA-1D:5000000000000002", Host: "BFS_Host_Node02", HostID: "BFS_Host_Node02"})
+				case "/univmax/restapi/100/sloprovisioning/symmetrix/testSymID/host/BFS_Host_Node01":
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(&types.Host{HostID: "BFS_Host_Node01", Initiators: []string{"FA-1D:5000000000000001"}})
+				case "/univmax/restapi/100/sloprovisioning/symmetrix/testSymID/host/BFS_Host_Node02":
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(&types.Host{HostID: "BFS_Host_Node02", Initiators: []string{"FA-1D:5000000000000002"}})
+				default:
+					w.WriteHeader(http.StatusNotFound)
+				}
+			},
+			expectHost:   false,
+			expectErr:    true,
+			expectErrMsg: "conflict",
+		},
+		{
+			name:  "Empty WWPN list returns (nil, error)",
+			symID: allowedArray,
+			wwpns: []string{},
+			setupHandler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			},
+			expectHost:   false,
+			expectErr:    true,
+			expectErrMsg: "no initiators provided",
+		},
+		{
+			name:  "API error on first WWPN — returns (nil, error) (RACE-3)",
+			symID: allowedArray,
+			wwpns: []string{"5000000000000001"},
+			setupHandler: func(w http.ResponseWriter, r *http.Request) {
+				// Mock GetInitiatorList failure
+				if strings.Contains(r.URL.Path, "/initiator") && strings.Contains(r.URL.RawQuery, "initiator_hba=") {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				w.WriteHeader(http.StatusNotFound)
+			},
+			expectHost: false,
+			expectErr:  true,
+		},
+		{
+			name:  "All WWPNs have no host — confirmed absent (nil, nil)",
+			symID: allowedArray,
+			wwpns: []string{"5000000000000001", "5000000000000002"},
+			setupHandler: makeHandler(
+				map[string]string{
+					"FA-1D:5000000000000001": "",
+					"FA-1D:5000000000000002": "",
+				},
+				nil,
+			),
+			expectHost: false,
+			expectErr:  false,
+		},
+		{
+			name:         "Invalid symID — returns error",
+			symID:        "invalidArray",
+			wwpns:        []string{"5000000000000001"},
+			setupHandler: func(_ http.ResponseWriter, _ *http.Request) {},
+			expectHost:   false,
+			expectErr:    true,
+			expectErrMsg: "is not managed",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(tc.setupHandler))
+			defer server.Close()
+
+			c, err := NewClientWithArgs(server.URL, "", true, true, "")
+			assert.NoError(t, err)
+			c.SetAllowedArrays([]string{allowedArray})
+
+			host, err := c.GetHostByInitiators(context.Background(), tc.symID, tc.wwpns)
+			if tc.expectErr {
+				assert.Error(t, err)
+				assert.Nil(t, host)
+				if tc.expectErrMsg != "" {
+					assert.ErrorContains(t, err, tc.expectErrMsg)
+				}
+			} else if tc.expectHost {
+				assert.NoError(t, err)
+				require.NotNil(t, host)
+				assert.Equal(t, "BFS_Host_Node01", host.HostID)
+			} else {
+				assert.NoError(t, err)
+				assert.Nil(t, host)
+			}
+		})
+	}
+}
+
+func TestGetHostMaskingViews(t *testing.T) {
+	allowedArray := "testSymID"
+
+	tests := []struct {
+		name         string
+		symID        string
+		hostID       string
+		setupHandler func(w http.ResponseWriter, r *http.Request)
+		expectedMVs  []string
+		expectErr    bool
+		expectErrMsg string
+	}{
+		{
+			name:   "Host with masking views",
+			symID:  allowedArray,
+			hostID: "BFS_Host_Node01",
+			setupHandler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(&types.Host{
+					HostID:         "BFS_Host_Node01",
+					MaskingviewIDs: []string{"MV_Boot_Node01", "MV_CSI_Node01"},
+				})
+			},
+			expectedMVs: []string{"MV_Boot_Node01", "MV_CSI_Node01"},
+			expectErr:   false,
+		},
+		{
+			name:   "Host with no masking views",
+			symID:  allowedArray,
+			hostID: "BFS_Host_Standalone",
+			setupHandler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(&types.Host{
+					HostID:         "BFS_Host_Standalone",
+					MaskingviewIDs: nil,
+				})
+			},
+			expectedMVs: nil,
+			expectErr:   false,
+		},
+		{
+			name:   "API error fetching host",
+			symID:  allowedArray,
+			hostID: "BFS_Host_Node01",
+			setupHandler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			},
+			expectedMVs:  nil,
+			expectErr:    true,
+			expectErrMsg: "Internal Server Error",
+		},
+		{
+			name:         "Invalid symID",
+			symID:        "invalidArray",
+			hostID:       "BFS_Host_Node01",
+			setupHandler: func(_ http.ResponseWriter, _ *http.Request) {},
+			expectedMVs:  nil,
+			expectErr:    true,
+			expectErrMsg: "is not managed",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(tc.setupHandler))
+			defer server.Close()
+
+			c, err := NewClientWithArgs(server.URL, "", true, true, "")
+			assert.NoError(t, err)
+			c.SetAllowedArrays([]string{allowedArray})
+
+			mvIDs, err := c.GetHostMaskingViews(context.Background(), tc.symID, tc.hostID)
+			if tc.expectErr {
+				assert.Error(t, err)
+				assert.Nil(t, mvIDs)
+				if tc.expectErrMsg != "" {
+					assert.ErrorContains(t, err, tc.expectErrMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedMVs, mvIDs)
+			}
+		})
+	}
+}
+
+// TestHostConflictError verifies the typed conflict error reports every host involved
+// with its matching WWPNs, and identifies itself as a logical conflict so callers can
+// reject rather than retry (FR-1.2).
+func TestHostConflictError(t *testing.T) {
+	err := &HostConflictError{
+		SymID: "000197900111",
+		Hosts: map[string][]string{
+			"BFS_Host_Node02": {"5000000000000002"},
+			"BFS_Host_Node01": {"5000000000000003", "5000000000000001"},
+		},
+	}
+
+	assert.True(t, err.IsHostConflict())
+
+	msg := err.Error()
+	assert.Contains(t, msg, "conflict")
+	assert.Contains(t, msg, "000197900111")
+	assert.Contains(t, msg, "2 different hosts")
+	// Hosts and their WWPNs are sorted so the message is stable across runs.
+	assert.Contains(t, msg, "host BFS_Host_Node01 has WWPNs [5000000000000001 5000000000000003]")
+	assert.Contains(t, msg, "host BFS_Host_Node02 has WWPNs [5000000000000002]")
+	assert.Less(t, strings.Index(msg, "BFS_Host_Node01"), strings.Index(msg, "BFS_Host_Node02"))
+
+	// Callers detect the condition through errors.As even when wrapped.
+	var conflict *HostConflictError
+	assert.True(t, errors.As(fmt.Errorf("adoption failed: %w", err), &conflict))
+	assert.Equal(t, "000197900111", conflict.SymID)
 }

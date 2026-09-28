@@ -25,7 +25,7 @@ import (
 	"net/http/httputil"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/dell/csmlog"
 )
 
 func isBinOctetBody(h http.Header) bool {
@@ -35,7 +35,7 @@ func isBinOctetBody(h http.Header) bool {
 func logRequest(
 	_ context.Context,
 	req *http.Request,
-	lf func(func(args ...interface{}), string),
+	_ func(func(args ...interface{}), string),
 ) {
 	w := &bytes.Buffer{}
 
@@ -52,7 +52,7 @@ func logRequest(
 	WriteIndented(w, buf) // #nosec G20
 	fmt.Fprintln(w)
 
-	lf(log.Debug, w.String())
+	csmlog.Debug(w.String())
 }
 
 func logResponse(
@@ -83,7 +83,7 @@ func logResponse(
 		fmt.Fprintln(w, scanner.Text()) // #nosec G705 -- server-side debug logging, not browser output
 	}
 
-	log.Debug(w.String())
+	csmlog.Debug(w.String())
 }
 
 // WriteIndentedN indents all lines n spaces.
@@ -219,7 +219,7 @@ func dumpRequest(req *http.Request, body bool) ([]byte, error) {
 			return b.Bytes(), err
 		}
 		cred := strings.Split(string(decodedCred), ":")
-		log.Debugf("username: %s , password: %s", cred[0], "*****")
+		csmlog.Debugf("username: %s , password: %s", cred[0], "*****")
 	}
 
 	err = req.Header.WriteSubset(&b, reqWriteExcludeHeaderDump)

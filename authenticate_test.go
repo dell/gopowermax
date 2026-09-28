@@ -6,7 +6,9 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
+	"github.com/dell/gopowermax/v2/api"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -175,4 +177,95 @@ func TestAuthenticate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestClientGettersSetters(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"version":"V10.4","api_version":"104"}`))
+	}))
+	defer srv.Close()
+
+	c, err := NewClientWithArgs(srv.URL, "testapp", true, false, "")
+	assert.NoError(t, err)
+	client := c.(*Client)
+
+	t.Run("SetContextTimeout", func(t *testing.T) {
+		result := client.SetContextTimeout(30 * time.Second)
+		assert.Equal(t, client, result)
+		assert.Equal(t, 30*time.Second, client.contextTimeout)
+	})
+
+	t.Run("GetHTTPClient", func(t *testing.T) {
+		httpClient := client.GetHTTPClient()
+		assert.NotNil(t, httpClient)
+	})
+
+	t.Run("SetToken", func(_ *testing.T) {
+		client.SetToken("test-token")
+	})
+
+	t.Run("SetCustomHTTPHeaders", func(_ *testing.T) {
+		headers := http.Header{"X-Custom": []string{"value"}}
+		client.SetCustomHTTPHeaders(headers)
+	})
+
+	t.Run("GetCustomHTTPHeaders", func(t *testing.T) {
+		headers := http.Header{"X-Custom": []string{"value"}}
+		client.SetCustomHTTPHeaders(headers)
+		got := client.GetCustomHTTPHeaders()
+		assert.Equal(t, headers, got)
+	})
+
+	t.Run("SetRequestObserver", func(t *testing.T) {
+		// Create a mock observer
+		mockObserver := &mockRequestObserver{}
+		client.SetRequestObserver(mockObserver)
+
+		// Verify the observer was set by making a request and checking if it was called
+		_, err := client.GetVersionDetails(context.Background())
+		// Don't assert error - just verify observer was called regardless of success/failure
+
+		// The observer should have been called if it was properly set
+		assert.True(t, mockObserver.called, "Observer should have been called")
+		assert.Equal(t, "GET", mockObserver.lastObservation.Method)
+		_ = err // Use err to avoid unused variable warning
+	})
+}
+
+// mockRequestObserver is a mock implementation of RequestObserver for testing
+type mockRequestObserver struct {
+	called          bool
+	lastObservation api.RequestObservation
+}
+
+func (m *mockRequestObserver) ObservePowerMaxRequest(obs api.RequestObservation) {
+	m.called = true
+	m.lastObservation = obs
+}
+
+func TestNewClientWithArgs_RequestObserver(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"version":"V10.4","api_version":"104"}`))
+	}))
+	defer srv.Close()
+
+	observer := &mockRequestObserver{}
+	c, err := NewClientWithArgs(srv.URL, "testapp", true, false, "")
+	assert.NoError(t, err)
+	client := c.(*Client)
+
+	client.SetRequestObserver(observer)
+
+	// Make a request to trigger the observer
+	_, err = client.GetVersionDetails(context.Background())
+	// Don't assert error - just verify observer was called regardless of success/failure
+
+	// Verify observer was called
+	assert.True(t, observer.called, "Observer should have been called")
+	assert.Equal(t, "GET", observer.lastObservation.Method)
+	_ = err // Use err to avoid unused variable warning
 }

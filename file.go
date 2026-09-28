@@ -25,8 +25,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dell/csmlog"
 	types "github.com/dell/gopowermax/v2/types/v100"
-	log "github.com/sirupsen/logrus"
 )
 
 // constants to be used in APIs
@@ -57,7 +57,7 @@ func (c *Client) GetFileSystemList(ctx context.Context, symID string, query type
 	}
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.Error("GetFileSystemList failed: " + err.Error())
+		csmlog.Error("GetFileSystemList failed: " + err.Error())
 		return nil, err
 	}
 
@@ -88,7 +88,7 @@ func (c *Client) GetFileSystemByID(ctx context.Context, symID, fsID string) (*ty
 	URL := c.urlPrefix() + XFile + SymmetrixX + symID + XFileSystem + "/" + fsID
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.Error("GetFileSystemByID failed: " + err.Error())
+		csmlog.Error("GetFileSystemByID failed: " + err.Error())
 		return nil, err
 	}
 
@@ -136,7 +136,7 @@ func (c *Client) CreateFileSystem(ctx context.Context, symID, name, nasServer, s
 	if err = decoder.Decode(fileSystem); err != nil {
 		return nil, err
 	}
-	log.Infof("Successfully created file system for %s", fileSystem.Name)
+	csmlog.Infof("Successfully created file system for %s", fileSystem.Name)
 	err = resp.Body.Close()
 	if err != nil {
 		return nil, err
@@ -157,17 +157,17 @@ func (c *Client) ModifyFileSystem(ctx context.Context, symID, fsID string, paylo
 		"fsID":         fsID,
 		"payload":      payload,
 	}
-	log.WithFields(fields).Info("Modifying FileSystem")
+	csmlog.WithFields(fields).Info("Modifying FileSystem")
 	updatedFileSystem := &types.FileSystem{}
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Put(
 		ctx, URL, c.getDefaultHeaders(), payload, updatedFileSystem)
 	if err != nil {
-		log.WithFields(fields).Error("Error in ModifyFileSystem: " + err.Error())
+		csmlog.WithFields(fields).Error("Error in ModifyFileSystem: " + err.Error())
 		return nil, err
 	}
-	log.Infof("Successfully updated file system: %s", updatedFileSystem.Name)
+	csmlog.Infof("Successfully updated file system: %s", updatedFileSystem.Name)
 	return updatedFileSystem, nil
 }
 
@@ -182,14 +182,14 @@ func (c *Client) DeleteFileSystem(ctx context.Context, symID, fsID string) error
 		http.MethodDelete: URL,
 		"FileSystemID":    fsID,
 	}
-	log.WithFields(fields).Info("Deleting FileSystem")
+	csmlog.WithFields(fields).Info("Deleting FileSystem")
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Delete(ctx, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.WithFields(fields).Error("Error in Deleting FileSystem: " + err.Error())
+		csmlog.WithFields(fields).Error("Error in Deleting FileSystem: " + err.Error())
 	} else {
-		log.Infof("Successfully deleted FileSystem: %s", fsID)
+		csmlog.Infof("Successfully deleted FileSystem: %s", fsID)
 	}
 	return err
 }
@@ -212,7 +212,7 @@ func (c *Client) GetNFSExportList(ctx context.Context, symID string, query types
 	}
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.Error("GetNFSExportList failed: " + err.Error())
+		csmlog.Error("GetNFSExportList failed: " + err.Error())
 		return nil, err
 	}
 
@@ -243,7 +243,7 @@ func (c *Client) GetNFSExportByID(ctx context.Context, symID, nfsExportID string
 	URL := c.urlPrefix() + XFile + SymmetrixX + symID + XNFSExport + "/" + nfsExportID
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.Error("GetNFSExportByID failed: " + err.Error())
+		csmlog.Error("GetNFSExportByID failed: " + err.Error())
 		return nil, err
 	}
 
@@ -285,7 +285,7 @@ func (c *Client) CreateNFSExport(ctx context.Context, symID string, createNFSExp
 	if err = decoder.Decode(nfsExport); err != nil {
 		return nil, err
 	}
-	log.Infof("Successfully created nfs export for %s", nfsExport.Name)
+	csmlog.Infof("Successfully created nfs export for %s", nfsExport.Name)
 	err = resp.Body.Close()
 	if err != nil {
 		return nil, err
@@ -306,17 +306,17 @@ func (c *Client) ModifyNFSExport(ctx context.Context, symID, nfsExportID string,
 		"nfsExportID":  nfsExportID,
 		"payload":      payload,
 	}
-	log.WithFields(fields).Info("Modifying NFS Export")
+	csmlog.WithFields(fields).Info("Modifying NFS Export")
 	updatedNFSExport := &types.NFSExport{}
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Put(
 		ctx, URL, c.getDefaultHeaders(), payload, updatedNFSExport)
 	if err != nil {
-		log.WithFields(fields).Error("Error in ModifyNFSExport: " + err.Error())
+		csmlog.WithFields(fields).Error("Error in ModifyNFSExport: " + err.Error())
 		return nil, err
 	}
-	log.Infof("Successfully modified NFS export: %s", updatedNFSExport.Name)
+	csmlog.Infof("Successfully modified NFS export: %s", updatedNFSExport.Name)
 	return updatedNFSExport, nil
 }
 
@@ -331,14 +331,14 @@ func (c *Client) DeleteNFSExport(ctx context.Context, symID, nfsExportID string)
 		http.MethodDelete: URL,
 		"nfsExportID":     nfsExportID,
 	}
-	log.WithFields(fields).Info("Deleting NFSExport")
+	csmlog.WithFields(fields).Info("Deleting NFSExport")
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Delete(ctx, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.WithFields(fields).Error("Error in Deleting NFSExport: " + err.Error())
+		csmlog.WithFields(fields).Error("Error in Deleting NFSExport: " + err.Error())
 	} else {
-		log.Infof("Successfully deleted NFSExport: %s", nfsExportID)
+		csmlog.Infof("Successfully deleted NFSExport: %s", nfsExportID)
 	}
 	return err
 }
@@ -361,7 +361,7 @@ func (c *Client) GetNASServerList(ctx context.Context, symID string, query types
 	}
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.Error("GetNASServerList failed: " + err.Error())
+		csmlog.Error("GetNASServerList failed: " + err.Error())
 		return nil, err
 	}
 
@@ -392,7 +392,7 @@ func (c *Client) GetNASServerByID(ctx context.Context, symID, nasID string) (*ty
 	URL := c.urlPrefix() + XFile + SymmetrixX + symID + XNASServer + "/" + nasID
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.Error("GetNASServerByID failed: " + err.Error())
+		csmlog.Error("GetNASServerByID failed: " + err.Error())
 		return nil, err
 	}
 
@@ -424,17 +424,17 @@ func (c *Client) ModifyNASServer(ctx context.Context, symID, nasID string, paylo
 		"nasID":        nasID,
 		"payload":      payload,
 	}
-	log.WithFields(fields).Info("Modifying NAS Server")
+	csmlog.WithFields(fields).Info("Modifying NAS Server")
 	updatedNASServer := &types.NASServer{}
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Put(
 		ctx, URL, c.getDefaultHeaders(), payload, updatedNASServer)
 	if err != nil {
-		log.WithFields(fields).Error("Error in ModifyNASServer: " + err.Error())
+		csmlog.WithFields(fields).Error("Error in ModifyNASServer: " + err.Error())
 		return nil, err
 	}
-	log.Infof("Successfully modified NFS export: %s", updatedNASServer.Name)
+	csmlog.Infof("Successfully modified NFS export: %s", updatedNASServer.Name)
 	return updatedNASServer, nil
 }
 
@@ -449,14 +449,14 @@ func (c *Client) DeleteNASServer(ctx context.Context, symID, nasID string) error
 		http.MethodDelete: URL,
 		"nasID":           nasID,
 	}
-	log.WithFields(fields).Info("Deleting NAS Server")
+	csmlog.WithFields(fields).Info("Deleting NAS Server")
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Delete(ctx, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.WithFields(fields).Error("Error in Deleting NAS Server: " + err.Error())
+		csmlog.WithFields(fields).Error("Error in Deleting NAS Server: " + err.Error())
 	} else {
-		log.Infof("Successfully deleted NAS Server: %s", nasID)
+		csmlog.Infof("Successfully deleted NAS Server: %s", nasID)
 	}
 	return err
 }
@@ -473,7 +473,7 @@ func (c *Client) GetFileInterfaceByID(ctx context.Context, symID, interfaceID st
 	URL := c.urlPrefix() + XFile + SymmetrixX + symID + XFileInterface + "/" + interfaceID
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.Error("GetFileInterfaceByID failed: " + err.Error())
+		csmlog.Error("GetFileInterfaceByID failed: " + err.Error())
 		return nil, err
 	}
 
@@ -504,7 +504,7 @@ func (c *Client) GetNFSServerList(ctx context.Context, symID string) (*types.NFS
 
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.Error("GetNFSServerList failed: " + err.Error())
+		csmlog.Error("GetNFSServerList failed: " + err.Error())
 		return nil, err
 	}
 
@@ -535,7 +535,7 @@ func (c *Client) GetNFSServerByID(ctx context.Context, symID, nfsID string) (*ty
 	URL := c.urlPrefix() + XFile + SymmetrixX + symID + XNFSServer + "/" + nfsID
 	resp, err := c.api.DoAndGetResponseBody(ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.Error("GetNFSServerByID failed: " + err.Error())
+		csmlog.Error("GetNFSServerByID failed: " + err.Error())
 		return nil, err
 	}
 

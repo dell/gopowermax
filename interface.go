@@ -1,5 +1,5 @@
 /*
- Copyright © 2020-2025 Dell Inc. or its subsidiaries. All Rights Reserved.
+ Copyright © 2020-2026 Dell Inc. or its subsidiaries. All Rights Reserved.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/dell/gopowermax/v2/api"
 	types "github.com/dell/gopowermax/v2/types/v100"
 )
 
@@ -77,6 +78,9 @@ type Pmax interface {
 	// GetCustomHTTPHeaders returns the current custom HTTP headers
 	GetCustomHTTPHeaders() http.Header
 
+	// SetRequestObserver registers a callback to observe API requests
+	SetRequestObserver(observer api.RequestObserver)
+
 	// WithSymmetrixID set a default symmetrix ID for the admin client,
 	// for it to be added to the request header.
 	WithSymmetrixID(symmetrixID string) Pmax
@@ -124,6 +128,11 @@ type Pmax interface {
 
 	// GetVolumesCapacityBulk returns capacity information for all volumes on the array in a single bulk operation.
 	GetVolumesCapacityBulk(ctx context.Context, symID string) (*types.Volumev1, error)
+
+	// GetVolumesIdentifiersInStorageGroup returns volume device IDs and their
+	// VolumeIdentifiers for every volume in the given storage group using the v1
+	// enhanced volumes endpoint. Requires Unisphere 10.1+.
+	GetVolumesIdentifiersInStorageGroup(ctx context.Context, symID, storageGroupID string) (*types.Volumev1, error)
 
 	// GetStorageGroupIDList returns a list of all the StorageGroup ids.
 	GetStorageGroupIDList(ctx context.Context, symID, storageGroupIDMatch string, like bool) (*types.StorageGroupIDList, error)
@@ -275,6 +284,14 @@ type Pmax interface {
 	GetHostList(ctx context.Context, symID string) (*types.HostList, error)
 	// GetHostByID returns a Host given the Host id.
 	GetHostByID(ctx context.Context, symID string, hostID string) (*types.Host, error)
+	// GetHostByInitiator returns the Host containing a given FC WWPN initiator.
+	// Three-outcome contract (RACE-3): (host, nil)=found, (nil, nil)=confirmed absent, (nil, error)=indeterminate.
+	GetHostByInitiator(ctx context.Context, symID string, wwpn string) (*types.Host, error)
+	// GetHostByInitiators validates all given WWPNs resolve to the same host and returns it.
+	// Three-outcome contract (RACE-3): (host, nil)=found, (nil, nil)=all absent, (nil, error)=conflict or API error.
+	GetHostByInitiators(ctx context.Context, symID string, wwpns []string) (*types.Host, error)
+	// GetHostMaskingViews returns the masking view IDs associated with a host.
+	GetHostMaskingViews(ctx context.Context, symID string, hostID string) ([]string, error)
 	// CreateHost creates a host from a list of InitiatorIDs (and optional HostFlags) return returns a types.Host.
 	// Initiator IDs do not contain the storage port designations, just the IQN string or FC WWN.
 	// Initiator IDs cannot be a member of more than one host.
@@ -393,6 +410,8 @@ type Pmax interface {
 
 	// CreateRDFPair creates a volume replication pair
 	CreateRDFPair(ctx context.Context, symID, rdfGroupNo, deviceID, rdfMode, rdfType string, establish, exemptConsistency bool) (*types.RDFDevicePairList, error)
+	// DeleteRDFPair deletes a volume replication pair
+	DeleteRDFPair(ctx context.Context, symID, rdfGroup, volumeID string, force bool) error
 	// GetRDFDevicePairInfo returns RDF volume information
 	GetRDFDevicePairInfo(ctx context.Context, symID, rdfGroup, volumeID string) (*types.RDFDevicePair, error)
 	// GetStorageGroupRDFInfo returns the of RDF info of protected storage group
@@ -416,6 +435,8 @@ type Pmax interface {
 	GetStorageGroupMetricsBulk(ctx context.Context, symID string) (*types.StorageGroupPerfCategoryResult, error)
 	// GetVolumesMetrics returns the list of volume metrics for specific storage groups
 	GetVolumesMetrics(ctx context.Context, symID string, storageGroups string, metricsQuery []string, firstAvailableDate int64, lastAvailableTime int64) (*types.VolumeMetricsIterator, error)
+	// GetRDFGroupMetrics returns SRDF group performance metrics (AvgCycleTime ms = lag, WriteMBs = bandwidth)
+	GetRDFGroupMetrics(ctx context.Context, symID string, rdfGroupID int, metricsQuery []string, firstAvailableDate int64, lastAvailableTime int64) (*types.RDFGroupMetricsIterator, error)
 	// GetStorageGroupPerfKeys returns the performance keys of storage group
 	GetStorageGroupPerfKeys(ctx context.Context, symID string) (*types.StorageGroupKeysResult, error)
 	// GetArrayPerfKeys returns the performance keys of array
@@ -424,7 +445,6 @@ type Pmax interface {
 	GetVolumesMetricsByID(ctx context.Context, symID string, volID string, metricsQuery []string, firstAvailableTime, lastAvailableTime int64) (*types.VolumeMetricsIterator, error)
 	// GetFileSystemMetricsByID returns a given FileSystem performance metrics
 	GetFileSystemMetricsByID(ctx context.Context, symID string, fsID string, metricsQuery []string, firstAvailableTime, lastAvailableTime int64) (*types.FileSystemMetricsIterator, error)
-
 	// CreateMigrationEnvironment creates a migration environment
 	CreateMigrationEnvironment(ctx context.Context, sourceSymID, remoteSymID string) (*types.MigrationEnv, error)
 	// CreateSGMigration create migration session on a storage group

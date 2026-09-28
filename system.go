@@ -22,9 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dell/csmlog"
 	types "github.com/dell/gopowermax/v2/types/v100"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // The following constants are for internal use of the pmax library.
@@ -80,7 +79,7 @@ func (c *Client) GetSymmetrixIDList(ctx context.Context) (*types.SymmetrixIDList
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodGet, c.getSymmetrixIDListURL(), c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.Error("GetSymmetrixIDList failed: " + err.Error())
+		csmlog.Error("GetSymmetrixIDList failed: " + err.Error())
 		return nil, err
 	}
 
@@ -121,7 +120,7 @@ func (c *Client) GetSymmetrixByID(ctx context.Context, id string) (*types.Symmet
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodGet, url, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.Error("GetSymmetrixIDList failed: " + err.Error())
+		csmlog.Error("GetSymmetrixIDList failed: " + err.Error())
 		return nil, err
 	}
 	if err = c.checkResponse(resp); err != nil {
@@ -155,7 +154,7 @@ func (c *Client) GetJobIDList(ctx context.Context, symID string, statusQuery str
 	defer cancel()
 	err := c.api.Get(ctx, url, c.getDefaultHeaders(), jobIDList)
 	if err != nil {
-		log.Error("GetJobIDList failed: " + err.Error())
+		csmlog.Error("GetJobIDList failed: " + err.Error())
 		return nil, err
 	}
 	return jobIDList.JobIDs, nil
@@ -175,11 +174,11 @@ func (c *Client) GetJobByID(ctx context.Context, symID string, jobID string) (*t
 		err := c.api.Get(ctx, url, c.getDefaultHeaders(), job)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot find role for user") {
-				log.Debug(fmt.Sprintf("Retrying GetJobs: %s", err.Error()))
+				csmlog.Debug(fmt.Sprintf("Retrying GetJobs: %s", err.Error()))
 				time.Sleep(10 * time.Second)
 				continue
 			}
-			log.Error("GetJobs failed: " + err.Error())
+			csmlog.Error("GetJobs failed: " + err.Error())
 			return nil, err
 		}
 		return job, nil
@@ -198,7 +197,7 @@ func (c *Client) WaitOnJobCompletion(ctx context.Context, symID string, jobID st
 		if err != nil {
 			return nil, err
 		}
-		log.Debug(c.JobToString(job))
+		csmlog.Debug(c.JobToString(job))
 		switch job.Status {
 		case types.JobStatusSucceeded:
 			return job, nil
@@ -237,7 +236,7 @@ func (c *Client) GetDirectorIDList(ctx context.Context, symID string) (*types.Di
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), directorList)
 	if err != nil {
-		log.Error("GetDirectorIDList failed: " + err.Error())
+		csmlog.Error("GetDirectorIDList failed: " + err.Error())
 		return nil, err
 	}
 
@@ -258,7 +257,7 @@ func (c *Client) GetPortList(ctx context.Context, symID string, directorID strin
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), portList)
 	if err != nil {
-		log.Error("GetPortList failed: " + err.Error())
+		csmlog.Error("GetPortList failed: " + err.Error())
 		return nil, err
 	}
 
@@ -276,7 +275,7 @@ func (c *Client) GetPort(ctx context.Context, symID string, directorID string, p
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), port)
 	if err != nil {
-		log.Error("GetPort failed: " + err.Error())
+		csmlog.Error("GetPort failed: " + err.Error())
 		return nil, err
 	}
 
@@ -295,7 +294,7 @@ func (c *Client) GetPorts(ctx context.Context, symID string) (*types.PortV1, err
 	defer cancel()
 	err := c.api.Get(ctx, URL, c.getDefaultHeaders(), port)
 	if err != nil {
-		log.Error("GetPorts failed: " + err.Error())
+		csmlog.Error("GetPorts failed: " + err.Error())
 		return nil, err
 	}
 
@@ -358,7 +357,7 @@ func (c *Client) GetISCSITargets(ctx context.Context, symID string) ([]ISCSITarg
 		ports, err := c.GetPortList(ctx, symID, d, "type=Gige")
 		if err != nil {
 			// Ignore the error and continue
-			log.Errorf("Failed to get ports of type GigE for director: %s. Error: %s",
+			csmlog.Errorf("Failed to get ports of type GigE for director: %s. Error: %s",
 				d, err.Error())
 			continue
 		}
@@ -375,7 +374,7 @@ func (c *Client) GetISCSITargets(ctx context.Context, symID string) ([]ISCSITarg
 				port, err := c.GetPort(ctx, symID, vp.DirectorID, vp.PortID)
 				if err != nil {
 					// Ignore the error and continue
-					log.Errorf("Failed to fetch port details for %s:%s. Error: %s",
+					csmlog.Errorf("Failed to fetch port details for %s:%s. Error: %s",
 						vp.DirectorID, vp.PortID, err.Error())
 					continue
 				}
@@ -410,7 +409,7 @@ func (c *Client) GetISCSIEndpoints(ctx context.Context, symID string) ([]ISCSITa
 		virtualPorts, err := c.GetPortList(ctx, symID, d, "iscsi_endpoint=true")
 		if err != nil {
 			// Ignore the error and continue
-			log.Errorf("Failed to get iSCSI endpoint ports for director: %s. Error: %s",
+			csmlog.Errorf("Failed to get iSCSI endpoint ports for director: %s. Error: %s",
 				d, err.Error())
 			continue
 		}
@@ -423,7 +422,7 @@ func (c *Client) GetISCSIEndpoints(ctx context.Context, symID string) ([]ISCSITa
 				port, err := c.GetPort(ctx, symID, vp.DirectorID, vp.PortID)
 				if err != nil {
 					// Ignore the error and continue
-					log.Errorf("Failed to fetch port details for %s:%s. Error: %s",
+					csmlog.Errorf("Failed to fetch port details for %s:%s. Error: %s",
 						vp.DirectorID, vp.PortID, err.Error())
 					continue
 				}
@@ -460,7 +459,7 @@ func (c *Client) GetNVMeTCPTargets(ctx context.Context, symID string) ([]NVMeTCP
 		ports, err := c.GetPortList(ctx, symID, d, "type=OSHostAndRDF")
 		if err != nil {
 			// Ignore the error and continue
-			log.Errorf("Failed to get ports of type OSHost for director: %s. Error: %s",
+			csmlog.Errorf("Failed to get ports of type OSHost for director: %s. Error: %s",
 				d, err.Error())
 			continue
 		}
@@ -477,7 +476,7 @@ func (c *Client) GetNVMeTCPTargets(ctx context.Context, symID string) ([]NVMeTCP
 				port, err := c.GetPort(ctx, symID, vp.DirectorID, vp.PortID)
 				if err != nil {
 					// Ignore the error and continue
-					log.Errorf("Failed to fetch port details for %s:%s. Error: %s",
+					csmlog.Errorf("Failed to fetch port details for %s:%s. Error: %s",
 						vp.DirectorID, vp.PortID, err.Error())
 					continue
 				}
@@ -507,13 +506,13 @@ func (c *Client) RefreshSymmetrix(ctx context.Context, symID string) error {
 	fields := map[string]interface{}{
 		http.MethodPut: URL,
 	}
-	log.WithFields(fields).Info("Refresh symmetrix")
+	csmlog.WithFields(fields).Info("Refresh symmetrix")
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	err := c.api.Post(
 		ctx, URL, c.getDefaultHeaders(), nil, nil)
 	if err != nil {
-		log.WithFields(fields).Error("Error in RefreshSymmetrix: " + err.Error())
+		csmlog.WithFields(fields).Error("Error in RefreshSymmetrix: " + err.Error())
 		return err
 	}
 	return nil
@@ -549,13 +548,13 @@ func (c *Client) IsAllowedArray(array string) (bool, error) {
 
 func (c *Client) GetVersionDetails(ctx context.Context) (*types.VersionDetails, error) {
 	URL := RESTPrefix + "version"
-	log.Debug("==URL", URL)
+	csmlog.Debug("==URL: " + URL)
 	ctx, cancel := c.GetTimeoutContext(ctx)
 	defer cancel()
 	resp, err := c.api.DoAndGetResponseBody(
 		ctx, http.MethodGet, URL, c.getDefaultHeaders(), nil)
 	if err != nil {
-		log.Error("GetVersion failed: " + err.Error())
+		csmlog.Error("GetVersion failed: " + err.Error())
 		return nil, err
 	}
 	if err = c.checkResponse(resp); err != nil {
