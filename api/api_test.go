@@ -1,5 +1,5 @@
 /*
- Copyright © 2021-2025 Dell Inc. or its subsidiaries. All Rights Reserved.
+ Copyright © 2021-2026 Dell Inc. or its subsidiaries. All Rights Reserved.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -1157,4 +1157,22 @@ func TestClient_Get_ObserverTransportError(t *testing.T) {
 	assert.Equal(t, 0, observations[0].StatusCode)
 	assert.NotNil(t, observations[0].Err)
 	assert.Greater(t, observations[0].Duration.Nanoseconds(), int64(0))
+}
+
+func TestDoAndGetResponseBody_SendsBearerTokenOverDefaultAuth(t *testing.T) {
+	var got []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.Header.Values("Authorization")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c, err := New(srv.URL, ClientOptions{}, false)
+	assert.NoError(t, err)
+	c.SetToken("jwt-token")
+
+	resp, err := c.DoAndGetResponseBody(context.Background(), http.MethodGet, "test", map[string]string{"Authorization": "Basic Og=="}, nil)
+	assert.NoError(t, err)
+	resp.Body.Close()
+	assert.Equal(t, []string{"Bearer jwt-token"}, got)
 }

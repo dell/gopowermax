@@ -1,5 +1,5 @@
 /*
- Copyright © 2020 Dell Inc. or its subsidiaries. All Rights Reserved.
+ Copyright © 2020-2026 Dell Inc. or its subsidiaries. All Rights Reserved.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -213,13 +213,16 @@ func dumpRequest(req *http.Request, body bool) ([]byte, error) {
 	}
 
 	if encodedCred, isAuth := req.Header["Authorization"]; isAuth {
-		decodedCred, err := base64.StdEncoding.DecodeString(strings.Split(encodedCred[0], " ")[1])
-		if err != nil {
-			fmt.Println("decode error:", err.Error())
-			return b.Bytes(), err
+		scheme, credentials, _ := strings.Cut(encodedCred[0], " ")
+		if strings.EqualFold(scheme, "Basic") {
+			decodedCred, err := base64.StdEncoding.DecodeString(credentials)
+			if err != nil {
+				fmt.Println("decode error:", err.Error())
+				return b.Bytes(), err
+			}
+			cred := strings.Split(string(decodedCred), ":")
+			csmlog.Debugf("username: %s , password: %s", cred[0], "*****")
 		}
-		cred := strings.Split(string(decodedCred), ":")
-		csmlog.Debugf("username: %s , password: %s", cred[0], "*****")
 	}
 
 	err = req.Header.WriteSubset(&b, reqWriteExcludeHeaderDump)

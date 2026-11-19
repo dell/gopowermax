@@ -1,5 +1,5 @@
 /*
- Copyright © 2020 Dell Inc. or its subsidiaries. All Rights Reserved.
+ Copyright © 2020-2026 Dell Inc. or its subsidiaries. All Rights Reserved.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -99,7 +99,7 @@ type Client interface {
 		headers map[string]string,
 		resp interface{}) error
 
-	// SetToken sets the Auth token for the HTTP client
+	// SetToken sets the bearer token used in the Authorization header of every request
 	SetToken(token string)
 
 	// GetToken gets the Auth token for the HTTP client
@@ -431,7 +431,7 @@ func (c *client) DoAndGetResponseBody(
 
 	// set the auth token
 	if c.token != "" {
-		req.SetBasicAuth("", c.token)
+		req.Header.Set("Authorization", "Bearer "+c.token)
 	}
 
 	// add custom HTTP headers

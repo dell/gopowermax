@@ -3,7 +3,7 @@ module github.com/dell/gopowermax/v2
 go 1.27
 
 require (
-	github.com/dell/csmlog v1.2.0
+	github.com/dell/csmlog v1.2.1
 	github.com/cucumber/godog v0.16.0
 	github.com/gorilla/mux v1.8.1
 	github.com/jinzhu/copier v0.4.0
