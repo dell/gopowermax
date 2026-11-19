@@ -69,7 +69,7 @@ type Pmax interface {
 	// Authenticate causes authentication and tests the connection
 	Authenticate(ctx context.Context, configConnect *ConfigConnect) error
 
-	// SetToken sets the Auth token for the HTTP client
+	// SetToken sets the bearer token used in the Authorization header of every request
 	SetToken(token string)
 
 	// SetCustomHTTPHeaders sets custom HTTP headers that will be sent with every request

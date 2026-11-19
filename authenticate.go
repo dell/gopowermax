@@ -1,5 +1,5 @@
 /*
- Copyright © 2020-2025 Dell Inc. or its subsidiaries. All Rights Reserved.
+ Copyright © 2020-2026 Dell Inc. or its subsidiaries. All Rights Reserved.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -253,7 +253,7 @@ func (c *Client) GetHTTPClient() *http.Client {
 	return c.api.GetHTTPClient()
 }
 
-// SetToken sets the Auth token for the HTTP client
+// SetToken sets the bearer token used in the Authorization header of every request
 func (c *Client) SetToken(token string) {
 	c.api.SetToken(token)
 }

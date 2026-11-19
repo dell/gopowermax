@@ -1,5 +1,5 @@
 /*
- Copyright © 2025 Dell Inc. or its subsidiaries. All Rights Reserved.
+ Copyright © 2025-2026 Dell Inc. or its subsidiaries. All Rights Reserved.
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -209,4 +209,21 @@ func TestDumpRequest(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDumpRequest_BearerAuthorization(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "http://example.com", bytes.NewBufferString(""))
+	assert.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer header.payload.signature")
+	req.URL.Host = "example.com"
+
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	log.SetLevel(log.DebugLevel)
+
+	dump, err := dumpRequest(req, true)
+	assert.NoError(t, err)
+	assert.Contains(t, string(dump), "GET / HTTP/1.1")
+	assert.NotContains(t, buf.String(), "username:")
+	assert.NotContains(t, string(dump), "header.payload.signature")
 }
